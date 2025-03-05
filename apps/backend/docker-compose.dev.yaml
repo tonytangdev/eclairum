@@ -1,0 +1,15 @@
+services:
+  postgres:
+    container_name: hey-learn-db-dev
+    image: postgres:17.0-alpine
+    ports:
+      - ${DATABASE_PORT}:5432
+    volumes:
+      - hey-learn-db-dev:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+
+volumes:
+  hey-learn-db-dev:
