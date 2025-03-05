@@ -16,6 +16,12 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "test": {
+      "dependsOn": ["^test"]
+    },
+    "test:e2e": {
+      "dependsOn": ["^test:e2e"]
     }
   }
 }
