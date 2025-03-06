@@ -8,7 +8,9 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
     "test": "turbo run test",
-    "test:e2e": "turbo run test:e2e"
+    "test:e2e": "turbo run test:e2e",
+    "docker:up": "turbo run docker:up",
+    "docker:down": "turbo run docker:down"
   },
   "devDependencies": {
     "prettier": "^3.5.3",
