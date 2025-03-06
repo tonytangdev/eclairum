@@ -6,6 +6,7 @@ import {
 } from "./quiz-generation-task";
 import { Question } from "./question";
 import { Answer } from "./answer";
+import { RequiredTextContentError } from "../errors/validation-errors";
 
 describe("QuizGenerationTask", () => {
   // Helper to create answers
@@ -76,7 +77,13 @@ describe("QuizGenerationTask", () => {
     expect(task.getGeneratedAt()).toBe(generatedAt);
   });
 
-  it("should throw error when text content is empty", () => {
+  it("should throw RequiredTextContentError when text content is empty", () => {
+    expect(() => {
+      new QuizGenerationTask({
+        textContent: "",
+        questions: [createQuestion()],
+      });
+    }).toThrow(RequiredTextContentError);
     expect(() => {
       new QuizGenerationTask({
         textContent: "",

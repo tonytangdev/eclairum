@@ -1,4 +1,5 @@
 import { Question } from "./question";
+import { RequiredTextContentError } from "../errors/validation-errors";
 
 export enum QuizGenerationStatus {
   "PENDING" = "PENDING",
@@ -39,7 +40,7 @@ export class QuizGenerationTask {
     generatedAt = null,
   }: QuizGenerationTaskConstructor) {
     if (!textContent) {
-      throw new Error("Text content is required");
+      throw new RequiredTextContentError();
     }
 
     this.id = id;

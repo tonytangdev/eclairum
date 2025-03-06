@@ -21,3 +21,11 @@ export class EmptyAnswersError extends ValidationError {
     Object.setPrototypeOf(this, EmptyAnswersError.prototype);
   }
 }
+
+export class RequiredTextContentError extends ValidationError {
+  constructor() {
+    super("Text content is required");
+    this.name = "RequiredTextContentError";
+    Object.setPrototypeOf(this, RequiredTextContentError.prototype);
+  }
+}
