@@ -1,15 +1,15 @@
 services:
   postgres:
-    container_name: hey-learn-db-ci
+    container_name: flash-me-db-ci
     image: postgres:17.0-alpine
     ports:
       - ${DATABASE_PORT}:5432
     volumes:
-      - hey-learn-db-ci:/var/lib/postgresql/data
+      - flash-me-db-ci:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: ${DATABASE_USERNAME}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: ${DATABASE_NAME}
 
 volumes:
-  hey-learn-db-ci:
+  flash-me-db-ci:
