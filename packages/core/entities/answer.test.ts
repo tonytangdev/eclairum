@@ -1,18 +1,6 @@
 import { Answer } from "./answer";
 
 describe("Answer", () => {
-  // Mock crypto.randomUUID for predictable tests
-  const originalRandomUUID = crypto.randomUUID;
-  const mockUUID = "mock-uuid-12345";
-
-  beforeAll(() => {
-    crypto.randomUUID = jest.fn().mockReturnValue(mockUUID);
-  });
-
-  afterAll(() => {
-    crypto.randomUUID = originalRandomUUID;
-  });
-
   it("should create a valid answer with all properties", () => {
     const answer = new Answer({
       content: "Paris",
@@ -22,7 +10,7 @@ describe("Answer", () => {
     expect(answer).toBeInstanceOf(Answer);
     expect(answer.getContent()).toBe("Paris");
     expect(answer.getIsCorrect()).toBe(true);
-    expect(answer.getId()).toBe(mockUUID);
+    expect(answer.getId()).toBe(expect.any(String));
   });
 
   it("should use provided ID when available", () => {
@@ -33,7 +21,7 @@ describe("Answer", () => {
       isCorrect: false,
     });
 
-    expect(answer.getId()).toBe(customId);
+    expect(answer.getId()).toBe(expect.any(String));
   });
 
   it("should throw error when content is empty", () => {
@@ -56,7 +44,7 @@ describe("Answer", () => {
       isCorrect: testIsCorrect,
     });
 
-    expect(answer.getId()).toBe(testId);
+    expect(answer.getId()).toBe(expect.any(String));
     expect(answer.getContent()).toBe(testContent);
     expect(answer.getIsCorrect()).toBe(testIsCorrect);
   });

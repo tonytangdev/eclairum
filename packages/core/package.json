@@ -4,13 +4,16 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "NODE_ENV=ci jest"
+    "test": "NODE_ENV=ci jest",
+    "lint": "eslint \"./**/*.ts\" --fix"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@flash-me/eslint-config": "workspace:*"
+    "@flash-me/eslint-config": "workspace:*",
+    "@flash-me/typescript-config": "workspace:*"
+
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
