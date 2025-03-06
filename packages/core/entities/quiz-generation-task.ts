@@ -32,7 +32,7 @@ export class QuizGenerationTask {
   constructor({
     id = crypto.randomUUID(),
     textContent,
-    questions = [],
+    questions,
     createdAt = new Date(),
     updatedAt = new Date(),
     deletedAt = null,

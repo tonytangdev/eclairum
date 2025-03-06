@@ -23,6 +23,9 @@
     "test:e2e": {
       "dependsOn": ["^test:e2e"]
     },
+    "test:cov": {
+      "dependsOn": ["^test:cov"]
+    },
     "docker:up": {
       "dependsOn": ["^docker:up"]
     },

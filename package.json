@@ -10,7 +10,8 @@
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
     "docker:up": "turbo run docker:up",
-    "docker:down": "turbo run docker:down"
+    "docker:down": "turbo run docker:down",
+    "test:cov": "turbo run test:cov"
   },
   "devDependencies": {
     "prettier": "^3.5.3",

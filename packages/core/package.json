@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "NODE_ENV=ci jest",
-    "lint": "eslint \"./**/*.ts\" --fix"
+    "lint": "eslint \"./**/*.ts\" --fix",
+    "test:cov": "NODE_ENV=ci jest --coverage"
   },
   "keywords": [],
   "author": "",

@@ -7,7 +7,7 @@ export class ValidationError extends Error {
 }
 
 export class RequiredContentError extends ValidationError {
-  constructor(entityName: string = "Entity") {
+  constructor(entityName: string) {
     super(`Content is required for ${entityName}`);
     this.name = "RequiredContentError";
     Object.setPrototypeOf(this, RequiredContentError.prototype);
