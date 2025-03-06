@@ -11,9 +11,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@faker-js/faker": "^9.5.1",
     "@flash-me/eslint-config": "workspace:*",
     "@flash-me/typescript-config": "workspace:*"
-
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

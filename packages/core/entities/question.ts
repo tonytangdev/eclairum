@@ -1,44 +1,44 @@
-import { Question } from "./question";
+import { Answer } from "./answer";
 
-type AnswerConstructor = {
+type QuestionConstructor = {
   id?: string;
   content: string;
-  isCorrect: boolean;
+  answers: Answer[];
   createdAt?: Date;
   updatedAt?: Date;
   deletedAt?: Date | null;
-  questionId: Question["id"];
 };
 
-export class Answer {
+export class Question {
   private id: string;
   private content: string;
-  private isCorrect: boolean;
+  private answers: Answer[];
   private createdAt: Date;
   private updatedAt: Date;
   private deletedAt: Date | null;
-  private questionId: Question["id"];
 
   constructor({
     id = crypto.randomUUID(),
     content,
-    isCorrect,
+    answers,
     createdAt = new Date(),
     updatedAt = new Date(),
     deletedAt = null,
-    questionId,
-  }: AnswerConstructor) {
+  }: QuestionConstructor) {
     if (!content) {
       throw new Error("Content is required");
     }
 
+    if (answers.length === 0) {
+      throw new Error("At least one answer is required");
+    }
+
     this.id = id;
     this.content = content;
-    this.isCorrect = isCorrect;
+    this.answers = answers;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
     this.deletedAt = deletedAt;
-    this.questionId = questionId;
   }
 
   public getId(): string {
@@ -49,8 +49,8 @@ export class Answer {
     return this.content;
   }
 
-  public getIsCorrect(): boolean {
-    return this.isCorrect;
+  public getAnswers(): Answer[] {
+    return this.answers;
   }
 
   public getCreatedAt(): Date {
@@ -63,9 +63,5 @@ export class Answer {
 
   public getDeletedAt(): Date | null {
     return this.deletedAt;
-  }
-
-  public getQuestionId(): Question["id"] {
-    return this.questionId;
   }
 }

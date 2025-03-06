@@ -1,27 +1,48 @@
+import { faker } from "@faker-js/faker";
 import { Answer } from "./answer";
+import { randomUUID } from "crypto";
 
 describe("Answer", () => {
   it("should create a valid answer with all properties", () => {
+    const questionId = randomUUID();
+    const content = faker.lorem.sentence();
+    const isCorrect = faker.datatype.boolean();
+
     const answer = new Answer({
-      content: "Paris",
-      isCorrect: true,
+      content,
+      isCorrect,
+      questionId,
     });
 
-    expect(answer).toBeInstanceOf(Answer);
-    expect(answer.getContent()).toBe("Paris");
-    expect(answer.getIsCorrect()).toBe(true);
-    expect(answer.getId()).toBe(expect.any(String));
+    expect(answer).toStrictEqual(expect.any(Answer));
+    expect(answer.getContent()).toStrictEqual(content);
+    expect(answer.getIsCorrect()).toStrictEqual(isCorrect);
+    expect(answer.getId()).toStrictEqual(expect.any(String));
+    expect(answer.getCreatedAt()).toStrictEqual(expect.any(Date));
+    expect(answer.getUpdatedAt()).toStrictEqual(expect.any(Date));
+    expect(answer.getDeletedAt()).toStrictEqual(null);
+    expect(answer.getQuestionId()).toStrictEqual(questionId);
   });
 
   it("should use provided ID when available", () => {
-    const customId = "custom-id-123";
+    const customId = randomUUID();
+    const questionId = randomUUID();
+    const content = faker.lorem.sentence();
+    const isCorrect = faker.datatype.boolean();
     const answer = new Answer({
       id: customId,
-      content: "Berlin",
-      isCorrect: false,
+      content,
+      isCorrect,
+      questionId,
     });
 
-    expect(answer.getId()).toBe(expect.any(String));
+    expect(answer.getId()).toStrictEqual(customId);
+    expect(answer.getContent()).toStrictEqual(content);
+    expect(answer.getIsCorrect()).toStrictEqual(isCorrect);
+    expect(answer.getQuestionId()).toStrictEqual(questionId);
+    expect(answer.getCreatedAt()).toStrictEqual(expect.any(Date));
+    expect(answer.getUpdatedAt()).toStrictEqual(expect.any(Date));
+    expect(answer.getDeletedAt()).toStrictEqual(null);
   });
 
   it("should throw error when content is empty", () => {
@@ -29,23 +50,30 @@ describe("Answer", () => {
       new Answer({
         content: "",
         isCorrect: true,
+        questionId: randomUUID(),
       });
     }).toThrow("Content is required");
   });
 
   it("should return correct values from getter methods", () => {
-    const testId = "test-id-456";
-    const testContent = "Tokyo";
-    const testIsCorrect = true;
+    const testId = randomUUID();
+    const content = faker.lorem.sentence();
+    const isCorrect = faker.datatype.boolean();
+    const questionId = randomUUID();
 
     const answer = new Answer({
       id: testId,
-      content: testContent,
-      isCorrect: testIsCorrect,
+      content,
+      isCorrect,
+      questionId,
     });
 
-    expect(answer.getId()).toBe(expect.any(String));
-    expect(answer.getContent()).toBe(testContent);
-    expect(answer.getIsCorrect()).toBe(testIsCorrect);
+    expect(answer.getId()).toStrictEqual(expect.any(String));
+    expect(answer.getContent()).toStrictEqual(content);
+    expect(answer.getIsCorrect()).toStrictEqual(isCorrect);
+    expect(answer.getCreatedAt()).toStrictEqual(expect.any(Date));
+    expect(answer.getUpdatedAt()).toStrictEqual(expect.any(Date));
+    expect(answer.getDeletedAt()).toStrictEqual(null);
+    expect(answer.getQuestionId()).toStrictEqual(questionId);
   });
 });
