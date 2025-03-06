@@ -2,6 +2,10 @@ import { faker } from "@faker-js/faker";
 import { randomUUID } from "crypto";
 import { Question } from "./question";
 import { Answer } from "./answer";
+import {
+  RequiredContentError,
+  EmptyAnswersError,
+} from "../errors/validation-errors";
 
 describe("Question", () => {
   // Helper to create a real answer
@@ -56,16 +60,28 @@ describe("Question", () => {
     expect(question.getDeletedAt()).toBe(deletedAt);
   });
 
-  it("should throw error when content is empty", () => {
+  it("should throw RequiredContentError when content is empty", () => {
     expect(() => {
       new Question({
         content: "",
         answers: [createAnswer()],
       });
-    }).toThrow("Content is required");
+    }).toThrow(RequiredContentError);
+    expect(() => {
+      new Question({
+        content: "",
+        answers: [createAnswer()],
+      });
+    }).toThrow("Content is required for Question");
   });
 
-  it("should throw error when answers array is empty", () => {
+  it("should throw EmptyAnswersError when answers array is empty", () => {
+    expect(() => {
+      new Question({
+        content: faker.lorem.sentence(),
+        answers: [],
+      });
+    }).toThrow(EmptyAnswersError);
     expect(() => {
       new Question({
         content: faker.lorem.sentence(),

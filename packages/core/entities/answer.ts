@@ -1,4 +1,5 @@
 import { Question } from "./question";
+import { RequiredContentError } from "../errors/validation-errors";
 
 type AnswerConstructor = {
   id?: string;
@@ -29,7 +30,7 @@ export class Answer {
     questionId,
   }: AnswerConstructor) {
     if (!content) {
-      throw new Error("Content is required");
+      throw new RequiredContentError("Answer");
     }
 
     this.id = id;

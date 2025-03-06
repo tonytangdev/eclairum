@@ -1,6 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { Answer } from "./answer";
 import { randomUUID } from "crypto";
+import { RequiredContentError } from "../errors/validation-errors";
 
 describe("Answer", () => {
   it("should create a valid answer with all properties", () => {
@@ -45,14 +46,21 @@ describe("Answer", () => {
     expect(answer.getDeletedAt()).toStrictEqual(null);
   });
 
-  it("should throw error when content is empty", () => {
+  it("should throw RequiredContentError when content is empty", () => {
     expect(() => {
       new Answer({
         content: "",
         isCorrect: true,
         questionId: randomUUID(),
       });
-    }).toThrow("Content is required");
+    }).toThrow(RequiredContentError);
+    expect(() => {
+      new Answer({
+        content: "",
+        isCorrect: true,
+        questionId: randomUUID(),
+      });
+    }).toThrow("Content is required for Answer");
   });
 
   it("should return correct values from getter methods", () => {

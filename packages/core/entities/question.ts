@@ -1,4 +1,8 @@
 import { Answer } from "./answer";
+import {
+  RequiredContentError,
+  EmptyAnswersError,
+} from "../errors/validation-errors";
 
 type QuestionConstructor = {
   id?: string;
@@ -26,11 +30,11 @@ export class Question {
     deletedAt = null,
   }: QuestionConstructor) {
     if (!content) {
-      throw new Error("Content is required");
+      throw new RequiredContentError("Question");
     }
 
     if (answers.length === 0) {
-      throw new Error("At least one answer is required");
+      throw new EmptyAnswersError();
     }
 
     this.id = id;
