@@ -123,6 +123,13 @@ importers:
         version: 8.26.0(eslint@9.21.0)(typescript@5.8.2)
 
   packages/core:
+    dependencies:
+      '@flash-me/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@flash-me/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
     devDependencies:
       '@types/jest':
         specifier: ^29.5.14
