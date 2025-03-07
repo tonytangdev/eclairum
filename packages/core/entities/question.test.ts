@@ -2,6 +2,7 @@ import { faker } from "@faker-js/faker";
 import { randomUUID } from "crypto";
 import { Question } from "./question";
 import { Answer } from "./answer";
+import { RequiredContentError } from "../errors/validation-errors";
 
 describe("Question", () => {
   // Helper to create a real answer
@@ -89,5 +90,56 @@ describe("Question", () => {
 
     expect(question.getAnswers().length).toBe(3);
     expect(question.getAnswers()).toEqual(answers);
+  });
+
+  it("should throw RequiredContentError when content is not provided", () => {
+    expect(() => {
+      new Question({
+        content: "",
+        answers: [],
+      });
+    }).toThrow(RequiredContentError);
+
+    expect(() => {
+      new Question({
+        // @ts-expect-error Testing invalid input
+        content: undefined,
+        answers: [],
+      });
+    }).toThrow(RequiredContentError);
+  });
+
+  it("should add answer correctly using addAnswer method", () => {
+    const question = new Question({
+      content: faker.lorem.sentence(),
+      answers: [],
+    });
+
+    const newAnswer = createAnswer(true);
+    question.addAnswer(newAnswer);
+
+    expect(question.getAnswers()).toContain(newAnswer);
+    expect(question.getAnswers().length).toBe(1);
+  });
+
+  it("should update the updatedAt timestamp when adding an answer", () => {
+    const question = new Question({
+      content: faker.lorem.sentence(),
+      answers: [],
+    });
+
+    const originalUpdatedAt = question.getUpdatedAt();
+
+    // Mock Date.now to ensure a different timestamp
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(originalUpdatedAt.getTime() + 1000));
+
+    question.addAnswer(createAnswer());
+
+    const newUpdatedAt = question.getUpdatedAt();
+
+    expect(newUpdatedAt.getTime()).toBeGreaterThan(originalUpdatedAt.getTime());
+
+    jest.useRealTimers();
   });
 });
