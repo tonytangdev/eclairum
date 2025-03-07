@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { User } from '@flash-me/core/entities/user';
 import { UserEntity } from '../entities/user.entity';
+import { User } from '@flash-me/core/entities';
 
 @Injectable()
 export class UserMapper {
-  toDomain(entity: UserEntity): User {
+  static toDomain(entity: UserEntity): User {
     const user = new User({
       id: entity.id,
       email: entity.email,
@@ -15,7 +15,7 @@ export class UserMapper {
     return user;
   }
 
-  toPersistence(domain: User): UserEntity {
+  static toPersistence(domain: User): UserEntity {
     const entity = new UserEntity();
     entity.id = domain.getId();
     entity.email = domain.getEmail();

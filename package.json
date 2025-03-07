@@ -16,7 +16,8 @@
   "devDependencies": {
     "prettier": "^3.5.3",
     "turbo": "^2.4.4",
-    "typescript": "5.8.2"
+    "typescript": "5.8.2",
+    "@nestjs/cli": "^11.0.0"
   },
   "packageManager": "pnpm@9.0.0",
   "engines": {

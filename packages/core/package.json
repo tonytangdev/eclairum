@@ -2,11 +2,34 @@
   "name": "@flash-me/core",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./entities": {
+      "import": "./dist/entities/index.js",
+      "require": "./dist/entities/index.js",
+      "types": "./dist/entities/index.d.ts"
+    },
+    "./interfaces": {
+      "import": "./dist/interfaces/index.js",
+      "require": "./dist/interfaces/index.js",
+      "types": "./dist/interfaces/index.d.ts"
+    },
+    "./use-cases": {
+      "import": "./dist/use-cases/index.js",
+      "require": "./dist/use-cases/index.js",
+      "types": "./dist/use-cases/index.d.ts"
+    }
+  },
   "scripts": {
     "test": "NODE_ENV=ci jest",
     "lint": "eslint \"./**/*.ts\" --fix",
-    "test:cov": "NODE_ENV=ci jest --coverage"
+    "test:cov": "NODE_ENV=ci jest --coverage",
+    "build": "tsc -p tsconfig.build.json"
   },
   "keywords": [],
   "author": "",
