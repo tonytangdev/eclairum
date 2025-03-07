@@ -1,38 +1,38 @@
 import { faker } from "@faker-js/faker";
 import { CreateUserUseCase } from "./create-user.use-case";
-import { UserRepository } from "../interfaces/user-repository.interface";
+import { UserService } from "../interfaces/user-service.interface";
 import { User } from "../entities/user";
 import { UserAlreadyExistsError } from "../errors/user-errors";
 
 describe("CreateUserUseCase", () => {
   let createUserUseCase: CreateUserUseCase;
-  let userRepository: UserRepository;
+  let userService: UserService;
 
   beforeEach(() => {
-    userRepository = {
-      create: jest.fn(),
-      findByEmail: jest.fn(),
+    userService = {
+      createUser: jest.fn(),
+      getUserByEmail: jest.fn(),
     };
-    createUserUseCase = new CreateUserUseCase(userRepository);
+    createUserUseCase = new CreateUserUseCase(userService);
   });
 
   it("should create a new user successfully", async () => {
     // Arrange
     const email = faker.internet.email();
     const mockUser = new User({ email });
-    const findByEmailSpy = jest
-      .spyOn(userRepository, "findByEmail")
+    const getUserByEmailSpy = jest
+      .spyOn(userService, "getUserByEmail")
       .mockResolvedValue(null);
-    const createSpy = jest
-      .spyOn(userRepository, "create")
+    const createUserSpy = jest
+      .spyOn(userService, "createUser")
       .mockResolvedValue(mockUser);
 
     // Act
     const result = await createUserUseCase.execute({ email });
 
     // Assert
-    expect(findByEmailSpy).toHaveBeenCalledWith(email);
-    expect(createSpy).toHaveBeenCalled();
+    expect(getUserByEmailSpy).toHaveBeenCalledWith(email);
+    expect(createUserSpy).toHaveBeenCalled();
     expect(result).toEqual({ user: mockUser });
   });
 
@@ -40,10 +40,10 @@ describe("CreateUserUseCase", () => {
     // Arrange
     const email = faker.internet.email();
     const existingUser = new User({ email });
-    const findByEmailSpy = jest
-      .spyOn(userRepository, "findByEmail")
+    const getUserByEmailSpy = jest
+      .spyOn(userService, "getUserByEmail")
       .mockResolvedValue(existingUser);
-    const createSpy = jest.spyOn(userRepository, "create");
+    const createUserSpy = jest.spyOn(userService, "createUser");
 
     // Act & Assert
     await expect(createUserUseCase.execute({ email })).rejects.toThrow(
@@ -52,7 +52,7 @@ describe("CreateUserUseCase", () => {
     await expect(createUserUseCase.execute({ email })).rejects.toThrow(
       `User with email '${email}' already exists`,
     );
-    expect(findByEmailSpy).toHaveBeenCalledWith(email);
-    expect(createSpy).not.toHaveBeenCalled();
+    expect(getUserByEmailSpy).toHaveBeenCalledWith(email);
+    expect(createUserSpy).not.toHaveBeenCalled();
   });
 });
