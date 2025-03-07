@@ -23,7 +23,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         password: configService.getOrThrow('DATABASE_PASSWORD'),
         database: configService.getOrThrow('DATABASE_NAME'),
         synchronize: configService.getOrThrow('DATABASE_SYNCHRONIZE'),
-        autoLoadEntities: true,
+        entities: [__dirname + '/**/*.entity{.ts,.js}'],
       }),
     }),
     QuizGenerationTaskModule,
