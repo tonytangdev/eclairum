@@ -1,6 +1,8 @@
 import { CreateQuizGenerationTaskUseCase } from "./create-quiz-generation-task.use-case";
 import { LLMService, QuizQuestion } from "../interfaces/llm-service.interface";
-import { QuizService } from "../interfaces/quiz-service.interface";
+import { QuestionRepository } from "../interfaces/question-repository.interface";
+import { AnswerRepository } from "../interfaces/answer-repository.interface";
+import { QuizGenerationTaskRepository } from "../interfaces/quiz-generation-task-repository.interface";
 import {
   QuizGenerationStatus,
   QuizGenerationTask,
@@ -14,7 +16,9 @@ import {
 describe("CreateQuizGenerationTaskUseCase", () => {
   let createQuizGenerationTaskUseCase: CreateQuizGenerationTaskUseCase;
   let llmService: jest.Mocked<LLMService>;
-  let quizService: jest.Mocked<QuizService>;
+  let questionRepository: jest.Mocked<QuestionRepository>;
+  let answerRepository: jest.Mocked<AnswerRepository>;
+  let quizGenerationTaskRepository: jest.Mocked<QuizGenerationTaskRepository>;
 
   beforeEach(() => {
     // Use proper mock typing to avoid unbound method warnings
@@ -24,14 +28,23 @@ describe("CreateQuizGenerationTaskUseCase", () => {
         .mockImplementation(async () => new Promise(() => [])),
     };
 
-    quizService = {
-      saveQuizGenerationTask: jest.fn().mockImplementation(async () => {}),
+    questionRepository = {
       saveQuestions: jest.fn().mockImplementation(async () => {}),
+    };
+
+    answerRepository = {
+      saveAnswers: jest.fn().mockImplementation(async () => {}),
+    };
+
+    quizGenerationTaskRepository = {
+      saveTask: jest.fn().mockImplementation(async () => {}),
     };
 
     createQuizGenerationTaskUseCase = new CreateQuizGenerationTaskUseCase(
       llmService,
-      quizService,
+      questionRepository,
+      answerRepository,
+      quizGenerationTaskRepository,
     );
   });
 
@@ -52,15 +65,19 @@ describe("CreateQuizGenerationTaskUseCase", () => {
 
     // Use mockResolvedValue instead of spying
     llmService.generateQuiz.mockResolvedValue(mockLLMQuestions);
-    quizService.saveQuizGenerationTask.mockResolvedValue();
+    questionRepository.saveQuestions.mockResolvedValue();
+    answerRepository.saveAnswers.mockResolvedValue();
 
     // Act
     const result = await createQuizGenerationTaskUseCase.execute({ text });
 
     // Assert
     expect(llmService.generateQuiz).toHaveBeenCalledWith(text);
-    expect(quizService.saveQuizGenerationTask).toHaveBeenCalledWith(
-      expect.any(QuizGenerationTask),
+    expect(questionRepository.saveQuestions).toHaveBeenCalledWith(
+      expect.any(Array),
+    );
+    expect(answerRepository.saveAnswers).toHaveBeenCalledWith(
+      expect.any(Array),
     );
     expect(result).toHaveProperty("quizGenerationTask");
     expect(result.quizGenerationTask).toBeInstanceOf(QuizGenerationTask);
@@ -81,6 +98,11 @@ describe("CreateQuizGenerationTaskUseCase", () => {
         .getAnswers()[0]
         .getIsCorrect(),
     ).toBe(true);
+
+    // Additional assertion
+    expect(quizGenerationTaskRepository.saveTask).toHaveBeenCalledWith(
+      expect.any(QuizGenerationTask),
+    );
   });
 
   it("should handle multiple quiz questions from LLM service", async () => {
@@ -138,7 +160,8 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     const text = "This text causes an LLM service error";
     const originalError = new Error("Original LLM error");
 
-    quizService.saveQuizGenerationTask.mockResolvedValue();
+    questionRepository.saveQuestions.mockResolvedValue();
+    answerRepository.saveAnswers.mockResolvedValue();
     llmService.generateQuiz.mockRejectedValue(originalError);
 
     // Act & Assert
@@ -147,12 +170,12 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     ).rejects.toThrow(LLMServiceError);
 
     // Verify that task is saved with failed status
-    expect(quizService.saveQuizGenerationTask).toHaveBeenCalledWith(
+    expect(quizGenerationTaskRepository.saveTask).toHaveBeenCalledWith(
       expect.any(QuizGenerationTask),
     );
 
     // Get the task from the mock call
-    const savedTask = quizService.saveQuizGenerationTask.mock.calls[0][0];
+    const savedTask = quizGenerationTaskRepository.saveTask.mock.calls[0][0];
     expect(savedTask.getStatus()).toBe(QuizGenerationStatus.FAILED);
   });
 
@@ -172,7 +195,33 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     const storageError = new Error("Database connection error");
 
     llmService.generateQuiz.mockResolvedValue(mockLLMQuestions);
-    quizService.saveQuizGenerationTask.mockRejectedValue(storageError);
+    questionRepository.saveQuestions.mockRejectedValue(storageError);
+
+    // Act & Assert
+    await expect(
+      createQuizGenerationTaskUseCase.execute({ text }),
+    ).rejects.toThrow(QuizStorageError);
+  });
+
+  // Add a test for when question repository fails
+  it("should throw QuizStorageError when saving questions fails", async () => {
+    // Arrange
+    const text = "This text causes question storage error";
+    const mockLLMQuestions: QuizQuestion[] = [
+      {
+        question: "What is this text about?",
+        answers: [
+          { text: "Quiz generation", isCorrect: true },
+          { text: "Movie reviews", isCorrect: false },
+        ],
+      },
+    ];
+
+    const storageError = new Error("Question database connection error");
+
+    llmService.generateQuiz.mockResolvedValue(mockLLMQuestions);
+    quizGenerationTaskRepository.saveTask.mockResolvedValue();
+    questionRepository.saveQuestions.mockRejectedValue(storageError);
 
     // Act & Assert
     await expect(

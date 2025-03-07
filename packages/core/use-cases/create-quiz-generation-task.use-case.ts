@@ -5,7 +5,9 @@ import {
 import { Question } from "../entities/question";
 import { Answer } from "../entities/answer";
 import { LLMService, QuizQuestion } from "../interfaces/llm-service.interface";
-import { QuizService } from "../interfaces/quiz-service.interface";
+import { QuestionRepository } from "../interfaces/question-repository.interface";
+import { AnswerRepository } from "../interfaces/answer-repository.interface";
+import { QuizGenerationTaskRepository } from "../interfaces/quiz-generation-task-repository.interface";
 import {
   LLMServiceError,
   NoQuestionsGeneratedError,
@@ -23,7 +25,9 @@ type CreateQuizGenerationTaskUseCaseResponse = {
 export class CreateQuizGenerationTaskUseCase {
   constructor(
     private readonly llmService: LLMService,
-    private readonly quizService: QuizService,
+    private readonly questionRepository: QuestionRepository,
+    private readonly answerRepository: AnswerRepository,
+    private readonly quizGenerationTaskRepository: QuizGenerationTaskRepository,
   ) {}
 
   async execute({
@@ -84,9 +88,13 @@ export class CreateQuizGenerationTaskUseCase {
       // Mark the task as completed
       quizGenerationTask.updateStatus(QuizGenerationStatus.COMPLETED);
 
-      // Save the quiz generation task using quiz service
+      // Save the questions and answers using repositories
       try {
-        await this.quizService.saveQuizGenerationTask(quizGenerationTask);
+        await this.quizGenerationTaskRepository.saveTask(quizGenerationTask);
+        await this.questionRepository.saveQuestions(questions);
+        await this.answerRepository.saveAnswers(
+          questions.flatMap((question) => question.getAnswers()),
+        );
       } catch (error) {
         throw new QuizStorageError(
           `Failed to save quiz generation task: ${(error as Error).message}`,
@@ -103,7 +111,10 @@ export class CreateQuizGenerationTaskUseCase {
 
       // Still try to save the task with the failed status
       try {
-        await this.quizService.saveQuizGenerationTask(quizGenerationTask);
+        await this.quizGenerationTaskRepository.saveTask(quizGenerationTask);
+        await this.questionRepository.saveQuestions(
+          quizGenerationTask.getQuestions(),
+        );
       } catch (saveError) {
         console.error("Failed to save failed quiz generation task:", saveError);
       }
