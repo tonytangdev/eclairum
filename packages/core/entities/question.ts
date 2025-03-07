@@ -21,7 +21,7 @@ export class Question {
   constructor({
     id = crypto.randomUUID(),
     content,
-    answers = [],
+    answers,
     createdAt = new Date(),
     updatedAt = new Date(),
     deletedAt = null,
