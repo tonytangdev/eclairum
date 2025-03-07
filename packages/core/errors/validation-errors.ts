@@ -14,14 +14,6 @@ export class RequiredContentError extends ValidationError {
   }
 }
 
-export class EmptyAnswersError extends ValidationError {
-  constructor() {
-    super("At least one answer is required");
-    this.name = "EmptyAnswersError";
-    Object.setPrototypeOf(this, EmptyAnswersError.prototype);
-  }
-}
-
 export class RequiredTextContentError extends ValidationError {
   constructor() {
     super("Text content is required");

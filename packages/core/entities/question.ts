@@ -1,8 +1,5 @@
 import { Answer } from "./answer";
-import {
-  RequiredContentError,
-  EmptyAnswersError,
-} from "../errors/validation-errors";
+import { RequiredContentError } from "../errors/validation-errors";
 
 type QuestionConstructor = {
   id?: string;
@@ -24,17 +21,13 @@ export class Question {
   constructor({
     id = crypto.randomUUID(),
     content,
-    answers,
+    answers = [],
     createdAt = new Date(),
     updatedAt = new Date(),
     deletedAt = null,
   }: QuestionConstructor) {
     if (!content) {
       throw new RequiredContentError("Question");
-    }
-
-    if (answers.length === 0) {
-      throw new EmptyAnswersError();
     }
 
     this.id = id;
@@ -67,5 +60,10 @@ export class Question {
 
   public getDeletedAt(): Date | null {
     return this.deletedAt;
+  }
+
+  public addAnswer(answer: Answer): void {
+    this.answers.push(answer);
+    this.updatedAt = new Date();
   }
 }
