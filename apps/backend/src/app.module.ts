@@ -3,9 +3,17 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { QuizGenerationTaskModule } from './quiz-generation-task/quiz-generation-task.module';
 import { UsersModule } from './users/users.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [QuizGenerationTaskModule, UsersModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: [`.env.${process.env.NODE_ENV}`, '.env'],
+    }),
+    QuizGenerationTaskModule,
+    UsersModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
