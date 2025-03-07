@@ -6,12 +6,18 @@ import { UserAlreadyExistsError } from "../errors/user-errors";
 
 describe("CreateUserUseCase", () => {
   let createUserUseCase: CreateUserUseCase;
-  let userService: UserService;
+  let userService: jest.Mocked<UserService>;
 
   beforeEach(() => {
     userService = {
-      createUser: jest.fn(),
-      getUserByEmail: jest.fn(),
+      createUser: jest
+        .fn()
+        .mockImplementation(
+          async (user: User) => await new Promise(() => user),
+        ),
+      getUserByEmail: jest
+        .fn()
+        .mockImplementation(async () => new Promise(() => null)),
     };
     createUserUseCase = new CreateUserUseCase(userService);
   });
@@ -20,19 +26,16 @@ describe("CreateUserUseCase", () => {
     // Arrange
     const email = faker.internet.email();
     const mockUser = new User({ email });
-    const getUserByEmailSpy = jest
-      .spyOn(userService, "getUserByEmail")
-      .mockResolvedValue(null);
-    const createUserSpy = jest
-      .spyOn(userService, "createUser")
-      .mockResolvedValue(mockUser);
+
+    userService.getUserByEmail.mockResolvedValue(null);
+    userService.createUser.mockResolvedValue(mockUser);
 
     // Act
     const result = await createUserUseCase.execute({ email });
 
     // Assert
-    expect(getUserByEmailSpy).toHaveBeenCalledWith(email);
-    expect(createUserSpy).toHaveBeenCalled();
+    expect(userService.getUserByEmail).toHaveBeenCalledWith(email);
+    expect(userService.createUser).toHaveBeenCalled();
     expect(result).toEqual({ user: mockUser });
   });
 
@@ -40,10 +43,8 @@ describe("CreateUserUseCase", () => {
     // Arrange
     const email = faker.internet.email();
     const existingUser = new User({ email });
-    const getUserByEmailSpy = jest
-      .spyOn(userService, "getUserByEmail")
-      .mockResolvedValue(existingUser);
-    const createUserSpy = jest.spyOn(userService, "createUser");
+
+    userService.getUserByEmail.mockResolvedValue(existingUser);
 
     // Act & Assert
     await expect(createUserUseCase.execute({ email })).rejects.toThrow(
@@ -52,7 +53,7 @@ describe("CreateUserUseCase", () => {
     await expect(createUserUseCase.execute({ email })).rejects.toThrow(
       `User with email '${email}' already exists`,
     );
-    expect(getUserByEmailSpy).toHaveBeenCalledWith(email);
-    expect(createUserSpy).not.toHaveBeenCalled();
+    expect(userService.getUserByEmail).toHaveBeenCalledWith(email);
+    expect(userService.createUser).not.toHaveBeenCalled();
   });
 });

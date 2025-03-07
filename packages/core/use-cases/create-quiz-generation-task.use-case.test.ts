@@ -13,17 +13,22 @@ import {
 
 describe("CreateQuizGenerationTaskUseCase", () => {
   let createQuizGenerationTaskUseCase: CreateQuizGenerationTaskUseCase;
-  let llmService: LLMService;
-  let quizService: QuizService;
+  let llmService: jest.Mocked<LLMService>;
+  let quizService: jest.Mocked<QuizService>;
 
   beforeEach(() => {
+    // Use proper mock typing to avoid unbound method warnings
     llmService = {
-      generateQuiz: jest.fn(),
+      generateQuiz: jest
+        .fn()
+        .mockImplementation(async () => new Promise(() => [])),
     };
+
     quizService = {
-      saveQuizGenerationTask: jest.fn(),
-      saveQuestions: jest.fn(),
+      saveQuizGenerationTask: jest.fn().mockImplementation(async () => {}),
+      saveQuestions: jest.fn().mockImplementation(async () => {}),
     };
+
     createQuizGenerationTaskUseCase = new CreateQuizGenerationTaskUseCase(
       llmService,
       quizService,
@@ -45,20 +50,16 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       },
     ];
 
-    const generateQuizSpy = jest
-      .spyOn(llmService, "generateQuiz")
-      .mockResolvedValue(mockLLMQuestions);
-
-    const saveQuizGenerationTaskSpy = jest
-      .spyOn(quizService, "saveQuizGenerationTask")
-      .mockResolvedValue();
+    // Use mockResolvedValue instead of spying
+    llmService.generateQuiz.mockResolvedValue(mockLLMQuestions);
+    quizService.saveQuizGenerationTask.mockResolvedValue();
 
     // Act
     const result = await createQuizGenerationTaskUseCase.execute({ text });
 
     // Assert
-    expect(generateQuizSpy).toHaveBeenCalledWith(text);
-    expect(saveQuizGenerationTaskSpy).toHaveBeenCalledWith(
+    expect(llmService.generateQuiz).toHaveBeenCalledWith(text);
+    expect(quizService.saveQuizGenerationTask).toHaveBeenCalledWith(
       expect.any(QuizGenerationTask),
     );
     expect(result).toHaveProperty("quizGenerationTask");
@@ -106,7 +107,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       },
     ];
 
-    jest.spyOn(llmService, "generateQuiz").mockResolvedValue(mockLLMQuestions);
+    llmService.generateQuiz.mockResolvedValue(mockLLMQuestions);
 
     // Act
     const result = await createQuizGenerationTaskUseCase.execute({ text });
@@ -124,7 +125,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
   it("should throw NoQuestionsGeneratedError when LLM returns empty questions array", async () => {
     // Arrange
     const text = "This text doesn't generate any questions";
-    jest.spyOn(llmService, "generateQuiz").mockResolvedValue([]);
+    llmService.generateQuiz.mockResolvedValue([]);
 
     // Act & Assert
     await expect(
@@ -137,8 +138,8 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     const text = "This text causes an LLM service error";
     const originalError = new Error("Original LLM error");
 
-    jest.spyOn(quizService, "saveQuizGenerationTask").mockResolvedValue();
-    jest.spyOn(llmService, "generateQuiz").mockRejectedValue(originalError);
+    quizService.saveQuizGenerationTask.mockResolvedValue();
+    llmService.generateQuiz.mockRejectedValue(originalError);
 
     // Act & Assert
     await expect(
@@ -147,18 +148,11 @@ describe("CreateQuizGenerationTaskUseCase", () => {
 
     // Verify that task is saved with failed status
     expect(quizService.saveQuizGenerationTask).toHaveBeenCalledWith(
-      expect.objectContaining({
-        getStatus: expect.any(Function),
-      }),
+      expect.any(QuizGenerationTask),
     );
 
-    // Get the task from the mock call and properly type it
-    const mockSaveQuizGenerationTask =
-      quizService.saveQuizGenerationTask as jest.MockedFunction<
-        typeof quizService.saveQuizGenerationTask
-      >;
-    const savedTask = mockSaveQuizGenerationTask.mock
-      .calls[0][0] as QuizGenerationTask;
+    // Get the task from the mock call
+    const savedTask = quizService.saveQuizGenerationTask.mock.calls[0][0];
     expect(savedTask.getStatus()).toBe(QuizGenerationStatus.FAILED);
   });
 
@@ -177,10 +171,8 @@ describe("CreateQuizGenerationTaskUseCase", () => {
 
     const storageError = new Error("Database connection error");
 
-    jest.spyOn(llmService, "generateQuiz").mockResolvedValue(mockLLMQuestions);
-    jest
-      .spyOn(quizService, "saveQuizGenerationTask")
-      .mockRejectedValue(storageError);
+    llmService.generateQuiz.mockResolvedValue(mockLLMQuestions);
+    quizService.saveQuizGenerationTask.mockRejectedValue(storageError);
 
     // Act & Assert
     await expect(
