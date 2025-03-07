@@ -24,6 +24,9 @@ importers:
 
   apps/backend:
     dependencies:
+      '@flash-me/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@flash-me/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
