@@ -1,6 +1,6 @@
 import { User } from "../entities/user";
 import { UserAlreadyExistsError } from "../errors/user-errors";
-import { UserService } from "../interfaces/user-service.interface";
+import { UserRepository } from "../interfaces/user-repository.interface";
 
 type CreateUserUseCaseRequest = {
   email: string;
@@ -11,13 +11,13 @@ type CreateUserUseCaseResponse = {
 };
 
 export class CreateUserUseCase {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userRepository: UserRepository) {}
 
   async execute({
     email,
   }: CreateUserUseCaseRequest): Promise<CreateUserUseCaseResponse> {
     // Check if user with email already exists
-    const userWithSameEmail = await this.userService.getUserByEmail(email);
+    const userWithSameEmail = await this.userRepository.findByEmail(email);
 
     if (userWithSameEmail) {
       throw new UserAlreadyExistsError(email);
@@ -26,8 +26,8 @@ export class CreateUserUseCase {
     // Create new user
     const user = new User({ email });
 
-    // Save user using service
-    const savedUser = await this.userService.createUser(user);
+    // Save user using repository
+    const savedUser = await this.userRepository.save(user);
 
     return {
       user: savedUser,

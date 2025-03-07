@@ -1,25 +1,25 @@
 import { faker } from "@faker-js/faker";
 import { CreateUserUseCase } from "./create-user.use-case";
-import { UserService } from "../interfaces/user-service.interface";
+import { UserRepository } from "../interfaces/user-repository.interface";
 import { User } from "../entities/user";
 import { UserAlreadyExistsError } from "../errors/user-errors";
 
 describe("CreateUserUseCase", () => {
   let createUserUseCase: CreateUserUseCase;
-  let userService: jest.Mocked<UserService>;
+  let userRepository: jest.Mocked<UserRepository>;
 
   beforeEach(() => {
-    userService = {
-      createUser: jest
+    userRepository = {
+      save: jest
         .fn()
         .mockImplementation(
           async (user: User) => await new Promise(() => user),
         ),
-      getUserByEmail: jest
+      findByEmail: jest
         .fn()
         .mockImplementation(async () => new Promise(() => null)),
     };
-    createUserUseCase = new CreateUserUseCase(userService);
+    createUserUseCase = new CreateUserUseCase(userRepository);
   });
 
   it("should create a new user successfully", async () => {
@@ -27,15 +27,15 @@ describe("CreateUserUseCase", () => {
     const email = faker.internet.email();
     const mockUser = new User({ email });
 
-    userService.getUserByEmail.mockResolvedValue(null);
-    userService.createUser.mockResolvedValue(mockUser);
+    userRepository.findByEmail.mockResolvedValue(null);
+    userRepository.save.mockResolvedValue(mockUser);
 
     // Act
     const result = await createUserUseCase.execute({ email });
 
     // Assert
-    expect(userService.getUserByEmail).toHaveBeenCalledWith(email);
-    expect(userService.createUser).toHaveBeenCalled();
+    expect(userRepository.findByEmail).toHaveBeenCalledWith(email);
+    expect(userRepository.save).toHaveBeenCalled();
     expect(result).toEqual({ user: mockUser });
   });
 
@@ -44,7 +44,7 @@ describe("CreateUserUseCase", () => {
     const email = faker.internet.email();
     const existingUser = new User({ email });
 
-    userService.getUserByEmail.mockResolvedValue(existingUser);
+    userRepository.findByEmail.mockResolvedValue(existingUser);
 
     // Act & Assert
     await expect(createUserUseCase.execute({ email })).rejects.toThrow(
@@ -53,7 +53,7 @@ describe("CreateUserUseCase", () => {
     await expect(createUserUseCase.execute({ email })).rejects.toThrow(
       `User with email '${email}' already exists`,
     );
-    expect(userService.getUserByEmail).toHaveBeenCalledWith(email);
-    expect(userService.createUser).not.toHaveBeenCalled();
+    expect(userRepository.findByEmail).toHaveBeenCalledWith(email);
+    expect(userRepository.save).not.toHaveBeenCalled();
   });
 });
