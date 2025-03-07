@@ -27,10 +27,12 @@
       "dependsOn": ["^test:cov"]
     },
     "docker:up": {
-      "dependsOn": ["^docker:up"]
+      "dependsOn": ["^docker:up"],
+      "cache": false
     },
     "docker:down": {
-      "dependsOn": ["^docker:down"]
+      "dependsOn": ["^docker:down"],
+      "cache": false
     }
   }
 }
