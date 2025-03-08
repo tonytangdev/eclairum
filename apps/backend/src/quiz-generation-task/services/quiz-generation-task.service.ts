@@ -71,8 +71,6 @@ export class QuizGenerationTaskService {
           `Failed to create quiz generation task: ${error.message}`,
           error.stack,
         );
-      } else {
-        this.logger.error(`Failed to create quiz generation task: ${error}`);
       }
 
       throw error;

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Answer } from '@flash-me/core/entities';
 import { AnswerEntity } from '../entities/answer.entity';
 import { AnswerRepositoryImpl } from './answer.repository';
@@ -136,6 +136,50 @@ describe('AnswerRepositoryImpl', () => {
       );
       expect(AnswerMapper.toPersistence).toHaveBeenCalledWith(answer);
       expect(typeOrmRepository.save).toHaveBeenCalledWith([entity]);
+    });
+
+    it('should use provided entity manager when available', async () => {
+      // Arrange
+      const answer = new Answer({
+        id: faker.string.uuid(),
+        content: faker.lorem.paragraph(),
+        questionId: faker.string.uuid(),
+        isCorrect: faker.datatype.boolean(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      });
+
+      const entity = new AnswerEntity();
+      entity.id = answer.getId();
+      entity.content = answer.getContent();
+      entity.questionId = answer.getQuestionId();
+      entity.isCorrect = answer.getIsCorrect();
+      entity.createdAt = answer.getCreatedAt();
+      entity.updatedAt = answer.getUpdatedAt();
+
+      AnswerMapper.toPersistence = jest.fn().mockReturnValueOnce(entity);
+
+      // Mock entityManager and its repository
+      const mockTransactionRepo = {
+        save: jest.fn().mockResolvedValue([entity]),
+      };
+
+      const mockEntityManager = {
+        getRepository: jest.fn().mockReturnValue(mockTransactionRepo),
+      } as unknown as EntityManager;
+
+      // Act
+      await answerRepository.saveAnswers([answer], mockEntityManager);
+
+      // Assert
+      expect(AnswerMapper.toPersistence).toHaveBeenCalledWith(answer);
+      expect(mockEntityManager.getRepository).toHaveBeenCalledWith(
+        AnswerEntity,
+      );
+      expect(mockTransactionRepo.save).toHaveBeenCalledWith([entity]);
+      // Verify default repository was not used
+      expect(typeOrmRepository.save).not.toHaveBeenCalled();
     });
   });
 

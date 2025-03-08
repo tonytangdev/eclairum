@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Question } from '@flash-me/core/entities';
 import { QuestionEntity } from '../entities/question.entity';
 import { QuestionRepositoryImpl } from './question.repository';
@@ -153,6 +153,45 @@ describe('QuestionRepositoryImpl', () => {
       // Assert
       expect(QuestionMapper.toPersistence).toHaveBeenCalledWith(question);
       expect(typeOrmRepository.save).toHaveBeenCalledWith([mockEntity]);
+    });
+
+    it('should use provided entity manager when available', async () => {
+      // Arrange
+      const question = new Question({
+        id: faker.string.uuid(),
+        content: faker.lorem.paragraph(),
+        answers: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      });
+
+      const entity = new QuestionEntity();
+      entity.id = question.getId();
+      entity.content = question.getContent();
+
+      QuestionMapper.toPersistence = jest.fn().mockReturnValueOnce(entity);
+
+      // Mock entityManager and its repository
+      const mockTransactionRepo = {
+        save: jest.fn().mockResolvedValue([entity]),
+      };
+
+      const mockEntityManager = {
+        getRepository: jest.fn().mockReturnValue(mockTransactionRepo),
+      } as unknown as EntityManager;
+
+      // Act
+      await questionRepository.saveQuestions([question], mockEntityManager);
+
+      // Assert
+      expect(QuestionMapper.toPersistence).toHaveBeenCalledWith(question);
+      expect(mockEntityManager.getRepository).toHaveBeenCalledWith(
+        QuestionEntity,
+      );
+      expect(mockTransactionRepo.save).toHaveBeenCalledWith([entity]);
+      // Verify default repository was not used
+      expect(typeOrmRepository.save).not.toHaveBeenCalled();
     });
   });
 });
