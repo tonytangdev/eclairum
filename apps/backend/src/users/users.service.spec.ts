@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
-import { RelationalUserRepository } from './infrastructure/relational/user.repository';
+import { UserRepositoryImpl } from './infrastructure/relational/user.repository';
 import { CreateUserUseCase } from '@flash-me/core/use-cases';
 import { CreateUserDto } from './dto/create-user.dto';
 import { faker } from '@faker-js/faker';
@@ -16,20 +16,20 @@ jest.mock('@flash-me/core/use-cases', () => {
 
 describe('UsersService', () => {
   let service: UsersService;
-  let mockUserRepository: jest.Mocked<RelationalUserRepository>;
+  let mockUserRepository: jest.Mocked<UserRepositoryImpl>;
 
   beforeEach(async () => {
     // Create a mock for the RelationalUserRepository
     mockUserRepository = {
       findByEmail: jest.fn(),
       save: jest.fn(),
-    } as unknown as jest.Mocked<RelationalUserRepository>;
+    } as unknown as jest.Mocked<UserRepositoryImpl>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
         {
-          provide: RelationalUserRepository,
+          provide: UserRepositoryImpl,
           useValue: mockUserRepository,
         },
       ],

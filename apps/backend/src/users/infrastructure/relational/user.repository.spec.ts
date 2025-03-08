@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { RelationalUserRepository } from './user.repository';
+import { UserRepositoryImpl } from './user.repository';
 import { UserEntity } from './entities/user.entity';
 import { UserMapper } from './mappers/user.mapper';
 import { User } from '@flash-me/core/entities';
@@ -16,7 +16,7 @@ jest.mock('./mappers/user.mapper', () => ({
 }));
 
 describe('RelationalUserRepository', () => {
-  let repository: RelationalUserRepository;
+  let repository: UserRepositoryImpl;
   let typeOrmRepository: jest.Mocked<Repository<UserEntity>>;
 
   beforeEach(async () => {
@@ -28,7 +28,7 @@ describe('RelationalUserRepository', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        RelationalUserRepository,
+        UserRepositoryImpl,
         {
           provide: getRepositoryToken(UserEntity),
           useValue: mockTypeOrmRepository,
@@ -36,7 +36,7 @@ describe('RelationalUserRepository', () => {
       ],
     }).compile();
 
-    repository = module.get<RelationalUserRepository>(RelationalUserRepository);
+    repository = module.get<UserRepositoryImpl>(UserRepositoryImpl);
     typeOrmRepository = module.get(getRepositoryToken(UserEntity));
 
     jest.clearAllMocks();

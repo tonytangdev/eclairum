@@ -7,7 +7,7 @@ import { UserMapper } from './mappers/user.mapper';
 import { User } from '@flash-me/core/entities';
 
 @Injectable()
-export class RelationalUserRepository implements UserRepository {
+export class UserRepositoryImpl implements UserRepository {
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,

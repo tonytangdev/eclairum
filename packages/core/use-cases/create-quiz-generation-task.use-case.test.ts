@@ -34,6 +34,9 @@ describe("CreateQuizGenerationTaskUseCase", () => {
 
     answerRepository = {
       saveAnswers: jest.fn().mockImplementation(async () => {}),
+      findByQuestionId: jest
+        .fn()
+        .mockImplementation(async () => Promise.resolve([])),
     };
 
     quizGenerationTaskRepository = {
