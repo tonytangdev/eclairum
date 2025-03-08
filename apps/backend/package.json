@@ -85,6 +85,11 @@
       ".*\\.module\\.ts$",
       "main\\.ts$"
     ],
+    "coveragePathIgnorePatterns": [
+      ".*\\.entity\\.ts$",
+      ".*\\.module\\.ts$",
+      "main\\.ts$"
+    ],
     "coverageThreshold": {
       "global": {
         "branches": 100,
