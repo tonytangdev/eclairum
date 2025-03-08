@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { CreateQuizGenerationTaskDto } from '../dto/create-quiz-generation-task.dto';
 import {
@@ -7,18 +7,16 @@ import {
   QuizGenerationTask,
   QuizGenerationStatus,
 } from '@flash-me/core/entities';
-import { QuestionRepository } from '@flash-me/core/interfaces/question-repository.interface';
-import { AnswerRepository } from '@flash-me/core/interfaces/answer-repository.interface';
+import { QuestionRepositoryImpl } from '../../questions/infrastructure/relational/repositories/question.repository';
+import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 
 @Injectable()
 export class QuizGenerationTaskService {
   private readonly logger = new Logger(QuizGenerationTaskService.name);
 
   constructor(
-    @Inject('QuestionRepository')
-    private readonly questionRepository: QuestionRepository,
-    @Inject('AnswerRepository')
-    private readonly answerRepository: AnswerRepository,
+    private readonly questionRepository: QuestionRepositoryImpl,
+    private readonly answerRepository: AnswerRepositoryImpl,
     private readonly dataSource: DataSource,
   ) {}
 

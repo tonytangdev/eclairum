@@ -5,12 +5,7 @@ import { AnswerRepositoryImpl } from './infrastructure/relational/repositories/a
 
 @Module({
   imports: [TypeOrmModule.forFeature([AnswerEntity])],
-  providers: [
-    {
-      provide: 'AnswerRepository',
-      useClass: AnswerRepositoryImpl,
-    },
-  ],
-  exports: ['AnswerRepository'],
+  providers: [AnswerRepositoryImpl],
+  exports: [AnswerRepositoryImpl],
 })
 export class AnswersModule {}
