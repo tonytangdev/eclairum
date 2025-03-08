@@ -66,6 +66,11 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "/dist/",
+      "/index.ts"
+    ],
     "coverageThreshold": {
       "global": {
         "branches": 100,
