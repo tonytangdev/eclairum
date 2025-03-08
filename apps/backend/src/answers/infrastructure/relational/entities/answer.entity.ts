@@ -32,12 +32,7 @@ export class AnswerEntity {
   @Column('uuid')
   questionId: string;
 
-  @ManyToOne(
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    () => QuestionEntity,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return
-    (question) => question.answers,
-  )
+  @ManyToOne(() => QuestionEntity, (question) => question.answers)
   @JoinColumn({ name: 'questionId' })
   question: QuestionEntity;
 }

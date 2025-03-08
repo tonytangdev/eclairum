@@ -6,7 +6,7 @@ import {
   UpdateDateColumn,
   OneToMany,
 } from 'typeorm';
-import { AnswerEntity } from '../../../../answers/infrastructure/relational/entities/answer.entity';
+import { AnswerEntity } from '../answers/infrastructure/relational/entities/answer.entity';
 
 @Entity('questions')
 export class QuestionEntity {

@@ -5,6 +5,7 @@ import { QuizGenerationTaskModule } from './quiz-generation-task/quiz-generation
 import { UsersModule } from './users/users.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { QuestionsModule } from './questions/questions.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     }),
     QuizGenerationTaskModule,
     UsersModule,
+    QuestionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
