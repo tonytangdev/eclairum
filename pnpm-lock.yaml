@@ -27,6 +27,9 @@ importers:
 
   apps/backend:
     dependencies:
+      '@faker-js/faker':
+        specifier: ^9.5.1
+        version: 9.5.1
       '@flash-me/core':
         specifier: workspace:*
         version: link:../../packages/core
