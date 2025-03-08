@@ -8,7 +8,7 @@ import {
 
 @Entity('users')
 export class UserEntity {
-  @PrimaryColumn('uuid')
+  @PrimaryColumn()
   id: string;
 
   @Column({ unique: true })

@@ -4,6 +4,7 @@ import { UserRepository } from "../interfaces/user-repository.interface";
 
 type CreateUserUseCaseRequest = {
   email: string;
+  id?: string;
 };
 
 type CreateUserUseCaseResponse = {
@@ -15,6 +16,7 @@ export class CreateUserUseCase {
 
   async execute({
     email,
+    id,
   }: CreateUserUseCaseRequest): Promise<CreateUserUseCaseResponse> {
     // Check if user with email already exists
     const userWithSameEmail = await this.userRepository.findByEmail(email);
@@ -24,7 +26,7 @@ export class CreateUserUseCase {
     }
 
     // Create new user
-    const user = new User({ email });
+    const user = new User({ email, id });
 
     // Save user using repository
     const savedUser = await this.userRepository.save(user);
