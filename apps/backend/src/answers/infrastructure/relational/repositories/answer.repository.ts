@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { AnswerRepository } from '@flash-me/core/interfaces/answer-repository.interface';
 import { Answer } from '@flash-me/core/entities';
 import { AnswerEntity } from '../entities/answer.entity';
@@ -13,14 +13,21 @@ export class AnswerRepositoryImpl implements AnswerRepository {
     private answerRepository: Repository<AnswerEntity>,
   ) {}
 
-  async saveAnswers(answers: Answer[]): Promise<void> {
+  async saveAnswers(
+    answers: Answer[],
+    entityManager?: EntityManager,
+  ): Promise<void> {
     const answerEntities = answers.map((answer) =>
       AnswerMapper.toPersistence(answer),
     );
 
     // Save all answers at once
     if (answerEntities.length > 0) {
-      await this.answerRepository.save(answerEntities);
+      // Use provided entity manager if available, otherwise use default repository
+      const repo = entityManager
+        ? entityManager.getRepository(AnswerEntity)
+        : this.answerRepository;
+      await repo.save(answerEntities);
     }
   }
 
