@@ -23,6 +23,11 @@
       "import": "./dist/use-cases/index.js",
       "require": "./dist/use-cases/index.js",
       "types": "./dist/use-cases/index.d.ts"
+    },
+    "./errors": {
+      "import": "./dist/errors/index.js",
+      "require": "./dist/errors/index.js",
+      "types": "./dist/errors/index.d.ts"
     }
   },
   "scripts": {
