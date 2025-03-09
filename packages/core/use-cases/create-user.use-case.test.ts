@@ -18,6 +18,7 @@ describe("CreateUserUseCase", () => {
       findByEmail: jest
         .fn()
         .mockImplementation(async () => new Promise(() => null)),
+      findById: jest.fn().mockResolvedValue(null),
     };
     createUserUseCase = new CreateUserUseCase(userRepository);
   });

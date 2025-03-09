@@ -1,8 +1,10 @@
+import { faker } from "@faker-js/faker";
 import { CreateQuizGenerationTaskUseCase } from "./create-quiz-generation-task.use-case";
 import { LLMService, QuizQuestion } from "../interfaces/llm-service.interface";
 import { QuestionRepository } from "../interfaces/question-repository.interface";
 import { AnswerRepository } from "../interfaces/answer-repository.interface";
 import { QuizGenerationTaskRepository } from "../interfaces/quiz-generation-task-repository.interface";
+import { UserRepository } from "../interfaces/user-repository.interface";
 import {
   QuizGenerationStatus,
   QuizGenerationTask,
@@ -11,7 +13,9 @@ import {
   LLMServiceError,
   NoQuestionsGeneratedError,
   QuizStorageError,
+  UserNotFoundError,
 } from "../errors/quiz-errors";
+import { User } from "../entities/user";
 
 describe("CreateQuizGenerationTaskUseCase", () => {
   let createQuizGenerationTaskUseCase: CreateQuizGenerationTaskUseCase;
@@ -19,6 +23,9 @@ describe("CreateQuizGenerationTaskUseCase", () => {
   let questionRepository: jest.Mocked<QuestionRepository>;
   let answerRepository: jest.Mocked<AnswerRepository>;
   let quizGenerationTaskRepository: jest.Mocked<QuizGenerationTaskRepository>;
+  let userRepository: jest.Mocked<UserRepository>;
+  const mockUserId = faker.string.uuid();
+  const mockUser = { getId: () => mockUserId } as User;
 
   beforeEach(() => {
     // Use proper mock typing to avoid unbound method warnings
@@ -43,25 +50,32 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       saveTask: jest.fn().mockImplementation(async () => {}),
     };
 
+    userRepository = {
+      findByEmail: jest.fn().mockResolvedValue(mockUser),
+      findById: jest.fn().mockResolvedValue(mockUser),
+      save: jest.fn(),
+    };
+
     createQuizGenerationTaskUseCase = new CreateQuizGenerationTaskUseCase(
       llmService,
       questionRepository,
       answerRepository,
       quizGenerationTaskRepository,
+      userRepository,
     );
   });
 
   it("should generate quiz questions, create a task entity, and save it successfully", async () => {
     // Arrange
-    const text = "This is a sample text for quiz generation";
+    const text = faker.lorem.paragraph(3);
     const mockLLMQuestions: QuizQuestion[] = [
       {
-        question: "What is this text about?",
+        question: faker.lorem.sentence() + "?",
         answers: [
-          { text: "Quiz generation", isCorrect: true },
-          { text: "Movie reviews", isCorrect: false },
-          { text: "Food recipes", isCorrect: false },
-          { text: "Sports news", isCorrect: false },
+          { text: faker.lorem.sentence(), isCorrect: true },
+          { text: faker.lorem.sentence(), isCorrect: false },
+          { text: faker.lorem.sentence(), isCorrect: false },
+          { text: faker.lorem.sentence(), isCorrect: false },
         ],
       },
     ];
@@ -72,9 +86,13 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     answerRepository.saveAnswers.mockResolvedValue();
 
     // Act
-    const result = await createQuizGenerationTaskUseCase.execute({ text });
+    const result = await createQuizGenerationTaskUseCase.execute({
+      userId: mockUserId,
+      text,
+    });
 
     // Assert
+    expect(userRepository.findById).toHaveBeenCalledWith(mockUserId);
     expect(llmService.generateQuiz).toHaveBeenCalledWith(text);
     expect(questionRepository.saveQuestions).toHaveBeenCalledWith(
       expect.any(Array),
@@ -88,6 +106,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     expect(result.quizGenerationTask.getStatus()).toBe(
       QuizGenerationStatus.COMPLETED,
     );
+    expect(result.quizGenerationTask.getUserId()).toBe(mockUserId);
     expect(result.quizGenerationTask.getQuestions().length).toBe(1);
     expect(result.quizGenerationTask.getQuestions()[0].getContent()).toBe(
       mockLLMQuestions[0].question,
@@ -108,26 +127,45 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     );
   });
 
+  it("should throw UserNotFoundError when user does not exist", async () => {
+    // Arrange
+    const text = faker.lorem.paragraph();
+    const nonExistentUserId = faker.string.uuid();
+
+    userRepository.findById.mockResolvedValue(null);
+
+    // Act & Assert
+    await expect(
+      createQuizGenerationTaskUseCase.execute({
+        userId: nonExistentUserId,
+        text,
+      }),
+    ).rejects.toThrow(UserNotFoundError);
+
+    expect(userRepository.findById).toHaveBeenCalledWith(nonExistentUserId);
+    expect(llmService.generateQuiz).not.toHaveBeenCalled();
+  });
+
   it("should handle multiple quiz questions from LLM service", async () => {
     // Arrange
-    const text = "This is a longer text for multiple quiz questions";
+    const text = faker.lorem.paragraphs(2);
     const mockLLMQuestions: QuizQuestion[] = [
       {
-        question: "Question 1?",
+        question: faker.lorem.sentence() + "?",
         answers: [
-          { text: "Correct answer 1", isCorrect: true },
-          { text: "Wrong answer 1", isCorrect: false },
-          { text: "Wrong answer 2", isCorrect: false },
-          { text: "Wrong answer 3", isCorrect: false },
+          { text: faker.lorem.sentence(), isCorrect: true },
+          { text: faker.lorem.sentence(), isCorrect: false },
+          { text: faker.lorem.sentence(), isCorrect: false },
+          { text: faker.lorem.sentence(), isCorrect: false },
         ],
       },
       {
-        question: "Question 2?",
+        question: faker.lorem.sentence() + "?",
         answers: [
-          { text: "Wrong answer 1", isCorrect: false },
-          { text: "Correct answer 2", isCorrect: true },
-          { text: "Wrong answer 2", isCorrect: false },
-          { text: "Wrong answer 3", isCorrect: false },
+          { text: faker.lorem.sentence(), isCorrect: false },
+          { text: faker.lorem.sentence(), isCorrect: true },
+          { text: faker.lorem.sentence(), isCorrect: false },
+          { text: faker.lorem.sentence(), isCorrect: false },
         ],
       },
     ];
@@ -135,32 +173,42 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     llmService.generateQuiz.mockResolvedValue(mockLLMQuestions);
 
     // Act
-    const result = await createQuizGenerationTaskUseCase.execute({ text });
+    const result = await createQuizGenerationTaskUseCase.execute({
+      userId: mockUserId,
+      text,
+    });
 
     // Assert
+    expect(userRepository.findById).toHaveBeenCalledWith(mockUserId);
     expect(result.quizGenerationTask.getQuestions().length).toBe(2);
+    expect(result.quizGenerationTask.getUserId()).toBe(mockUserId);
     expect(result.quizGenerationTask.getQuestions()[0].getContent()).toBe(
-      "Question 1?",
+      mockLLMQuestions[0].question,
     );
     expect(result.quizGenerationTask.getQuestions()[1].getContent()).toBe(
-      "Question 2?",
+      mockLLMQuestions[1].question,
     );
   });
 
   it("should throw NoQuestionsGeneratedError when LLM returns empty questions array", async () => {
     // Arrange
-    const text = "This text doesn't generate any questions";
+    const text = faker.lorem.paragraph();
     llmService.generateQuiz.mockResolvedValue([]);
 
     // Act & Assert
     await expect(
-      createQuizGenerationTaskUseCase.execute({ text }),
+      createQuizGenerationTaskUseCase.execute({
+        userId: mockUserId,
+        text,
+      }),
     ).rejects.toThrow(NoQuestionsGeneratedError);
+
+    expect(userRepository.findById).toHaveBeenCalledWith(mockUserId);
   });
 
   it("should throw LLMServiceError when LLM service fails", async () => {
     // Arrange
-    const text = "This text causes an LLM service error";
+    const text = faker.lorem.paragraph();
     const originalError = new Error("Original LLM error");
 
     questionRepository.saveQuestions.mockResolvedValue();
@@ -169,9 +217,13 @@ describe("CreateQuizGenerationTaskUseCase", () => {
 
     // Act & Assert
     await expect(
-      createQuizGenerationTaskUseCase.execute({ text }),
+      createQuizGenerationTaskUseCase.execute({
+        userId: mockUserId,
+        text,
+      }),
     ).rejects.toThrow(LLMServiceError);
 
+    expect(userRepository.findById).toHaveBeenCalledWith(mockUserId);
     // Verify that task is saved with failed status
     expect(quizGenerationTaskRepository.saveTask).toHaveBeenCalledWith(
       expect.any(QuizGenerationTask),
@@ -184,13 +236,13 @@ describe("CreateQuizGenerationTaskUseCase", () => {
 
   it("should throw QuizStorageError when saving quiz fails", async () => {
     // Arrange
-    const text = "This text causes storage error";
+    const text = faker.lorem.paragraph();
     const mockLLMQuestions: QuizQuestion[] = [
       {
-        question: "What is this text about?",
+        question: faker.lorem.sentence() + "?",
         answers: [
-          { text: "Quiz generation", isCorrect: true },
-          { text: "Movie reviews", isCorrect: false },
+          { text: faker.lorem.sentence(), isCorrect: true },
+          { text: faker.lorem.sentence(), isCorrect: false },
         ],
       },
     ];
@@ -202,20 +254,25 @@ describe("CreateQuizGenerationTaskUseCase", () => {
 
     // Act & Assert
     await expect(
-      createQuizGenerationTaskUseCase.execute({ text }),
+      createQuizGenerationTaskUseCase.execute({
+        userId: mockUserId,
+        text,
+      }),
     ).rejects.toThrow(QuizStorageError);
+
+    expect(userRepository.findById).toHaveBeenCalledWith(mockUserId);
   });
 
   // Add a test for when question repository fails
   it("should throw QuizStorageError when saving questions fails", async () => {
     // Arrange
-    const text = "This text causes question storage error";
+    const text = faker.lorem.paragraph();
     const mockLLMQuestions: QuizQuestion[] = [
       {
-        question: "What is this text about?",
+        question: faker.lorem.sentence() + "?",
         answers: [
-          { text: "Quiz generation", isCorrect: true },
-          { text: "Movie reviews", isCorrect: false },
+          { text: faker.lorem.sentence(), isCorrect: true },
+          { text: faker.lorem.sentence(), isCorrect: false },
         ],
       },
     ];
@@ -228,7 +285,12 @@ describe("CreateQuizGenerationTaskUseCase", () => {
 
     // Act & Assert
     await expect(
-      createQuizGenerationTaskUseCase.execute({ text }),
+      createQuizGenerationTaskUseCase.execute({
+        userId: mockUserId,
+        text,
+      }),
     ).rejects.toThrow(QuizStorageError);
+
+    expect(userRepository.findById).toHaveBeenCalledWith(mockUserId);
   });
 });

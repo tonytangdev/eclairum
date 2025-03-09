@@ -8,13 +8,17 @@ import { LLMService, QuizQuestion } from "../interfaces/llm-service.interface";
 import { QuestionRepository } from "../interfaces/question-repository.interface";
 import { AnswerRepository } from "../interfaces/answer-repository.interface";
 import { QuizGenerationTaskRepository } from "../interfaces/quiz-generation-task-repository.interface";
+import { UserRepository } from "../interfaces/user-repository.interface";
 import {
   LLMServiceError,
   NoQuestionsGeneratedError,
   QuizStorageError,
+  UserNotFoundError,
 } from "../errors/quiz-errors";
+import { User } from "../entities";
 
 type CreateQuizGenerationTaskUseCaseRequest = {
+  userId: User["id"];
   text: string;
 };
 
@@ -28,12 +32,20 @@ export class CreateQuizGenerationTaskUseCase {
     private readonly questionRepository: QuestionRepository,
     private readonly answerRepository: AnswerRepository,
     private readonly quizGenerationTaskRepository: QuizGenerationTaskRepository,
+    private readonly userRepository: UserRepository,
   ) {}
 
   async execute({
+    userId,
     text,
   }: CreateQuizGenerationTaskUseCaseRequest): Promise<CreateQuizGenerationTaskUseCaseResponse> {
-    const quizGenerationTask = this.createTask(text);
+    // Check if user exists
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new UserNotFoundError(`User with ID ${userId} not found`);
+    }
+
+    const quizGenerationTask = this.createTask(text, userId);
 
     try {
       const questions = await this.generateQuestions(text);
@@ -47,11 +59,12 @@ export class CreateQuizGenerationTaskUseCase {
     return { quizGenerationTask };
   }
 
-  private createTask(text: string): QuizGenerationTask {
+  private createTask(text: string, userId: User["id"]): QuizGenerationTask {
     return new QuizGenerationTask({
       textContent: text,
       questions: [],
       status: QuizGenerationStatus.IN_PROGRESS,
+      userId,
     });
   }
 

@@ -9,6 +9,13 @@ export interface UserRepository {
   findByEmail(email: string): Promise<User | null>;
 
   /**
+   * Find a user by their ID
+   * @param id The user ID to search for
+   * @returns The user if found, or null/undefined if not found
+   */
+  findById(id: User["id"]): Promise<User | null>;
+
+  /**
    * Save a user in the repository
    * @param user The user to save
    * @returns The saved user

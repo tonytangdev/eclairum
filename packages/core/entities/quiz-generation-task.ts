@@ -1,5 +1,6 @@
 import { Question } from "./question";
 import { RequiredTextContentError } from "../errors/validation-errors";
+import { User } from "./user";
 
 export enum QuizGenerationStatus {
   "PENDING" = "PENDING",
@@ -17,6 +18,7 @@ type QuizGenerationTaskConstructor = {
   deletedAt?: Date | null;
   status?: QuizGenerationStatus;
   generatedAt?: Date | null;
+  userId: User["id"];
 };
 
 export class QuizGenerationTask {
@@ -28,6 +30,7 @@ export class QuizGenerationTask {
   private deletedAt: Date | null;
   private status: QuizGenerationStatus;
   private generatedAt: Date | null;
+  private userId: User["id"];
 
   constructor({
     id = crypto.randomUUID(),
@@ -38,9 +41,14 @@ export class QuizGenerationTask {
     deletedAt = null,
     status = QuizGenerationStatus.PENDING,
     generatedAt = null,
+    userId,
   }: QuizGenerationTaskConstructor) {
     if (!textContent) {
       throw new RequiredTextContentError();
+    }
+
+    if (!userId) {
+      throw new Error("User ID is required");
     }
 
     this.id = id;
@@ -51,6 +59,7 @@ export class QuizGenerationTask {
     this.deletedAt = deletedAt;
     this.status = status;
     this.generatedAt = generatedAt;
+    this.userId = userId;
   }
 
   public getId(): string {
@@ -83,6 +92,10 @@ export class QuizGenerationTask {
 
   public getGeneratedAt(): Date | null {
     return this.generatedAt;
+  }
+
+  public getUserId(): User["id"] {
+    return this.userId;
   }
 
   public addQuestion(question: Question): void {
