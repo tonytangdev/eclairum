@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { CreateQuizGenerationTaskDto } from '../dto/create-quiz-generation-task.dto';
 import {
   Question,
@@ -10,6 +10,7 @@ import {
 import { QuestionRepositoryImpl } from '../../questions/infrastructure/relational/repositories/question.repository';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { OpenAILLMService } from './openai-llm.service';
+import { QuizGenerationTaskRepositoryImpl } from '../infrastructure/relational/repositories/quiz-generation-task.repository';
 
 @Injectable()
 export class QuizGenerationTasksService {
@@ -18,6 +19,7 @@ export class QuizGenerationTasksService {
   constructor(
     private readonly questionRepository: QuestionRepositoryImpl,
     private readonly answerRepository: AnswerRepositoryImpl,
+    private readonly quizGenerationTaskRepository: QuizGenerationTaskRepositoryImpl,
     private readonly dataSource: DataSource,
     private readonly openAILLMService: OpenAILLMService,
   ) {}
@@ -44,29 +46,62 @@ export class QuizGenerationTasksService {
       );
       this.logger.debug(`Text length: ${text.length} characters`);
 
-      // Generate questions from the text
-      const questionAnswerPairs = await this.generateQuestionsFromText(text);
+      // Start a transaction
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
 
-      // Save everything in a transaction and get the created questions
-      const questions =
-        await this.saveQuestionsAndAnswersInTransaction(questionAnswerPairs);
+      try {
+        // Save the task initially
+        await this.quizGenerationTaskRepository.save(
+          quizGenerationTask,
+          queryRunner.manager,
+        );
 
-      // Add questions to the task and update status
-      questions.forEach((question) => quizGenerationTask.addQuestion(question));
-      quizGenerationTask.updateStatus(QuizGenerationStatus.COMPLETED);
+        // Generate questions from the text
+        const questionAnswerPairs = await this.generateQuestionsFromText(text);
 
-      this.logger.log(
-        `Successfully generated ${questions.length} questions for task ${taskId}`,
-      );
+        // Save questions and answers
+        const questions = await this.saveQuestionsAndAnswersInTransaction(
+          questionAnswerPairs,
+          queryRunner.manager,
+        );
 
-      return {
-        taskId,
-        userId,
-        status: quizGenerationTask.getStatus(),
-        questionsCount: questions.length,
-        message: `Quiz generation task created with ${questions.length} questions`,
-        generatedAt: quizGenerationTask.getGeneratedAt(),
-      };
+        // Add questions to the task and update status
+        questions.forEach((question) =>
+          quizGenerationTask.addQuestion(question),
+        );
+        quizGenerationTask.updateStatus(QuizGenerationStatus.COMPLETED);
+
+        // Update the task with the generated questions and completed status
+        await this.quizGenerationTaskRepository.save(
+          quizGenerationTask,
+          queryRunner.manager,
+        );
+
+        // Commit the transaction
+        await queryRunner.commitTransaction();
+
+        this.logger.log(
+          `Successfully generated ${questions.length} questions for task ${taskId}`,
+        );
+
+        return {
+          taskId,
+          userId,
+          status: quizGenerationTask.getStatus(),
+          questionsCount: questions.length,
+          message: `Quiz generation task created with ${questions.length} questions`,
+          generatedAt: quizGenerationTask.getGeneratedAt(),
+        };
+      } catch (error) {
+        // Roll back the transaction if anything fails
+        await queryRunner.rollbackTransaction();
+        throw error;
+      } finally {
+        // Always release the query runner
+        await queryRunner.release();
+      }
     } catch (error) {
       if (error instanceof Error) {
         this.logger.error(
@@ -74,9 +109,17 @@ export class QuizGenerationTasksService {
           error.stack,
         );
       }
-
       throw error;
     }
+  }
+
+  /**
+   * Retrieves a quiz generation task by ID
+   * @param taskId - The ID of the task to retrieve
+   * @returns The quiz generation task if found, or null
+   */
+  async getTaskById(taskId: string): Promise<QuizGenerationTask | null> {
+    return this.quizGenerationTaskRepository.findById(taskId);
   }
 
   /**
@@ -119,6 +162,7 @@ export class QuizGenerationTasksService {
   /**
    * Saves generated questions and their corresponding answers to the database in a single transaction
    * @param questionAnswerPairs - Array of question-answer pairs
+   * @param entityManager - Optional entity manager for transactions
    * @returns Array of created Question domain entities
    */
   private async saveQuestionsAndAnswersInTransaction(
@@ -126,56 +170,39 @@ export class QuizGenerationTasksService {
       question: string;
       answers: Array<{ content: string; isCorrect: boolean }>;
     }>,
+    entityManager?: EntityManager,
   ): Promise<Question[]> {
-    const queryRunner = this.dataSource.createQueryRunner();
+    const questions: Question[] = [];
+    const allAnswers: Answer[] = [];
 
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+    // Create domain entities for questions and answers
+    for (const pair of questionAnswerPairs) {
+      // Create the question with auto-generated ID
+      const question = new Question({
+        content: pair.question,
+        answers: [], // Will be populated after saving
+      });
 
-    try {
-      const questions: Question[] = [];
-      const allAnswers: Answer[] = [];
+      const questionId = question.getId();
+      questions.push(question);
 
-      // Create domain entities for questions and answers
-      for (const pair of questionAnswerPairs) {
-        // Create the question with auto-generated ID
-        const question = new Question({
-          content: pair.question,
-          answers: [], // Will be populated after saving
-        });
-
-        const questionId = question.getId();
-        questions.push(question);
-
-        // Create the answers for this question
-        const answers = pair.answers.map(
-          (answer) =>
-            new Answer({
-              content: answer.content,
-              isCorrect: answer.isCorrect,
-              questionId: questionId,
-            }),
-        );
-
-        allAnswers.push(...answers);
-      }
-
-      // Save questions and answers using the transaction's entity manager
-      await this.questionRepository.saveQuestions(
-        questions,
-        queryRunner.manager,
+      // Create the answers for this question
+      const answers = pair.answers.map(
+        (answer) =>
+          new Answer({
+            content: answer.content,
+            isCorrect: answer.isCorrect,
+            questionId: questionId,
+          }),
       );
-      await this.answerRepository.saveAnswers(allAnswers, queryRunner.manager);
 
-      // Commit the transaction
-      await queryRunner.commitTransaction();
-      return questions;
-    } catch (error) {
-      // This will properly roll back ALL changes made with queryRunner.manager
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
+      allAnswers.push(...answers);
     }
+
+    // Save questions and answers
+    await this.questionRepository.saveQuestions(questions, entityManager);
+    await this.answerRepository.saveAnswers(allAnswers, entityManager);
+
+    return questions;
   }
 }

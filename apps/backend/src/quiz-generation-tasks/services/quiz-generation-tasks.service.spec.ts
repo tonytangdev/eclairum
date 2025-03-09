@@ -2,24 +2,28 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { QuizGenerationTasksService } from './quiz-generation-tasks.service';
 import { QuestionRepositoryImpl } from '../../questions/infrastructure/relational/repositories/question.repository';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
-import { DataSource, QueryRunner } from 'typeorm';
+import { DataSource, EntityManager, QueryRunner } from 'typeorm';
 import {
   Answer,
   Question,
   QuizGenerationStatus,
+  QuizGenerationTask,
 } from '@flash-me/core/entities';
 import { CreateQuizGenerationTaskDto } from '../dto/create-quiz-generation-task.dto';
 import { faker } from '@faker-js/faker';
 import { OpenAILLMService } from './openai-llm.service';
 import { Logger } from '@nestjs/common';
+import { QuizGenerationTaskRepositoryImpl } from '../infrastructure/relational/repositories/quiz-generation-task.repository';
 
 describe('QuizGenerationTasksService', () => {
   let service: QuizGenerationTasksService;
   let questionRepository: QuestionRepositoryImpl;
   let answerRepository: AnswerRepositoryImpl;
+  let quizGenerationTaskRepository: QuizGenerationTaskRepositoryImpl;
   let openAILLMService: OpenAILLMService;
   let dataSource: DataSource;
   let queryRunner: QueryRunner;
+  let entityManager: EntityManager;
 
   // Setup mock questions that will be returned from OpenAI
   const generateMockQuizQuestions = (count = 10) =>
@@ -36,6 +40,13 @@ describe('QuizGenerationTasksService', () => {
       }));
 
   beforeEach(async () => {
+    // Create mock for entity manager
+    entityManager = {
+      getRepository: jest.fn().mockReturnValue({
+        save: jest.fn().mockResolvedValue({}),
+      }),
+    } as unknown as EntityManager;
+
     // Create mock for query runner with transaction methods
     queryRunner = {
       connect: jest.fn().mockResolvedValue(undefined),
@@ -43,7 +54,7 @@ describe('QuizGenerationTasksService', () => {
       commitTransaction: jest.fn().mockResolvedValue(undefined),
       rollbackTransaction: jest.fn().mockResolvedValue(undefined),
       release: jest.fn().mockResolvedValue(undefined),
-      manager: jest.fn() as unknown as QueryRunner['manager'],
+      manager: entityManager,
     } as unknown as QueryRunner;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -69,6 +80,28 @@ describe('QuizGenerationTasksService', () => {
                 // Return the answers as if they were successfully saved
                 return Promise.resolve(answers);
               }),
+          },
+        },
+        {
+          provide: QuizGenerationTaskRepositoryImpl,
+          useValue: {
+            save: jest
+              .fn()
+              .mockImplementation(async (task: QuizGenerationTask) => {
+                // Return the task as if it was successfully saved
+                return Promise.resolve(task);
+              }),
+            findById: jest.fn().mockImplementation((id: string) => {
+              // Return a mock task for the given ID
+              const task = new QuizGenerationTask({
+                id,
+                textContent: faker.lorem.paragraphs(1),
+                status: QuizGenerationStatus.COMPLETED,
+                questions: [],
+              });
+              return Promise.resolve(task);
+            }),
+            saveTask: jest.fn().mockResolvedValue(undefined),
           },
         },
         {
@@ -100,6 +133,9 @@ describe('QuizGenerationTasksService', () => {
       QuestionRepositoryImpl,
     );
     answerRepository = module.get<AnswerRepositoryImpl>(AnswerRepositoryImpl);
+    quizGenerationTaskRepository = module.get<QuizGenerationTaskRepositoryImpl>(
+      QuizGenerationTaskRepositoryImpl,
+    );
     openAILLMService = module.get<OpenAILLMService>(OpenAILLMService);
     dataSource = module.get<DataSource>(DataSource);
   });
@@ -139,8 +175,23 @@ describe('QuizGenerationTasksService', () => {
       expect(dataSource.createQueryRunner).toHaveBeenCalled();
       expect(queryRunner.connect).toHaveBeenCalled();
       expect(queryRunner.startTransaction).toHaveBeenCalled();
-      expect(questionRepository.saveQuestions).toHaveBeenCalled();
-      expect(answerRepository.saveAnswers).toHaveBeenCalled();
+
+      // Verify repositories were called with transaction manager
+      expect(quizGenerationTaskRepository.save).toHaveBeenCalledTimes(2);
+      expect(quizGenerationTaskRepository.save).toHaveBeenCalledWith(
+        expect.any(QuizGenerationTask),
+        queryRunner.manager,
+      );
+      expect(questionRepository.saveQuestions).toHaveBeenCalledWith(
+        expect.any(Array),
+        queryRunner.manager,
+      );
+      expect(answerRepository.saveAnswers).toHaveBeenCalledWith(
+        expect.any(Array),
+        queryRunner.manager,
+      );
+
+      // Verify transaction was committed and released
       expect(queryRunner.commitTransaction).toHaveBeenCalled();
       expect(queryRunner.release).toHaveBeenCalled();
     });
@@ -161,34 +212,78 @@ describe('QuizGenerationTasksService', () => {
       // Verify error was logged
       expect(loggerErrorSpy).toHaveBeenCalled();
 
-      // Verify OpenAI was called but transaction was never started
+      // Verify OpenAI was called
       expect(openAILLMService.generateQuiz).toHaveBeenCalledWith(mockDto.text);
-      expect(queryRunner.startTransaction).not.toHaveBeenCalled();
+
+      // Verify transaction was rolled back and released
+      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
+      expect(queryRunner.release).toHaveBeenCalled();
     });
 
-    it('should handle database errors and log them properly', async () => {
-      // Setup the repository to throw an error
-      const errorMessage = `Database error: ${faker.lorem.sentence()}`;
-      (questionRepository.saveQuestions as jest.Mock).mockRejectedValueOnce(
-        new Error(errorMessage),
-      );
-
-      // Mock the logger to verify error logging
-      const loggerErrorSpy = jest.spyOn(service['logger'], 'error');
+    it('should handle task repository save errors and rollback transaction', async () => {
+      // Setup the repository to throw an error on second save
+      const errorMessage = `Task repository error: ${faker.lorem.sentence()}`;
+      (quizGenerationTaskRepository.save as jest.Mock)
+        .mockResolvedValueOnce({})
+        .mockRejectedValueOnce(new Error(errorMessage));
 
       // Execute and expect error
       await expect(service.createTask(mockDto)).rejects.toThrow(errorMessage);
 
-      // Verify error was logged
-      expect(loggerErrorSpy).toHaveBeenCalled();
-
-      // Verify OpenAI was successfully called
-      expect(openAILLMService.generateQuiz).toHaveBeenCalledWith(mockDto.text);
-
-      // Verify transaction was rolled back
+      // Verify transaction was rolled back and released
       expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
       expect(queryRunner.commitTransaction).not.toHaveBeenCalled();
       expect(queryRunner.release).toHaveBeenCalled();
+    });
+
+    it('should handle question repository errors and rollback transaction', async () => {
+      // Setup the repository to throw an error
+      const errorMessage = `Question repository error: ${faker.lorem.sentence()}`;
+      (questionRepository.saveQuestions as jest.Mock).mockRejectedValueOnce(
+        new Error(errorMessage),
+      );
+
+      // Execute and expect error
+      await expect(service.createTask(mockDto)).rejects.toThrow(errorMessage);
+
+      // Verify transaction was rolled back and released
+      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
+      expect(queryRunner.commitTransaction).not.toHaveBeenCalled();
+      expect(queryRunner.release).toHaveBeenCalled();
+    });
+  });
+
+  describe('getTaskById', () => {
+    it('should return a task when it exists', async () => {
+      // Arrange
+      const taskId = faker.string.uuid();
+
+      // Act
+      const result = await service.getTaskById(taskId);
+
+      // Assert
+      expect(result).toBeDefined();
+      expect(result?.getId()).toBe(taskId);
+      expect(quizGenerationTaskRepository.findById).toHaveBeenCalledWith(
+        taskId,
+      );
+    });
+
+    it('should return null when task does not exist', async () => {
+      // Arrange
+      const taskId = faker.string.uuid();
+      (
+        quizGenerationTaskRepository.findById as jest.Mock
+      ).mockResolvedValueOnce(null);
+
+      // Act
+      const result = await service.getTaskById(taskId);
+
+      // Assert
+      expect(result).toBeNull();
+      expect(quizGenerationTaskRepository.findById).toHaveBeenCalledWith(
+        taskId,
+      );
     });
   });
 

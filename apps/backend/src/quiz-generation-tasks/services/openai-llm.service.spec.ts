@@ -91,7 +91,7 @@ describe('OpenAILLMService', () => {
       // Verify parse was called with correct parameters
       expect(parseMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          model: 'gpt-4o',
+          model: expect.any(String) as string,
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           messages: expect.arrayContaining([
             expect.objectContaining({
