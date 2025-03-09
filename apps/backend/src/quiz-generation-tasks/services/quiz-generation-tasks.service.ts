@@ -11,6 +11,27 @@ import { QuestionRepositoryImpl } from '../../questions/infrastructure/relationa
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { OpenAILLMService } from './openai-llm.service';
 import { QuizGenerationTaskRepositoryImpl } from '../infrastructure/relational/repositories/quiz-generation-task.repository';
+import { QuizQuestion } from '@flash-me/core/interfaces';
+
+// New type definitions to replace any usages
+interface QuestionAnswerPair {
+  question: string;
+  answers: AnswerData[];
+}
+
+interface AnswerData {
+  content: string;
+  isCorrect: boolean;
+}
+
+export interface TaskResponse {
+  taskId: string;
+  userId: string;
+  status: QuizGenerationStatus;
+  questionsCount: number;
+  message: string;
+  generatedAt: Date;
+}
 
 @Injectable()
 export class QuizGenerationTasksService {
@@ -24,185 +45,240 @@ export class QuizGenerationTasksService {
     private readonly openAILLMService: OpenAILLMService,
   ) {}
 
-  /**
-   * Creates a new quiz generation task with the given text and generates questions
-   * @param createQuizGenerationTaskDto - The DTO containing text to generate questions from
-   * @returns A confirmation object with task details
-   */
-  async createTask(createQuizGenerationTaskDto: CreateQuizGenerationTaskDto) {
+  async createTask(
+    createQuizGenerationTaskDto: CreateQuizGenerationTaskDto,
+  ): Promise<TaskResponse> {
     const { text, userId } = createQuizGenerationTaskDto;
 
     try {
-      // Create a new quiz generation task
-      const quizGenerationTask = new QuizGenerationTask({
-        textContent: text,
-        questions: [],
-        status: QuizGenerationStatus.IN_PROGRESS,
-      });
-
+      const quizGenerationTask = this.initializeTask(text);
       const taskId = quizGenerationTask.getId();
-      this.logger.log(
-        `Creating quiz generation task ${taskId} for user ${userId}`,
+
+      this.logTaskCreation(taskId, userId, text);
+      return await this.executeTaskCreationTransaction(
+        quizGenerationTask,
+        text,
+        userId,
       );
-      this.logger.debug(`Text length: ${text.length} characters`);
-
-      // Start a transaction
-      const queryRunner = this.dataSource.createQueryRunner();
-      await queryRunner.connect();
-      await queryRunner.startTransaction();
-
-      try {
-        // Save the task initially
-        await this.quizGenerationTaskRepository.save(
-          quizGenerationTask,
-          queryRunner.manager,
-        );
-
-        // Generate questions from the text
-        const questionAnswerPairs = await this.generateQuestionsFromText(text);
-
-        // Save questions and answers
-        const questions = await this.saveQuestionsAndAnswersInTransaction(
-          questionAnswerPairs,
-          queryRunner.manager,
-        );
-
-        // Add questions to the task and update status
-        questions.forEach((question) =>
-          quizGenerationTask.addQuestion(question),
-        );
-        quizGenerationTask.updateStatus(QuizGenerationStatus.COMPLETED);
-
-        // Update the task with the generated questions and completed status
-        await this.quizGenerationTaskRepository.save(
-          quizGenerationTask,
-          queryRunner.manager,
-        );
-
-        // Commit the transaction
-        await queryRunner.commitTransaction();
-
-        this.logger.log(
-          `Successfully generated ${questions.length} questions for task ${taskId}`,
-        );
-
-        return {
-          taskId,
-          userId,
-          status: quizGenerationTask.getStatus(),
-          questionsCount: questions.length,
-          message: `Quiz generation task created with ${questions.length} questions`,
-          generatedAt: quizGenerationTask.getGeneratedAt(),
-        };
-      } catch (error) {
-        // Roll back the transaction if anything fails
-        await queryRunner.rollbackTransaction();
-        throw error;
-      } finally {
-        // Always release the query runner
-        await queryRunner.release();
-      }
     } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(
-          `Failed to create quiz generation task: ${error.message}`,
-          error.stack,
-        );
-      }
+      this.logError('Failed to create quiz generation task', error);
       throw error;
     }
   }
 
-  /**
-   * Retrieves a quiz generation task by ID
-   * @param taskId - The ID of the task to retrieve
-   * @returns The quiz generation task if found, or null
-   */
   async getTaskById(taskId: string): Promise<QuizGenerationTask | null> {
     return this.quizGenerationTaskRepository.findById(taskId);
   }
 
-  /**
-   * Generates questions from the provided text using OpenAI
-   * @param text - The text to generate questions from
-   * @returns An array of question-answer pairs
-   */
-  private async generateQuestionsFromText(text: string): Promise<
-    Array<{
-      question: string;
-      answers: Array<{ content: string; isCorrect: boolean }>;
-    }>
-  > {
+  private initializeTask(text: string): QuizGenerationTask {
+    return new QuizGenerationTask({
+      textContent: text,
+      questions: [],
+      status: QuizGenerationStatus.IN_PROGRESS,
+    });
+  }
+
+  private logTaskCreation(taskId: string, userId: string, text: string): void {
+    this.logger.log(
+      `Creating quiz generation task ${taskId} for user ${userId}`,
+    );
+    this.logger.debug(`Text length: ${text.length} characters`);
+  }
+
+  private async executeTaskCreationTransaction(
+    quizGenerationTask: QuizGenerationTask,
+    text: string,
+    userId: string,
+  ): Promise<TaskResponse> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      return await this.processTaskWithinTransaction(
+        quizGenerationTask,
+        text,
+        userId,
+        queryRunner.manager,
+      );
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  private async processTaskWithinTransaction(
+    quizGenerationTask: QuizGenerationTask,
+    text: string,
+    userId: string,
+    entityManager: EntityManager,
+  ): Promise<TaskResponse> {
+    await this.saveInitialTask(quizGenerationTask, entityManager);
+
+    const questions = await this.generateAndSaveQuestions(text, entityManager);
+
+    await this.finalizeTask(quizGenerationTask, questions, entityManager);
+
+    return this.createTaskResponse(quizGenerationTask, userId);
+  }
+
+  private async saveInitialTask(
+    task: QuizGenerationTask,
+    entityManager: EntityManager,
+  ): Promise<void> {
+    await this.quizGenerationTaskRepository.save(task, entityManager);
+  }
+
+  private async generateAndSaveQuestions(
+    text: string,
+    entityManager: EntityManager,
+  ): Promise<Question[]> {
+    const questionAnswerPairs = await this.generateQuestionsFromText(text);
+    return this.saveQuestionsAndAnswersInTransaction(
+      questionAnswerPairs,
+      entityManager,
+    );
+  }
+
+  private async finalizeTask(
+    task: QuizGenerationTask,
+    questions: Question[],
+    entityManager: EntityManager,
+  ): Promise<void> {
+    this.addQuestionsToTask(task, questions);
+    task.updateStatus(QuizGenerationStatus.COMPLETED);
+    await this.quizGenerationTaskRepository.save(task, entityManager);
+  }
+
+  private addQuestionsToTask(
+    task: QuizGenerationTask,
+    questions: Question[],
+  ): void {
+    questions.forEach((question) => task.addQuestion(question));
+  }
+
+  private createTaskResponse(
+    task: QuizGenerationTask,
+    userId: string,
+  ): TaskResponse {
+    const taskId = task.getId();
+    const questionsCount = task.getQuestions().length;
+
+    this.logger.log(
+      `Successfully generated ${questionsCount} questions for task ${taskId}`,
+    );
+
+    return {
+      taskId,
+      userId,
+      status: task.getStatus(),
+      questionsCount,
+      message: `Quiz generation task created with ${questionsCount} questions`,
+      generatedAt: task.getGeneratedAt()!,
+    };
+  }
+
+  private async generateQuestionsFromText(
+    text: string,
+  ): Promise<QuestionAnswerPair[]> {
     this.logger.debug(`Generating questions from text using OpenAI`);
 
     try {
-      // Use the OpenAI LLM service to generate questions
-      const generatedQuizQuestions =
-        await this.openAILLMService.generateQuiz(text);
-
-      // Map the OpenAI response format to our internal format
-      return generatedQuizQuestions.map((quizQuestion) => ({
-        question: quizQuestion.question,
-        answers: quizQuestion.answers.map((answer) => ({
-          content: answer.text,
-          isCorrect: answer.isCorrect,
-        })),
-      }));
+      return await this.fetchAndFormatQuestions(text);
     } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(
-          `Failed to generate questions with OpenAI: ${error.message}`,
-          error.stack,
-        );
-      }
+      this.logError('Failed to generate questions with OpenAI', error);
       throw error;
     }
   }
 
-  /**
-   * Saves generated questions and their corresponding answers to the database in a single transaction
-   * @param questionAnswerPairs - Array of question-answer pairs
-   * @param entityManager - Optional entity manager for transactions
-   * @returns Array of created Question domain entities
-   */
+  private async fetchAndFormatQuestions(
+    text: string,
+  ): Promise<QuestionAnswerPair[]> {
+    const generatedQuizQuestions =
+      await this.openAILLMService.generateQuiz(text);
+    return this.formatQuizQuestions(generatedQuizQuestions);
+  }
+
+  private formatQuizQuestions(
+    quizQuestions: QuizQuestion[],
+  ): QuestionAnswerPair[] {
+    return quizQuestions.map((quizQuestion: QuizQuestion) => ({
+      question: quizQuestion.question,
+      answers: this.formatAnswers(quizQuestion.answers),
+    }));
+  }
+
+  private formatAnswers(answers: QuizQuestion['answers']): AnswerData[] {
+    return answers.map((answer) => ({
+      content: answer.text,
+      isCorrect: answer.isCorrect,
+    }));
+  }
+
   private async saveQuestionsAndAnswersInTransaction(
-    questionAnswerPairs: Array<{
-      question: string;
-      answers: Array<{ content: string; isCorrect: boolean }>;
-    }>,
+    questionAnswerPairs: QuestionAnswerPair[],
     entityManager?: EntityManager,
   ): Promise<Question[]> {
-    const questions: Question[] = [];
-    const allAnswers: Answer[] = [];
+    const questions = this.createQuestionEntities(questionAnswerPairs);
+    const allAnswers = this.extractAllAnswers(questions);
 
-    // Create domain entities for questions and answers
-    for (const pair of questionAnswerPairs) {
-      // Create the question with auto-generated ID
-      const question = new Question({
-        content: pair.question,
-        answers: [], // Will be populated after saving
-      });
-
-      const questionId = question.getId();
-      questions.push(question);
-
-      // Create the answers for this question
-      const answers = pair.answers.map(
-        (answer) =>
-          new Answer({
-            content: answer.content,
-            isCorrect: answer.isCorrect,
-            questionId: questionId,
-          }),
-      );
-
-      allAnswers.push(...answers);
-    }
-
-    // Save questions and answers
-    await this.questionRepository.saveQuestions(questions, entityManager);
-    await this.answerRepository.saveAnswers(allAnswers, entityManager);
+    await this.persistEntities(questions, allAnswers, entityManager);
 
     return questions;
+  }
+
+  private createQuestionEntities(
+    questionAnswerPairs: QuestionAnswerPair[],
+  ): Question[] {
+    return questionAnswerPairs.map((pair) => {
+      const question = new Question({
+        content: pair.question,
+        answers: [],
+      });
+
+      const answers = this.createAnswersForQuestion(
+        question.getId(),
+        pair.answers,
+      );
+      answers.forEach((answer) => question.addAnswer(answer));
+      return question;
+    });
+  }
+
+  private createAnswersForQuestion(
+    questionId: string,
+    answerData: AnswerData[],
+  ): Answer[] {
+    return answerData.map(
+      (answer) =>
+        new Answer({
+          content: answer.content,
+          isCorrect: answer.isCorrect,
+          questionId,
+        }),
+    );
+  }
+
+  private extractAllAnswers(questions: Question[]): Answer[] {
+    return questions.flatMap((question) => question.getAnswers());
+  }
+
+  private async persistEntities(
+    questions: Question[],
+    answers: Answer[],
+    entityManager?: EntityManager,
+  ): Promise<void> {
+    await this.questionRepository.saveQuestions(questions, entityManager);
+    await this.answerRepository.saveAnswers(answers, entityManager);
+  }
+
+  private logError(message: string, error: unknown): void {
+    if (error instanceof Error) {
+      this.logger.error(`${message}: ${error.message}`, error.stack);
+    } else {
+      this.logger.error(`${message}: Unknown error`);
+    }
   }
 }
