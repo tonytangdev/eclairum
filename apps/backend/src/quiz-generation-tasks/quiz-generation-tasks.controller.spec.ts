@@ -37,7 +37,9 @@ describe('QuizGenerationTasksController', () => {
     controller = module.get<QuizGenerationTasksController>(
       QuizGenerationTasksController,
     );
-    service = module.get<QuizGenerationTasksService>(QuizGenerationTasksService);
+    service = module.get<QuizGenerationTasksService>(
+      QuizGenerationTasksService,
+    );
   });
 
   it('should be defined', () => {

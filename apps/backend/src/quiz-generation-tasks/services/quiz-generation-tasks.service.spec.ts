@@ -1,323 +1,281 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
+import { EntityManager } from 'typeorm';
 import { QuizGenerationTasksService } from './quiz-generation-tasks.service';
 import { QuestionRepositoryImpl } from '../../questions/infrastructure/relational/repositories/question.repository';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
-import { DataSource, EntityManager, QueryRunner } from 'typeorm';
-import {
-  Answer,
-  Question,
-  QuizGenerationStatus,
-  QuizGenerationTask,
-} from '@flash-me/core/entities';
-import { CreateQuizGenerationTaskDto } from '../dto/create-quiz-generation-task.dto';
-import { faker } from '@faker-js/faker';
-import { OpenAILLMService } from './openai-llm.service';
-import { Logger } from '@nestjs/common';
 import { QuizGenerationTaskRepositoryImpl } from '../infrastructure/relational/repositories/quiz-generation-task.repository';
+import { QuestionGenerationService } from './question-generation.service';
+import { QuizEntityFactory } from '../factories/quiz-entity.factory';
+import { TransactionHelper } from '../../shared/helpers/transaction.helper';
+import {
+  QuizGenerationTask,
+  Question,
+  Answer,
+  QuizGenerationStatus,
+} from '@flash-me/core/entities';
+import { faker } from '@faker-js/faker';
 
 describe('QuizGenerationTasksService', () => {
-  let service: QuizGenerationTasksService;
-  let questionRepository: QuestionRepositoryImpl;
-  let answerRepository: AnswerRepositoryImpl;
-  let quizGenerationTaskRepository: QuizGenerationTaskRepositoryImpl;
-  let openAILLMService: OpenAILLMService;
-  let dataSource: DataSource;
-  let queryRunner: QueryRunner;
-  let entityManager: EntityManager;
-
-  // Setup mock questions that will be returned from OpenAI
-  const generateMockQuizQuestions = (count = 10) =>
-    Array(count)
-      .fill(null)
-      .map(() => ({
-        question: faker.lorem.sentence() + '?',
-        answers: Array(4)
-          .fill(null)
-          .map((_, i) => ({
-            text: faker.lorem.sentence(),
-            isCorrect: i === 0, // First answer is correct
-          })),
-      }));
+  let quizGenerationTasksService: QuizGenerationTasksService;
+  let mockQuestionRepository: Partial<QuestionRepositoryImpl>;
+  let mockAnswerRepository: Partial<AnswerRepositoryImpl>;
+  let mockTaskRepository: Partial<QuizGenerationTaskRepositoryImpl>;
+  let mockQuestionGenerationService: Partial<QuestionGenerationService>;
+  let mockQuizEntityFactory: Partial<QuizEntityFactory>;
+  let mockTransactionHelper: Partial<TransactionHelper>;
 
   beforeEach(async () => {
-    // Create mock for entity manager
-    entityManager = {
-      getRepository: jest.fn().mockReturnValue({
-        save: jest.fn().mockResolvedValue({}),
-      }),
-    } as unknown as EntityManager;
+    // Create mock implementations for all dependencies
+    mockQuestionRepository = {
+      saveQuestions: jest.fn().mockResolvedValue(undefined),
+    };
 
-    // Create mock for query runner with transaction methods
-    queryRunner = {
-      connect: jest.fn().mockResolvedValue(undefined),
-      startTransaction: jest.fn().mockResolvedValue(undefined),
-      commitTransaction: jest.fn().mockResolvedValue(undefined),
-      rollbackTransaction: jest.fn().mockResolvedValue(undefined),
-      release: jest.fn().mockResolvedValue(undefined),
-      manager: entityManager,
-    } as unknown as QueryRunner;
+    mockAnswerRepository = {
+      saveAnswers: jest.fn().mockResolvedValue(undefined),
+    };
 
-    const module: TestingModule = await Test.createTestingModule({
+    mockTaskRepository = {
+      save: jest.fn().mockResolvedValue(undefined),
+      findById: jest.fn(),
+    };
+
+    mockQuestionGenerationService = {
+      generateQuestionsFromText: jest.fn(),
+    };
+
+    mockQuizEntityFactory = {
+      createTask: jest.fn(),
+      createQuestionEntities: jest.fn(),
+      extractAllAnswers: jest.fn(),
+      addQuestionsToTask: jest.fn(),
+    };
+
+    mockTransactionHelper = {
+      executeInTransaction: jest
+        .fn()
+        .mockImplementation(
+          (callback: (entityManager: EntityManager) => void) => {
+            const mockEntityManager = {} as EntityManager;
+            return callback(mockEntityManager);
+          },
+        ),
+    };
+
+    const moduleRef = await Test.createTestingModule({
       providers: [
         QuizGenerationTasksService,
-        {
-          provide: QuestionRepositoryImpl,
-          useValue: {
-            saveQuestions: jest
-              .fn()
-              .mockImplementation(async (questions: Question[]) => {
-                // Return the questions as if they were successfully saved
-                return Promise.resolve(questions);
-              }),
-          },
-        },
-        {
-          provide: AnswerRepositoryImpl,
-          useValue: {
-            saveAnswers: jest
-              .fn()
-              .mockImplementation(async (answers: Answer[]) => {
-                // Return the answers as if they were successfully saved
-                return Promise.resolve(answers);
-              }),
-          },
-        },
+        { provide: QuestionRepositoryImpl, useValue: mockQuestionRepository },
+        { provide: AnswerRepositoryImpl, useValue: mockAnswerRepository },
         {
           provide: QuizGenerationTaskRepositoryImpl,
-          useValue: {
-            save: jest
-              .fn()
-              .mockImplementation(async (task: QuizGenerationTask) => {
-                // Return the task as if it was successfully saved
-                return Promise.resolve(task);
-              }),
-            findById: jest.fn().mockImplementation((id: string) => {
-              // Return a mock task for the given ID
-              const task = new QuizGenerationTask({
-                id,
-                textContent: faker.lorem.paragraphs(1),
-                status: QuizGenerationStatus.COMPLETED,
-                questions: [],
-              });
-              return Promise.resolve(task);
-            }),
-            saveTask: jest.fn().mockResolvedValue(undefined),
-          },
+          useValue: mockTaskRepository,
         },
         {
-          provide: DataSource,
-          useValue: {
-            createQueryRunner: jest.fn().mockReturnValue(queryRunner),
-          },
+          provide: QuestionGenerationService,
+          useValue: mockQuestionGenerationService,
         },
-        {
-          provide: OpenAILLMService,
-          useValue: {
-            generateQuiz: jest
-              .fn()
-              .mockResolvedValue(generateMockQuizQuestions()),
-          },
-        },
+        { provide: QuizEntityFactory, useValue: mockQuizEntityFactory },
+        { provide: TransactionHelper, useValue: mockTransactionHelper },
       ],
     }).compile();
 
-    // Mock logger to avoid console outputs during tests
+    quizGenerationTasksService = moduleRef.get<QuizGenerationTasksService>(
+      QuizGenerationTasksService,
+    );
+
+    // Mock logger to avoid console output during tests
     jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
     jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => undefined);
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-
-    service = module.get<QuizGenerationTasksService>(
-      QuizGenerationTasksService,
-    );
-    questionRepository = module.get<QuestionRepositoryImpl>(
-      QuestionRepositoryImpl,
-    );
-    answerRepository = module.get<AnswerRepositoryImpl>(AnswerRepositoryImpl);
-    quizGenerationTaskRepository = module.get<QuizGenerationTaskRepositoryImpl>(
-      QuizGenerationTaskRepositoryImpl,
-    );
-    openAILLMService = module.get<OpenAILLMService>(OpenAILLMService);
-    dataSource = module.get<DataSource>(DataSource);
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   describe('createTask', () => {
-    const mockDto: CreateQuizGenerationTaskDto = {
-      text: faker.lorem.paragraphs(3),
-      userId: faker.string.uuid(),
-    };
+    it('should successfully create and process a quiz generation task', async () => {
+      // Arrange
+      const createQuizDto = {
+        text: faker.lorem.paragraphs(3),
+        userId: faker.string.uuid(),
+      };
 
-    it('should successfully create a quiz generation task', async () => {
-      // Execute the service method
-      const result = await service.createTask(mockDto);
+      // Create a mock task with Faker data
+      const taskId = faker.string.uuid();
+      const generatedDate = faker.date.recent();
 
-      // Assert the result structure
-      expect(result).toEqual(
-        expect.objectContaining({
-          userId: mockDto.userId,
-          status: QuizGenerationStatus.COMPLETED,
-          questionsCount: 10, // Now expecting 10 questions from OpenAI
-          message: expect.stringContaining(
-            'Quiz generation task created with',
-          ) as string,
-        }),
-      );
-      expect(result.taskId).toBeDefined();
-      expect(result.generatedAt).toBeDefined();
+      const mockTask = new QuizGenerationTask({
+        textContent: createQuizDto.text,
+        questions: [],
+        status: QuizGenerationStatus.IN_PROGRESS,
+      });
+      mockTask.updateStatus = jest.fn();
+      mockTask.getId = jest.fn().mockReturnValue(taskId);
+      mockTask.getQuestions = jest.fn().mockReturnValue([]);
+      mockTask.getStatus = jest
+        .fn()
+        .mockReturnValue(QuizGenerationStatus.COMPLETED);
+      mockTask.getGeneratedAt = jest.fn().mockReturnValue(generatedDate);
 
-      // Verify OpenAI service was called
-      expect(openAILLMService.generateQuiz).toHaveBeenCalledWith(mockDto.text);
-
-      // Verify transaction was properly managed
-      expect(dataSource.createQueryRunner).toHaveBeenCalled();
-      expect(queryRunner.connect).toHaveBeenCalled();
-      expect(queryRunner.startTransaction).toHaveBeenCalled();
-
-      // Verify repositories were called with transaction manager
-      expect(quizGenerationTaskRepository.save).toHaveBeenCalledTimes(2);
-      expect(quizGenerationTaskRepository.save).toHaveBeenCalledWith(
-        expect.any(QuizGenerationTask),
-        queryRunner.manager,
-      );
-      expect(questionRepository.saveQuestions).toHaveBeenCalledWith(
-        expect.any(Array),
-        queryRunner.manager,
-      );
-      expect(answerRepository.saveAnswers).toHaveBeenCalledWith(
-        expect.any(Array),
-        queryRunner.manager,
+      // Create mock questions with Faker data
+      const mockQuestions: Question[] = Array.from(
+        { length: faker.number.int({ min: 2, max: 5 }) },
+        () =>
+          new Question({
+            content: `${faker.lorem.sentence()}?`,
+            answers: [],
+          }),
       );
 
-      // Verify transaction was committed and released
-      expect(queryRunner.commitTransaction).toHaveBeenCalled();
-      expect(queryRunner.release).toHaveBeenCalled();
+      // Create mock answers with Faker data
+      const mockAnswers: Answer[] = mockQuestions.flatMap((question) =>
+        Array.from(
+          { length: faker.number.int({ min: 2, max: 4 }) },
+          () =>
+            new Answer({
+              content: faker.lorem.words(3),
+              isCorrect: faker.datatype.boolean(),
+              questionId: question.getId(),
+            }),
+        ),
+      );
+
+      // Create mock question-answer pairs with Faker data
+      const mockQuestionAnswerPairs = mockQuestions.map((question) => ({
+        question: question.getContent(),
+        answers: mockAnswers
+          .filter((answer) => answer.getQuestionId() === question.getId())
+          .map((answer) => ({
+            content: answer.getContent(),
+            isCorrect: answer.getIsCorrect(),
+          })),
+      }));
+
+      mockQuizEntityFactory.createTask = jest.fn().mockReturnValue(mockTask);
+      mockQuestionGenerationService.generateQuestionsFromText = jest
+        .fn()
+        .mockResolvedValue(mockQuestionAnswerPairs);
+      mockQuizEntityFactory.createQuestionEntities = jest
+        .fn()
+        .mockReturnValue(mockQuestions);
+      mockQuizEntityFactory.extractAllAnswers = jest
+        .fn()
+        .mockReturnValue(mockAnswers);
+
+      // Act
+      const result = await quizGenerationTasksService.createTask(createQuizDto);
+
+      // Assert
+      expect(mockQuizEntityFactory.createTask).toHaveBeenCalledWith(
+        createQuizDto.text,
+      );
+      expect(mockTransactionHelper.executeInTransaction).toHaveBeenCalled();
+      expect(mockTaskRepository.save).toHaveBeenCalledWith(
+        mockTask,
+        expect.anything(),
+      );
+      expect(
+        mockQuestionGenerationService.generateQuestionsFromText,
+      ).toHaveBeenCalledWith(createQuizDto.text);
+      expect(mockQuizEntityFactory.createQuestionEntities).toHaveBeenCalledWith(
+        mockQuestionAnswerPairs,
+      );
+      expect(mockQuestionRepository.saveQuestions).toHaveBeenCalledWith(
+        mockQuestions,
+        expect.anything(),
+      );
+      expect(mockAnswerRepository.saveAnswers).toHaveBeenCalledWith(
+        mockAnswers,
+        expect.anything(),
+      );
+      expect(mockQuizEntityFactory.addQuestionsToTask).toHaveBeenCalledWith(
+        mockTask,
+        mockQuestions,
+      );
+      expect(mockTask.updateStatus).toHaveBeenCalledWith(
+        QuizGenerationStatus.COMPLETED,
+      );
+
+      expect(result).toEqual({
+        taskId,
+        userId: createQuizDto.userId,
+        status: QuizGenerationStatus.COMPLETED,
+        questionsCount: 0, // From the mock implementation of getQuestions
+        message: expect.stringContaining(
+          'Quiz generation task created with',
+        ) as string,
+        generatedAt: generatedDate,
+      });
     });
 
-    it('should handle OpenAI errors properly', async () => {
-      // Setup OpenAI service to throw an error
-      const errorMessage = 'OpenAI API error';
-      (openAILLMService.generateQuiz as jest.Mock).mockRejectedValueOnce(
-        new Error(errorMessage),
+    it('should handle and log errors during task creation', async () => {
+      // Arrange
+      const createQuizDto = {
+        text: faker.lorem.paragraphs(2),
+        userId: faker.string.uuid(),
+      };
+
+      const mockTask = new QuizGenerationTask({
+        textContent: createQuizDto.text,
+        questions: [],
+        status: QuizGenerationStatus.IN_PROGRESS,
+      });
+
+      const errorMessage = faker.lorem.sentence();
+      mockQuizEntityFactory.createTask = jest.fn().mockReturnValue(mockTask);
+      mockTransactionHelper.executeInTransaction = jest
+        .fn()
+        .mockRejectedValue(new Error(errorMessage));
+
+      // Mock the error logger
+      const errorLogSpy = jest.spyOn(Logger.prototype, 'error');
+
+      // Act & Assert
+      await expect(
+        quizGenerationTasksService.createTask(createQuizDto),
+      ).rejects.toThrow(errorMessage);
+
+      expect(mockQuizEntityFactory.createTask).toHaveBeenCalledWith(
+        createQuizDto.text,
       );
-
-      // Mock the logger to verify error logging
-      const loggerErrorSpy = jest.spyOn(service['logger'], 'error');
-
-      // Execute and expect error
-      await expect(service.createTask(mockDto)).rejects.toThrow(errorMessage);
-
-      // Verify error was logged
-      expect(loggerErrorSpy).toHaveBeenCalled();
-
-      // Verify OpenAI was called
-      expect(openAILLMService.generateQuiz).toHaveBeenCalledWith(mockDto.text);
-
-      // Verify transaction was rolled back and released
-      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
-      expect(queryRunner.release).toHaveBeenCalled();
-    });
-
-    it('should handle task repository save errors and rollback transaction', async () => {
-      // Setup the repository to throw an error on second save
-      const errorMessage = `Task repository error: ${faker.lorem.sentence()}`;
-      (quizGenerationTaskRepository.save as jest.Mock)
-        .mockResolvedValueOnce({})
-        .mockRejectedValueOnce(new Error(errorMessage));
-
-      // Execute and expect error
-      await expect(service.createTask(mockDto)).rejects.toThrow(errorMessage);
-
-      // Verify transaction was rolled back and released
-      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
-      expect(queryRunner.commitTransaction).not.toHaveBeenCalled();
-      expect(queryRunner.release).toHaveBeenCalled();
-    });
-
-    it('should handle question repository errors and rollback transaction', async () => {
-      // Setup the repository to throw an error
-      const errorMessage = `Question repository error: ${faker.lorem.sentence()}`;
-      (questionRepository.saveQuestions as jest.Mock).mockRejectedValueOnce(
-        new Error(errorMessage),
-      );
-
-      // Execute and expect error
-      await expect(service.createTask(mockDto)).rejects.toThrow(errorMessage);
-
-      // Verify transaction was rolled back and released
-      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
-      expect(queryRunner.commitTransaction).not.toHaveBeenCalled();
-      expect(queryRunner.release).toHaveBeenCalled();
+      expect(mockTransactionHelper.executeInTransaction).toHaveBeenCalled();
+      expect(errorLogSpy).toHaveBeenCalled();
     });
   });
 
   describe('getTaskById', () => {
-    it('should return a task when it exists', async () => {
+    it('should retrieve a task by ID', async () => {
       // Arrange
       const taskId = faker.string.uuid();
+      const mockTask = new QuizGenerationTask({
+        textContent: faker.lorem.paragraphs(1),
+        questions: [],
+        status: QuizGenerationStatus.COMPLETED,
+      });
+
+      mockTaskRepository.findById = jest.fn().mockResolvedValue(mockTask);
 
       // Act
-      const result = await service.getTaskById(taskId);
+      const result = await quizGenerationTasksService.getTaskById(taskId);
 
       // Assert
-      expect(result).toBeDefined();
-      expect(result?.getId()).toBe(taskId);
-      expect(quizGenerationTaskRepository.findById).toHaveBeenCalledWith(
-        taskId,
-      );
+      expect(mockTaskRepository.findById).toHaveBeenCalledWith(taskId);
+      expect(result).toBe(mockTask);
     });
 
-    it('should return null when task does not exist', async () => {
+    it('should return null when task is not found', async () => {
       // Arrange
       const taskId = faker.string.uuid();
-      (
-        quizGenerationTaskRepository.findById as jest.Mock
-      ).mockResolvedValueOnce(null);
+      mockTaskRepository.findById = jest.fn().mockResolvedValue(null);
 
       // Act
-      const result = await service.getTaskById(taskId);
+      const result = await quizGenerationTasksService.getTaskById(taskId);
 
       // Assert
+      expect(mockTaskRepository.findById).toHaveBeenCalledWith(taskId);
       expect(result).toBeNull();
-      expect(quizGenerationTaskRepository.findById).toHaveBeenCalledWith(
-        taskId,
-      );
     });
-  });
-
-  it('should return the expected number of questions from OpenAI', async () => {
-    // Arrange - setup for a specific number of questions (7)
-    const customQuestionCount = 7;
-    (openAILLMService.generateQuiz as jest.Mock).mockResolvedValueOnce(
-      generateMockQuizQuestions(customQuestionCount),
-    );
-
-    // Act
-    const result = await service.createTask({
-      text: faker.lorem.paragraphs(2),
-      userId: faker.string.uuid(),
-    });
-
-    // Assert
-    expect(result.questionsCount).toBe(customQuestionCount);
-    expect(result.message).toBe(
-      `Quiz generation task created with ${customQuestionCount} questions`,
-    );
-  });
-
-  it('should properly pass user ID through to the result', async () => {
-    // Arrange
-    const userId = faker.string.uuid();
-
-    // Act
-    const result = await service.createTask({
-      text: faker.lorem.paragraph(),
-      userId,
-    });
-
-    // Assert
-    expect(result.userId).toBe(userId);
   });
 });

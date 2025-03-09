@@ -8,10 +8,19 @@ import { OpenAILLMService } from './services/openai-llm.service';
 import { OpenAIProvider } from './providers/openai.provider';
 import { QuizGenerationTaskEntity } from './infrastructure/relational/entities/quiz-generation-task.entity';
 import { QuizGenerationTaskRepositoryImpl } from './infrastructure/relational/repositories/quiz-generation-task.repository';
+import { QuestionGenerationService } from './services/question-generation.service';
+import { QuizEntityFactory } from './factories/quiz-entity.factory';
+import { TransactionHelper } from '../shared/helpers/transaction.helper';
+import { QuestionEntity } from '../questions/infrastructure/relational/entities/question.entity';
+import { AnswerEntity } from '../answers/infrastructure/relational/entities/answer.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([QuizGenerationTaskEntity]),
+    TypeOrmModule.forFeature([
+      QuizGenerationTaskEntity,
+      QuestionEntity,
+      AnswerEntity,
+    ]),
     QuestionsModule,
     AnswersModule,
   ],
@@ -21,6 +30,10 @@ import { QuizGenerationTaskRepositoryImpl } from './infrastructure/relational/re
     OpenAILLMService,
     OpenAIProvider,
     QuizGenerationTaskRepositoryImpl,
+    QuestionGenerationService,
+    QuizEntityFactory,
+    TransactionHelper,
   ],
+  exports: [QuizGenerationTasksService],
 })
 export class QuizGenerationTasksModule {}
