@@ -1,5 +1,4 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { LLMService, QuizQuestion } from '@flash-me/core/interfaces';
 import OpenAI from 'openai';
 import { zodResponseFormat } from 'openai/helpers/zod';
@@ -13,21 +12,17 @@ import { OPENAI_CLIENT } from '../providers/openai.provider';
 
 // Define the Zod schema for our quiz questions
 const QuizSchema = z.object({
-  data: z
-    .array(
-      z.object({
-        question: z.string(),
-        answers: z
-          .array(
-            z.object({
-              text: z.string().min(1),
-              isCorrect: z.boolean(),
-            }),
-          )
-          .length(4),
-      }),
-    )
-    .length(10),
+  data: z.array(
+    z.object({
+      question: z.string(),
+      answers: z.array(
+        z.object({
+          text: z.string(),
+          isCorrect: z.boolean(),
+        }),
+      ),
+    }),
+  ),
 });
 
 @Injectable()
@@ -41,19 +36,19 @@ export class OpenAILLMService implements LLMService {
       this.logger.log(`Generating quiz from text of length: ${text.length}`);
       // Use the parse method with zodResponseFormat
       const completion = await this.openai.beta.chat.completions.parse({
-        model: 'gpt-4o',
+        model: 'o3-mini',
         messages: [
           {
             role: 'system',
             content:
-              'You are a specialized quiz generation assistant. Create concise, accurate quiz questions based on provided text.',
+              'You are a specialized quiz generation assistant. Create concise, accurate quiz questions based on provided text. You must provide 10 questions and for each 4 answers.',
           },
           {
             role: 'user',
             content: `Generate 10 quiz questions based on this text: "${text}"`,
           },
         ],
-        temperature: 0.5,
+        // temperature: 0.5,
         response_format: zodResponseFormat(QuizSchema, 'quiz'),
       });
 
