@@ -56,8 +56,6 @@ export class QuestionGenerationService {
   private logError(message: string, error: unknown): void {
     if (error instanceof Error) {
       this.logger.error(`${message}: ${error.message}`, error.stack);
-    } else {
-      this.logger.error(`${message}: Unknown error`);
     }
   }
 }
