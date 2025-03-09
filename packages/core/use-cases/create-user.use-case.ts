@@ -18,21 +18,26 @@ export class CreateUserUseCase {
     email,
     id,
   }: CreateUserUseCaseRequest): Promise<CreateUserUseCaseResponse> {
-    // Check if user with email already exists
+    await this.checkIfUserExists(email);
+    const user = this.createUser(email, id);
+    const savedUser = await this.saveUser(user);
+
+    return { user: savedUser };
+  }
+
+  private async checkIfUserExists(email: string): Promise<void> {
     const userWithSameEmail = await this.userRepository.findByEmail(email);
 
     if (userWithSameEmail) {
       throw new UserAlreadyExistsError(email);
     }
+  }
 
-    // Create new user
-    const user = new User({ email, id });
+  private createUser(email: string, id?: string): User {
+    return new User({ email, id });
+  }
 
-    // Save user using repository
-    const savedUser = await this.userRepository.save(user);
-
-    return {
-      user: savedUser,
-    };
+  private async saveUser(user: User): Promise<User> {
+    return await this.userRepository.save(user);
   }
 }
