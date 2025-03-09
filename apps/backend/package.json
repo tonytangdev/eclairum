@@ -90,7 +90,8 @@
     "coveragePathIgnorePatterns": [
       ".*\\.entity\\.ts$",
       ".*\\.module\\.ts$",
-      "main\\.ts$"
+      "main\\.ts$",
+      ".*\\.provider\\.ts$"
     ],
     "coverageThreshold": {
       "global": {

@@ -1,9 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { LLMService, QuizQuestion } from '@flash-me/core/interfaces';
 import OpenAI from 'openai';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
+import {
+  QuizGenerationError,
+  OpenAIConnectionError,
+  InvalidResponseError,
+} from '../exceptions/quiz-generation.exceptions';
+import { OPENAI_CLIENT } from '../providers/openai.provider';
 
 // Define the Zod schema for our quiz questions
 const QuizSchema = z.object({
@@ -26,16 +32,16 @@ const QuizSchema = z.object({
 
 @Injectable()
 export class OpenAILLMService implements LLMService {
-  private openai: OpenAI;
+  private readonly logger = new Logger(OpenAILLMService.name);
 
-  constructor(private readonly configService: ConfigService) {
-    this.openai = new OpenAI({
-      apiKey: this.configService.get<string>('OPENAI_API_KEY'),
-    });
-  }
+  constructor(
+    private readonly configService: ConfigService,
+    @Inject(OPENAI_CLIENT) private readonly openai: OpenAI,
+  ) {}
 
   async generateQuiz(text: string): Promise<QuizQuestion[]> {
     try {
+      this.logger.log(`Generating quiz from text of length: ${text.length}`);
       // Use the parse method with zodResponseFormat
       const completion = await this.openai.beta.chat.completions.parse({
         model: 'gpt-4o',
@@ -58,15 +64,53 @@ export class OpenAILLMService implements LLMService {
       const quiz = completion.choices[0].message.parsed;
 
       if (!quiz) {
-        throw new Error();
+        throw new InvalidResponseError('No quiz data received from OpenAI');
       }
 
+      this.logger.debug('Successfully generated quiz questions');
       return quiz.data;
     } catch (error) {
-      console.error('Error generating quiz:', error);
-      throw new Error(
-        `Failed to generate quiz: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      if (error instanceof Error) {
+        if (error instanceof InvalidResponseError) {
+          throw error;
+        }
+
+        if (
+          error.name === 'OpenAIError' ||
+          error.name === 'APIConnectionError'
+        ) {
+          this.logger.error(
+            `OpenAI connection error: ${error.message}`,
+            error.stack,
+          );
+          throw new OpenAIConnectionError(
+            'Failed to connect to OpenAI service',
+            error,
+          );
+        }
+
+        if (error.name === 'ZodError') {
+          this.logger.error(
+            `Response validation failed: ${error.message}`,
+            error.stack,
+          );
+          throw new InvalidResponseError(
+            'Generated quiz does not match expected format',
+            error,
+          );
+        }
+
+        this.logger.error(
+          `Unexpected error during quiz generation: ${error.message}`,
+          error.stack,
+        );
+        throw new QuizGenerationError(
+          `Failed to generate quiz: ${error.message}`,
+          error,
+        );
+      }
     }
+
+    throw new QuizGenerationError('Failed to generate quiz');
   }
 }
