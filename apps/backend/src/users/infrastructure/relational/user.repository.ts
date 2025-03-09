@@ -14,20 +14,40 @@ export class UserRepositoryImpl implements UserRepository {
   ) {}
 
   async findByEmail(email: string): Promise<User | null> {
-    const userEntity = await this.userRepository.findOne({
-      where: { email },
-    });
-
-    if (!userEntity) {
-      return null;
-    }
-
-    return UserMapper.toDomain(userEntity);
+    const userEntity = await this.findUserEntityByEmail(email);
+    return this.mapEntityToDomainIfExists(userEntity);
   }
 
   async save(user: User): Promise<User> {
-    const userEntity = UserMapper.toPersistence(user);
-    const savedEntity = await this.userRepository.save(userEntity);
-    return UserMapper.toDomain(savedEntity);
+    const userEntity = this.mapDomainToPersistence(user);
+    const savedEntity = await this.saveUserEntity(userEntity);
+    return this.mapEntityToDomain(savedEntity);
+  }
+
+  private async findUserEntityByEmail(
+    email: string,
+  ): Promise<UserEntity | null> {
+    return await this.userRepository.findOne({
+      where: { email },
+    });
+  }
+
+  private mapEntityToDomainIfExists(entity: UserEntity | null): User | null {
+    if (!entity) {
+      return null;
+    }
+    return this.mapEntityToDomain(entity);
+  }
+
+  private mapEntityToDomain(entity: UserEntity): User {
+    return UserMapper.toDomain(entity);
+  }
+
+  private mapDomainToPersistence(user: User): UserEntity {
+    return UserMapper.toPersistence(user);
+  }
+
+  private async saveUserEntity(entity: UserEntity): Promise<UserEntity> {
+    return await this.userRepository.save(entity);
   }
 }
