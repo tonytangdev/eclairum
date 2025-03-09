@@ -17,17 +17,29 @@ export class QuestionRepositoryImpl implements QuestionRepository {
     questions: Question[],
     entityManager?: EntityManager,
   ): Promise<void> {
-    const questionEntities = questions.map((question) =>
-      QuestionMapper.toPersistence(question),
-    );
+    if (questions.length === 0) return;
 
-    // Save all questions at once
-    if (questionEntities.length > 0) {
-      // Use provided entity manager if available, otherwise use default repository
-      const repo = entityManager
-        ? entityManager.getRepository(QuestionEntity)
-        : this.questionRepository;
-      await repo.save(questionEntities);
-    }
+    const questionEntities = this.mapQuestionsToEntities(questions);
+    const repository = this.getRepository(entityManager);
+    await this.persistQuestions(repository, questionEntities);
+  }
+
+  private mapQuestionsToEntities(questions: Question[]): QuestionEntity[] {
+    return questions.map((question) => QuestionMapper.toPersistence(question));
+  }
+
+  private getRepository(
+    entityManager?: EntityManager,
+  ): Repository<QuestionEntity> {
+    return entityManager
+      ? entityManager.getRepository(QuestionEntity)
+      : this.questionRepository;
+  }
+
+  private async persistQuestions(
+    repository: Repository<QuestionEntity>,
+    entities: QuestionEntity[],
+  ): Promise<void> {
+    await repository.save(entities);
   }
 }
