@@ -17,30 +17,44 @@ export class AnswerRepositoryImpl implements AnswerRepository {
     answers: Answer[],
     entityManager?: EntityManager,
   ): Promise<void> {
-    const answerEntities = answers.map((answer) =>
-      AnswerMapper.toPersistence(answer),
-    );
+    if (answers.length === 0) return;
 
-    // Save all answers at once
-    if (answerEntities.length > 0) {
-      // Use provided entity manager if available, otherwise use default repository
-      const repo = entityManager
-        ? entityManager.getRepository(AnswerEntity)
-        : this.answerRepository;
-      await repo.save(answerEntities);
-    }
+    const answerEntities = this.mapAnswersToPersistence(answers);
+    const repository = this.getRepository(entityManager);
+    await this.persistAnswers(repository, answerEntities);
   }
 
-  /**
-   * Finds all answers for a specific question
-   * @param questionId The ID of the question to find answers for
-   * @returns Array of Answer domain objects
-   */
   async findByQuestionId(questionId: string): Promise<Answer[]> {
-    const answerEntities = await this.answerRepository.find({
-      where: { questionId },
-    });
+    const answerEntities = await this.queryAnswersByQuestionId(questionId);
+    return this.mapEntitiesToDomain(answerEntities);
+  }
 
-    return answerEntities.map((entity) => AnswerMapper.toDomain(entity));
+  private mapAnswersToPersistence(answers: Answer[]): AnswerEntity[] {
+    return answers.map((answer) => AnswerMapper.toPersistence(answer));
+  }
+
+  private getRepository(
+    entityManager?: EntityManager,
+  ): Repository<AnswerEntity> {
+    return entityManager
+      ? entityManager.getRepository(AnswerEntity)
+      : this.answerRepository;
+  }
+
+  private async persistAnswers(
+    repository: Repository<AnswerEntity>,
+    entities: AnswerEntity[],
+  ): Promise<void> {
+    await repository.save(entities);
+  }
+
+  private async queryAnswersByQuestionId(
+    questionId: string,
+  ): Promise<AnswerEntity[]> {
+    return await this.answerRepository.find({ where: { questionId } });
+  }
+
+  private mapEntitiesToDomain(entities: AnswerEntity[]): Answer[] {
+    return entities.map((entity) => AnswerMapper.toDomain(entity));
   }
 }
