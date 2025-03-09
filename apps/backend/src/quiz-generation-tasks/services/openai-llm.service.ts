@@ -34,10 +34,7 @@ const QuizSchema = z.object({
 export class OpenAILLMService implements LLMService {
   private readonly logger = new Logger(OpenAILLMService.name);
 
-  constructor(
-    private readonly configService: ConfigService,
-    @Inject(OPENAI_CLIENT) private readonly openai: OpenAI,
-  ) {}
+  constructor(@Inject(OPENAI_CLIENT) private readonly openai: OpenAI) {}
 
   async generateQuiz(text: string): Promise<QuizQuestion[]> {
     try {

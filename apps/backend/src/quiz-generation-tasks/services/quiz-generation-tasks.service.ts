@@ -9,6 +9,7 @@ import {
 } from '@flash-me/core/entities';
 import { QuestionRepositoryImpl } from '../../questions/infrastructure/relational/repositories/question.repository';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
+import { OpenAILLMService } from './openai-llm.service';
 
 @Injectable()
 export class QuizGenerationTasksService {
@@ -18,6 +19,7 @@ export class QuizGenerationTasksService {
     private readonly questionRepository: QuestionRepositoryImpl,
     private readonly answerRepository: AnswerRepositoryImpl,
     private readonly dataSource: DataSource,
+    private readonly openAILLMService: OpenAILLMService,
   ) {}
 
   /**
@@ -78,8 +80,7 @@ export class QuizGenerationTasksService {
   }
 
   /**
-   * Generates questions from the provided text
-   * This is a placeholder for the actual implementation that would use AI or other algorithms
+   * Generates questions from the provided text using OpenAI
    * @param text - The text to generate questions from
    * @returns An array of question-answer pairs
    */
@@ -89,40 +90,30 @@ export class QuizGenerationTasksService {
       answers: Array<{ content: string; isCorrect: boolean }>;
     }>
   > {
-    this.logger.debug(`Generating questions from text: ${text}`);
-    // Placeholder implementation - in a real app, this would use AI or other algorithms
-    // to generate questions and answers based on the text content
+    this.logger.debug(`Generating questions from text using OpenAI`);
 
-    // Mock generating 3 questions with 4 answers each
-    return Promise.resolve([
-      {
-        question: `What is the main topic of the provided text?`,
-        answers: [
-          { content: 'Sample answer 1', isCorrect: true },
-          { content: 'Sample answer 2', isCorrect: false },
-          { content: 'Sample answer 3', isCorrect: false },
-          { content: 'Sample answer 4', isCorrect: false },
-        ],
-      },
-      {
-        question: `According to the text, what is an important concept?`,
-        answers: [
-          { content: 'Sample answer 1', isCorrect: false },
-          { content: 'Sample answer 2', isCorrect: true },
-          { content: 'Sample answer 3', isCorrect: false },
-          { content: 'Sample answer 4', isCorrect: false },
-        ],
-      },
-      {
-        question: `Based on the text, which statement is true?`,
-        answers: [
-          { content: 'Sample answer 1', isCorrect: false },
-          { content: 'Sample answer 2', isCorrect: false },
-          { content: 'Sample answer 3', isCorrect: true },
-          { content: 'Sample answer 4', isCorrect: false },
-        ],
-      },
-    ]);
+    try {
+      // Use the OpenAI LLM service to generate questions
+      const generatedQuizQuestions =
+        await this.openAILLMService.generateQuiz(text);
+
+      // Map the OpenAI response format to our internal format
+      return generatedQuizQuestions.map((quizQuestion) => ({
+        question: quizQuestion.question,
+        answers: quizQuestion.answers.map((answer) => ({
+          content: answer.text,
+          isCorrect: answer.isCorrect,
+        })),
+      }));
+    } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error(
+          `Failed to generate questions with OpenAI: ${error.message}`,
+          error.stack,
+        );
+      }
+      throw error;
+    }
   }
 
   /**

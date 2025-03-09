@@ -10,13 +10,30 @@ import {
 } from '@flash-me/core/entities';
 import { CreateQuizGenerationTaskDto } from '../dto/create-quiz-generation-task.dto';
 import { faker } from '@faker-js/faker';
+import { OpenAILLMService } from './openai-llm.service';
+import { Logger } from '@nestjs/common';
 
 describe('QuizGenerationTasksService', () => {
   let service: QuizGenerationTasksService;
   let questionRepository: QuestionRepositoryImpl;
   let answerRepository: AnswerRepositoryImpl;
+  let openAILLMService: OpenAILLMService;
   let dataSource: DataSource;
   let queryRunner: QueryRunner;
+
+  // Setup mock questions that will be returned from OpenAI
+  const generateMockQuizQuestions = (count = 10) =>
+    Array(count)
+      .fill(null)
+      .map(() => ({
+        question: faker.lorem.sentence() + '?',
+        answers: Array(4)
+          .fill(null)
+          .map((_, i) => ({
+            text: faker.lorem.sentence(),
+            isCorrect: i === 0, // First answer is correct
+          })),
+      }));
 
   beforeEach(async () => {
     // Create mock for query runner with transaction methods
@@ -60,14 +77,30 @@ describe('QuizGenerationTasksService', () => {
             createQueryRunner: jest.fn().mockReturnValue(queryRunner),
           },
         },
+        {
+          provide: OpenAILLMService,
+          useValue: {
+            generateQuiz: jest
+              .fn()
+              .mockResolvedValue(generateMockQuizQuestions()),
+          },
+        },
       ],
     }).compile();
 
-    service = module.get<QuizGenerationTasksService>(QuizGenerationTasksService);
+    // Mock logger to avoid console outputs during tests
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => undefined);
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+
+    service = module.get<QuizGenerationTasksService>(
+      QuizGenerationTasksService,
+    );
     questionRepository = module.get<QuestionRepositoryImpl>(
       QuestionRepositoryImpl,
     );
     answerRepository = module.get<AnswerRepositoryImpl>(AnswerRepositoryImpl);
+    openAILLMService = module.get<OpenAILLMService>(OpenAILLMService);
     dataSource = module.get<DataSource>(DataSource);
   });
 
@@ -90,7 +123,7 @@ describe('QuizGenerationTasksService', () => {
         expect.objectContaining({
           userId: mockDto.userId,
           status: QuizGenerationStatus.COMPLETED,
-          questionsCount: 3, // Default implementation generates 3 questions
+          questionsCount: 10, // Now expecting 10 questions from OpenAI
           message: expect.stringContaining(
             'Quiz generation task created with',
           ) as string,
@@ -98,6 +131,9 @@ describe('QuizGenerationTasksService', () => {
       );
       expect(result.taskId).toBeDefined();
       expect(result.generatedAt).toBeDefined();
+
+      // Verify OpenAI service was called
+      expect(openAILLMService.generateQuiz).toHaveBeenCalledWith(mockDto.text);
 
       // Verify transaction was properly managed
       expect(dataSource.createQueryRunner).toHaveBeenCalled();
@@ -109,7 +145,28 @@ describe('QuizGenerationTasksService', () => {
       expect(queryRunner.release).toHaveBeenCalled();
     });
 
-    it('should handle errors and log them properly', async () => {
+    it('should handle OpenAI errors properly', async () => {
+      // Setup OpenAI service to throw an error
+      const errorMessage = 'OpenAI API error';
+      (openAILLMService.generateQuiz as jest.Mock).mockRejectedValueOnce(
+        new Error(errorMessage),
+      );
+
+      // Mock the logger to verify error logging
+      const loggerErrorSpy = jest.spyOn(service['logger'], 'error');
+
+      // Execute and expect error
+      await expect(service.createTask(mockDto)).rejects.toThrow(errorMessage);
+
+      // Verify error was logged
+      expect(loggerErrorSpy).toHaveBeenCalled();
+
+      // Verify OpenAI was called but transaction was never started
+      expect(openAILLMService.generateQuiz).toHaveBeenCalledWith(mockDto.text);
+      expect(queryRunner.startTransaction).not.toHaveBeenCalled();
+    });
+
+    it('should handle database errors and log them properly', async () => {
       // Setup the repository to throw an error
       const errorMessage = `Database error: ${faker.lorem.sentence()}`;
       (questionRepository.saveQuestions as jest.Mock).mockRejectedValueOnce(
@@ -125,6 +182,9 @@ describe('QuizGenerationTasksService', () => {
       // Verify error was logged
       expect(loggerErrorSpy).toHaveBeenCalled();
 
+      // Verify OpenAI was successfully called
+      expect(openAILLMService.generateQuiz).toHaveBeenCalledWith(mockDto.text);
+
       // Verify transaction was rolled back
       expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
       expect(queryRunner.commitTransaction).not.toHaveBeenCalled();
@@ -132,9 +192,12 @@ describe('QuizGenerationTasksService', () => {
     });
   });
 
-  it('should return the expected number of questions', async () => {
-    // Arrange - setup for a specific number of questions
-    // We don't need to do anything special since we're testing the actual implementation
+  it('should return the expected number of questions from OpenAI', async () => {
+    // Arrange - setup for a specific number of questions (7)
+    const customQuestionCount = 7;
+    (openAILLMService.generateQuiz as jest.Mock).mockResolvedValueOnce(
+      generateMockQuizQuestions(customQuestionCount),
+    );
 
     // Act
     const result = await service.createTask({
@@ -143,9 +206,9 @@ describe('QuizGenerationTasksService', () => {
     });
 
     // Assert
-    expect(result.questionsCount).toBe(3); // Current implementation returns 3 questions
+    expect(result.questionsCount).toBe(customQuestionCount);
     expect(result.message).toBe(
-      'Quiz generation task created with 3 questions',
+      `Quiz generation task created with ${customQuestionCount} questions`,
     );
   });
 
