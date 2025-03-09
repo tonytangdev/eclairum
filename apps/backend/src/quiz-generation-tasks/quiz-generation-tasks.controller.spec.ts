@@ -1,21 +1,21 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { QuizGenerationTaskController } from './quiz-generation-task.controller';
-import { QuizGenerationTaskService } from './services/quiz-generation-task.service';
+import { QuizGenerationTasksController } from './quiz-generation-tasks.controller';
+import { QuizGenerationTasksService } from './services/quiz-generation-tasks.service';
 import { CreateQuizGenerationTaskDto } from './dto/create-quiz-generation-task.dto';
 import { faker } from '@faker-js/faker';
 import { QuizGenerationStatus } from '@flash-me/core/entities';
 import { HttpStatus } from '@nestjs/common';
 
-describe('QuizGenerationTaskController', () => {
-  let controller: QuizGenerationTaskController;
-  let service: QuizGenerationTaskService;
+describe('QuizGenerationTasksController', () => {
+  let controller: QuizGenerationTasksController;
+  let service: QuizGenerationTasksService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [QuizGenerationTaskController],
+      controllers: [QuizGenerationTasksController],
       providers: [
         {
-          provide: QuizGenerationTaskService,
+          provide: QuizGenerationTasksService,
           useValue: {
             createTask: jest
               .fn()
@@ -34,10 +34,10 @@ describe('QuizGenerationTaskController', () => {
       ],
     }).compile();
 
-    controller = module.get<QuizGenerationTaskController>(
-      QuizGenerationTaskController,
+    controller = module.get<QuizGenerationTasksController>(
+      QuizGenerationTasksController,
     );
-    service = module.get<QuizGenerationTaskService>(QuizGenerationTaskService);
+    service = module.get<QuizGenerationTasksService>(QuizGenerationTasksService);
   });
 
   it('should be defined', () => {

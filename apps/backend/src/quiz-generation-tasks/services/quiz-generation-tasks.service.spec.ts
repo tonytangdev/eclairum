@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { QuizGenerationTaskService } from './quiz-generation-task.service';
+import { QuizGenerationTasksService } from './quiz-generation-tasks.service';
 import { QuestionRepositoryImpl } from '../../questions/infrastructure/relational/repositories/question.repository';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { DataSource, QueryRunner } from 'typeorm';
@@ -11,8 +11,8 @@ import {
 import { CreateQuizGenerationTaskDto } from '../dto/create-quiz-generation-task.dto';
 import { faker } from '@faker-js/faker';
 
-describe('QuizGenerationTaskService', () => {
-  let service: QuizGenerationTaskService;
+describe('QuizGenerationTasksService', () => {
+  let service: QuizGenerationTasksService;
   let questionRepository: QuestionRepositoryImpl;
   let answerRepository: AnswerRepositoryImpl;
   let dataSource: DataSource;
@@ -31,7 +31,7 @@ describe('QuizGenerationTaskService', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        QuizGenerationTaskService,
+        QuizGenerationTasksService,
         {
           provide: QuestionRepositoryImpl,
           useValue: {
@@ -63,7 +63,7 @@ describe('QuizGenerationTaskService', () => {
       ],
     }).compile();
 
-    service = module.get<QuizGenerationTaskService>(QuizGenerationTaskService);
+    service = module.get<QuizGenerationTasksService>(QuizGenerationTasksService);
     questionRepository = module.get<QuestionRepositoryImpl>(
       QuestionRepositoryImpl,
     );

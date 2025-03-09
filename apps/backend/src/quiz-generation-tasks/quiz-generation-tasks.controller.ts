@@ -1,11 +1,11 @@
 import { Body, Controller, Post, HttpCode, HttpStatus } from '@nestjs/common';
 import { CreateQuizGenerationTaskDto } from './dto/create-quiz-generation-task.dto';
-import { QuizGenerationTaskService } from './services/quiz-generation-task.service';
+import { QuizGenerationTasksService } from './services/quiz-generation-tasks.service';
 
 @Controller('quiz-generation-tasks')
-export class QuizGenerationTaskController {
+export class QuizGenerationTasksController {
   constructor(
-    private readonly quizGenerationTaskService: QuizGenerationTaskService,
+    private readonly quizGenerationTaskService: QuizGenerationTasksService,
   ) {}
 
   @Post()

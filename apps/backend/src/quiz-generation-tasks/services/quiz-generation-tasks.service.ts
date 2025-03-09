@@ -11,8 +11,8 @@ import { QuestionRepositoryImpl } from '../../questions/infrastructure/relationa
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 
 @Injectable()
-export class QuizGenerationTaskService {
-  private readonly logger = new Logger(QuizGenerationTaskService.name);
+export class QuizGenerationTasksService {
+  private readonly logger = new Logger(QuizGenerationTasksService.name);
 
   constructor(
     private readonly questionRepository: QuestionRepositoryImpl,
