@@ -33,107 +33,95 @@ export class CreateQuizGenerationTaskUseCase {
   async execute({
     text,
   }: CreateQuizGenerationTaskUseCaseRequest): Promise<CreateQuizGenerationTaskUseCaseResponse> {
-    // Create a new quiz generation task
-    const quizGenerationTask = new QuizGenerationTask({
+    const quizGenerationTask = this.createTask(text);
+
+    try {
+      const questions = await this.generateQuestions(text);
+      this.addQuestionsToTask(quizGenerationTask, questions);
+      quizGenerationTask.updateStatus(QuizGenerationStatus.COMPLETED);
+      await this.saveQuizData(quizGenerationTask, questions);
+    } catch (error) {
+      await this.handleFailedTask(quizGenerationTask, error);
+    }
+
+    return { quizGenerationTask };
+  }
+
+  private createTask(text: string): QuizGenerationTask {
+    return new QuizGenerationTask({
       textContent: text,
       questions: [],
       status: QuizGenerationStatus.IN_PROGRESS,
     });
-
-    try {
-      // Generate quiz questions using LLM service
-      const questions = await this.generateQuizUsingLLM(text);
-
-      // Add questions to the task
-      questions.forEach((question) => {
-        quizGenerationTask.addQuestion(question);
-      });
-
-      // Mark the task as completed
-      quizGenerationTask.updateStatus(QuizGenerationStatus.COMPLETED);
-
-      // Save the questions and answers using repositories
-      await this.saveQuizData(quizGenerationTask, questions);
-
-      return {
-        quizGenerationTask,
-      };
-    } catch (error) {
-      // If there's an error, mark the task as failed
-      quizGenerationTask.updateStatus(QuizGenerationStatus.FAILED);
-
-      // Still try to save the task with the failed status
-      try {
-        await this.saveFailedQuizTask(quizGenerationTask);
-      } catch (saveError) {
-        console.error("Failed to save failed quiz generation task:", saveError);
-      }
-
-      // Re-throw the error
-      throw error;
-    }
   }
 
-  private async generateQuizUsingLLM(text: string): Promise<Question[]> {
-    let llmQuestions: QuizQuestion[];
+  private async generateQuestions(text: string): Promise<Question[]> {
+    const llmQuestions = await this.fetchQuestionsFromLLM(text);
+    this.validateLLMResponse(llmQuestions, text);
+    return this.convertLLMQuestionsToEntities(llmQuestions);
+  }
+
+  private async fetchQuestionsFromLLM(text: string): Promise<QuizQuestion[]> {
     try {
-      llmQuestions = await this.llmService.generateQuiz(text);
+      return await this.llmService.generateQuiz(text);
     } catch (error) {
       throw new LLMServiceError(
         `Failed to generate quiz questions: ${(error as Error).message}`,
         error as Error,
       );
     }
+  }
 
-    // Check if we have any questions
-    if (!llmQuestions || llmQuestions.length === 0) {
+  private validateLLMResponse(questions: QuizQuestion[], text: string): void {
+    if (!questions || questions.length === 0) {
       throw new NoQuestionsGeneratedError(text);
     }
+  }
 
-    // Convert LLM questions to domain entities
+  private convertLLMQuestionsToEntities(
+    llmQuestions: QuizQuestion[],
+  ): Question[] {
     return llmQuestions.map((llmQuestion) => {
       const question = new Question({
         content: llmQuestion.question,
         answers: [],
       });
 
-      // Create answer entities for each answer
-      const answers = llmQuestion.answers.map((llmAnswer) => {
-        return new Answer({
-          content: llmAnswer.text,
-          isCorrect: llmAnswer.isCorrect,
-          questionId: question.getId(),
-        });
-      });
-
-      // Add answers to the question
-      answers.forEach((answer) => {
-        question.addAnswer(answer);
-      });
+      this.addAnswersToQuestion(question, llmQuestion);
       return question;
     });
   }
 
-  /**
-   * Save all quiz data in a specific order:
-   * 1. Save the quiz generation task
-   * 2. Save the questions
-   * 3. Save the answers
-   */
+  private addAnswersToQuestion(
+    question: Question,
+    llmQuestion: QuizQuestion,
+  ): void {
+    const answers = llmQuestion.answers.map((llmAnswer) => {
+      return new Answer({
+        content: llmAnswer.text,
+        isCorrect: llmAnswer.isCorrect,
+        questionId: question.getId(),
+      });
+    });
+
+    answers.forEach((answer) => question.addAnswer(answer));
+  }
+
+  private addQuestionsToTask(
+    task: QuizGenerationTask,
+    questions: Question[],
+  ): void {
+    questions.forEach((question) => task.addQuestion(question));
+  }
+
   private async saveQuizData(
     quizGenerationTask: QuizGenerationTask,
     questions: Question[],
   ): Promise<void> {
     try {
-      // 1. First, save the quiz generation task
       await this.quizGenerationTaskRepository.saveTask(quizGenerationTask);
-
-      // 2. Then, save the questions
       await this.questionRepository.saveQuestions(questions);
-
-      // 3. Finally, save the answers
-      const answers = questions.flatMap((question) => question.getAnswers());
-      await this.answerRepository.saveAnswers(answers);
+      await this.saveAnswers(questions);
     } catch (error) {
       throw new QuizStorageError(
         `Failed to save quiz generation task: ${(error as Error).message}`,
@@ -142,9 +130,26 @@ export class CreateQuizGenerationTaskUseCase {
     }
   }
 
-  /**
-   * Save a failed quiz generation task and its questions, if any
-   */
+  private async saveAnswers(questions: Question[]): Promise<void> {
+    const answers = questions.flatMap((question) => question.getAnswers());
+    await this.answerRepository.saveAnswers(answers);
+  }
+
+  private async handleFailedTask(
+    quizGenerationTask: QuizGenerationTask,
+    error: unknown,
+  ): Promise<void> {
+    quizGenerationTask.updateStatus(QuizGenerationStatus.FAILED);
+
+    try {
+      await this.saveFailedQuizTask(quizGenerationTask);
+    } catch (saveError) {
+      console.error("Failed to save failed quiz generation task:", saveError);
+    }
+
+    throw error;
+  }
+
   private async saveFailedQuizTask(
     quizGenerationTask: QuizGenerationTask,
   ): Promise<void> {
