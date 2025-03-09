@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { FileText, Upload, ImageIcon, File, CheckCircle, AlertCircle } from "lucide-react";
-import { createQuizGenerationTask, generateRandomUserId } from "@/app/actions/quiz-generation";
+import { createQuizGenerationTask } from "@/app/actions/quiz-generation";
 
 const MAX_CHARACTERS = 50000;
 
