@@ -5,6 +5,19 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./dtos": {
+      "import": "./dist/dtos/index.js",
+      "require": "./dist/dtos/index.js",
+      "types": "./dist/dtos/index.d.ts"
+    }
+  },
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",

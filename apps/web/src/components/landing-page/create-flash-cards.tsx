@@ -1,10 +1,70 @@
+"use client";
+
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Upload, ImageIcon, File } from "lucide-react";
+import { FileText, Upload, ImageIcon, File, CheckCircle, AlertCircle } from "lucide-react";
+import { createQuizGenerationTask, generateRandomUserId } from "@/app/actions/quiz-generation";
+
+const MAX_CHARACTERS = 50000;
 
 export function CreateFlashCards() {
+  const [text, setText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  const characterCount = text.length;
+  const isOverLimit = characterCount > MAX_CHARACTERS;
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setText(e.target.value);
+    // Clear any previous feedback when user starts typing again
+    if (feedback) {
+      setFeedback(null);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (isOverLimit || characterCount < 10) {
+      setFeedback({
+        type: "error",
+        message: characterCount < 10
+          ? "Text must be at least 10 characters"
+          : "Text exceeds the maximum character limit"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    setFeedback(null);
+
+    try {
+      const result = await createQuizGenerationTask({
+        text,
+        userId: 'zefz'
+      });
+
+      if (result.success) {
+        setFeedback({
+          type: "success",
+          message: "Flash cards generation started! This might take a moment."
+        });
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: "Failed to generate flash cards. Please try again."
+      });
+      console.error("Error creating quiz generation task:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <section id="create-now" className="space-y-8">
       <Card className="max-w-3xl mx-auto border-primary shadow-lg">
@@ -30,7 +90,17 @@ export function CreateFlashCards() {
               </TabsList>
 
               <TabsContent value="text" className="space-y-4">
-                <Textarea placeholder="Enter your text here..." className="min-h-[150px]" />
+                <div className="space-y-2">
+                  <Textarea
+                    placeholder="Enter your text here..."
+                    className="min-h-[150px] h-[150px] max-h-[150px] resize-none overflow-y-auto"
+                    value={text}
+                    onChange={handleTextChange}
+                  />
+                  <div className={`text-xs flex justify-end ${isOverLimit ? "text-red-500" : "text-muted-foreground"}`}>
+                    {characterCount}/{MAX_CHARACTERS} characters
+                  </div>
+                </div>
               </TabsContent>
 
               <TabsContent value="upload" className="space-y-4">
@@ -57,10 +127,36 @@ export function CreateFlashCards() {
               </TabsContent>
             </Tabs>
 
+            {feedback && (
+              <div className={`p-3 rounded-md flex items-start gap-2 ${feedback.type === "success" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                }`}>
+                {feedback.type === "success" ? (
+                  <CheckCircle className="h-5 w-5 shrink-0" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 shrink-0" />
+                )}
+                <p>{feedback.message}</p>
+              </div>
+            )}
+
             <CardFooter className="border-t px-6 py-4 -mx-6 mt-6 rounded-b-lg">
-              <Button size="lg" className="w-full py-6 text-lg">
-                <Upload className="mr-2 h-5 w-5" />
-                Flash me!
+              <Button
+                size="lg"
+                className="w-full py-6 text-lg"
+                disabled={isLoading || isOverLimit || characterCount < 10}
+                onClick={handleSubmit}
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 border-2 border-t-transparent animate-spin rounded-full"></div>
+                    Processing...
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-5 w-5" />
+                    Flash me!
+                  </>
+                )}
               </Button>
             </CardFooter>
           </div>
