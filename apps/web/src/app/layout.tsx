@@ -47,7 +47,9 @@ export default function RootLayout({
             </header>
             <SidebarProvider>
               <div className="flex flex-1 overflow-hidden">
-                <AppSidebar />
+                <SignedIn>
+                  <AppSidebar />
+                </SignedIn>
                 <main className="flex-1 overflow-auto">
                   <div className="container mx-auto py-6 px-4 md:px-6">{children}</div>
                   <Footer />
