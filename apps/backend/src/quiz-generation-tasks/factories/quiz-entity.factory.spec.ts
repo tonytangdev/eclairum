@@ -11,6 +11,7 @@ import {
   AnswerData,
 } from '../services/question-generation.service';
 import { faker } from '@faker-js/faker';
+import { randomUUID } from 'node:crypto';
 
 describe('QuizEntityFactory', () => {
   let quizEntityFactory: QuizEntityFactory;
@@ -27,15 +28,17 @@ describe('QuizEntityFactory', () => {
     it('should create a new QuizGenerationTask with IN_PROGRESS status', () => {
       // Arrange
       const text = faker.lorem.paragraphs(3);
+      const userId = faker.string.uuid();
 
       // Act
-      const task = quizEntityFactory.createTask(text);
+      const task = quizEntityFactory.createTask(text, userId);
 
       // Assert
       expect(task).toBeInstanceOf(QuizGenerationTask);
       expect(task.getTextContent()).toBe(text);
       expect(task.getStatus()).toBe(QuizGenerationStatus.IN_PROGRESS);
       expect(task.getQuestions()).toEqual([]);
+      expect(task.getUserId()).toBe(userId);
     });
   });
 
@@ -150,6 +153,7 @@ describe('QuizEntityFactory', () => {
         textContent: faker.lorem.paragraphs(2),
         questions: [],
         status: QuizGenerationStatus.IN_PROGRESS,
+        userId: randomUUID(),
       });
 
       const question1 = new Question({

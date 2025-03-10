@@ -110,6 +110,7 @@ describe('QuizGenerationTasksService', () => {
         textContent: createQuizDto.text,
         questions: [],
         status: QuizGenerationStatus.IN_PROGRESS,
+        userId: createQuizDto.userId, // Add userId here
       });
       mockTask.updateStatus = jest.fn();
       mockTask.getId = jest.fn().mockReturnValue(taskId);
@@ -170,6 +171,7 @@ describe('QuizGenerationTasksService', () => {
       // Assert
       expect(mockQuizEntityFactory.createTask).toHaveBeenCalledWith(
         createQuizDto.text,
+        createQuizDto.userId, // Add userId parameter here
       );
       expect(mockTransactionHelper.executeInTransaction).toHaveBeenCalled();
       expect(mockTaskRepository.save).toHaveBeenCalledWith(
@@ -221,6 +223,7 @@ describe('QuizGenerationTasksService', () => {
         textContent: createQuizDto.text,
         questions: [],
         status: QuizGenerationStatus.IN_PROGRESS,
+        userId: createQuizDto.userId, // Add userId here
       });
 
       const errorMessage = faker.lorem.sentence();
@@ -239,6 +242,7 @@ describe('QuizGenerationTasksService', () => {
 
       expect(mockQuizEntityFactory.createTask).toHaveBeenCalledWith(
         createQuizDto.text,
+        createQuizDto.userId, // Add userId parameter here
       );
       expect(mockTransactionHelper.executeInTransaction).toHaveBeenCalled();
       expect(errorLogSpy).toHaveBeenCalled();
@@ -253,6 +257,7 @@ describe('QuizGenerationTasksService', () => {
         textContent: faker.lorem.paragraphs(1),
         questions: [],
         status: QuizGenerationStatus.COMPLETED,
+        userId: faker.string.uuid(),
       });
 
       mockTaskRepository.findById = jest.fn().mockResolvedValue(mockTask);

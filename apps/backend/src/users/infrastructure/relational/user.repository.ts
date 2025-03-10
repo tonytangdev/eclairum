@@ -18,6 +18,11 @@ export class UserRepositoryImpl implements UserRepository {
     return this.mapEntityToDomainIfExists(userEntity);
   }
 
+  async findById(id: User['id']): Promise<User | null> {
+    const userEntity = await this.findUserEntityById(id);
+    return this.mapEntityToDomainIfExists(userEntity);
+  }
+
   async save(user: User): Promise<User> {
     const userEntity = this.mapDomainToPersistence(user);
     const savedEntity = await this.saveUserEntity(userEntity);
@@ -29,6 +34,12 @@ export class UserRepositoryImpl implements UserRepository {
   ): Promise<UserEntity | null> {
     return await this.userRepository.findOne({
       where: { email },
+    });
+  }
+
+  private async findUserEntityById(id: User['id']): Promise<UserEntity | null> {
+    return await this.userRepository.findOne({
+      where: { id },
     });
   }
 

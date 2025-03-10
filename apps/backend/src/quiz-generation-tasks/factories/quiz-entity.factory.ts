@@ -12,11 +12,12 @@ import {
 
 @Injectable()
 export class QuizEntityFactory {
-  createTask(text: string): QuizGenerationTask {
+  createTask(text: string, userId: string): QuizGenerationTask {
     return new QuizGenerationTask({
       textContent: text,
       questions: [],
       status: QuizGenerationStatus.IN_PROGRESS,
+      userId,
     });
   }
 
