@@ -17,7 +17,7 @@ import {
   TextTooLongError,
 } from "../errors/quiz-errors";
 import { User } from "../entities/user";
-import { MAX_TEXT_LENGTH } from "../constants/quiz.constants";
+import { MAX_TEXT_LENGTH } from "../constants/quiz";
 
 describe("CreateQuizGenerationTaskUseCase", () => {
   let createQuizGenerationTaskUseCase: CreateQuizGenerationTaskUseCase;

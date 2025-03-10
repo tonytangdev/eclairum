@@ -1,4 +1,4 @@
-import { MAX_TEXT_LENGTH } from '@flash-me/core/constants/quiz.constants';
+import { MAX_TEXT_LENGTH } from '@flash-me/core/constants';
 import { IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
 
 /**
