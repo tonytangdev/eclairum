@@ -19,6 +19,7 @@ export async function startNgrokTunnel(): Promise<string> {
       addr: PORT,
       authtoken: NGROK_AUTH_TOKEN,
       region: "us",
+      hostname: process.env.NGROK_STATIC_DOMAIN,
     });
 
     console.log(`Ngrok tunnel started at: ${url}`);
