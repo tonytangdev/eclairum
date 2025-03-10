@@ -45,7 +45,10 @@ export class QuizGenerationTasksService {
     const { text, userId } = createQuizGenerationTaskDto;
 
     try {
-      const quizGenerationTask = this.quizEntityFactory.createTask(text);
+      const quizGenerationTask = this.quizEntityFactory.createTask(
+        text,
+        userId,
+      );
       const taskId = quizGenerationTask.getId();
       this.logTaskCreation(taskId, userId, text);
 

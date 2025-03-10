@@ -25,6 +25,7 @@ describe('QuizGenerationTaskMapper', () => {
         }),
       ];
 
+      const userId = faker.string.uuid();
       const domainModel = new QuizGenerationTask({
         id: faker.string.uuid(),
         textContent: faker.lorem.paragraphs(2),
@@ -34,6 +35,7 @@ describe('QuizGenerationTaskMapper', () => {
         updatedAt: new Date(),
         deletedAt: null,
         generatedAt: new Date(),
+        userId,
       });
 
       // Act
@@ -48,6 +50,7 @@ describe('QuizGenerationTaskMapper', () => {
       expect(entity.updatedAt).toBe(domainModel.getUpdatedAt());
       expect(entity.deletedAt).toBe(domainModel.getDeletedAt());
       expect(entity.generatedAt).toBe(domainModel.getGeneratedAt());
+      expect(entity.userId).toBe(userId);
 
       // Check questions mapping
       expect(entity.questions).toHaveLength(questions.length);
@@ -59,11 +62,13 @@ describe('QuizGenerationTaskMapper', () => {
 
     it('should handle domain model without questions', () => {
       // Arrange
+      const userId = faker.string.uuid();
       const domainModel = new QuizGenerationTask({
         id: faker.string.uuid(),
         textContent: faker.lorem.paragraphs(2),
         status: QuizGenerationStatus.PENDING,
         questions: [],
+        userId,
       });
 
       // Act
@@ -71,6 +76,7 @@ describe('QuizGenerationTaskMapper', () => {
 
       // Assert
       expect(entity.questions).toEqual([]);
+      expect(entity.userId).toBe(userId);
     });
   });
 
@@ -85,6 +91,7 @@ describe('QuizGenerationTaskMapper', () => {
       entity.updatedAt = new Date();
       entity.deletedAt = null;
       entity.generatedAt = new Date();
+      entity.userId = faker.string.uuid();
 
       // Create question entities
       entity.questions = [
@@ -110,6 +117,7 @@ describe('QuizGenerationTaskMapper', () => {
       expect(domainModel.getUpdatedAt()).toBe(entity.updatedAt);
       expect(domainModel.getDeletedAt()).toBe(entity.deletedAt);
       expect(domainModel.getGeneratedAt()).toBe(entity.generatedAt);
+      expect(domainModel.getUserId()).toBe(entity.userId);
 
       // Check questions mapping
       const questions = domainModel.getQuestions();
@@ -130,12 +138,14 @@ describe('QuizGenerationTaskMapper', () => {
       entity.textContent = faker.lorem.paragraphs(2);
       entity.status = QuizGenerationStatus.PENDING;
       entity.questions = [];
+      entity.userId = faker.string.uuid();
 
       // Act
       const domainModel = QuizGenerationTaskMapper.toDomain(entity);
 
       // Assert
       expect(domainModel.getQuestions()).toEqual([]);
+      expect(domainModel.getUserId()).toBe(entity.userId);
     });
   });
 
@@ -147,6 +157,7 @@ describe('QuizGenerationTaskMapper', () => {
         entity.id = faker.string.uuid();
         entity.textContent = faker.lorem.paragraphs(1);
         entity.status = QuizGenerationStatus.COMPLETED;
+        entity.userId = faker.string.uuid();
         entity.questions = [
           Object.assign(new QuestionEntity(), {
             id: faker.string.uuid(),
@@ -173,6 +184,7 @@ describe('QuizGenerationTaskMapper', () => {
         expect(domainModel).toBeInstanceOf(QuizGenerationTask);
         expect(domainModel.getId()).toBe(entities[index].id);
         expect(domainModel.getTextContent()).toBe(entities[index].textContent);
+        expect(domainModel.getUserId()).toBe(entities[index].userId);
       });
 
       // Clean up spy
@@ -201,6 +213,7 @@ describe('QuizGenerationTaskMapper', () => {
       entity.deletedAt = null;
       entity.generatedAt = null; // Explicitly null
       entity.questions = [];
+      entity.userId = faker.string.uuid();
 
       // Act
       const domainModel = QuizGenerationTaskMapper.toDomain(entity);
@@ -220,11 +233,13 @@ describe('QuizGenerationTaskMapper', () => {
 
       statuses.forEach((status) => {
         // Arrange
+        const userId = faker.string.uuid();
         const domainModel = new QuizGenerationTask({
           id: faker.string.uuid(),
           textContent: faker.lorem.sentence(),
           status,
           questions: [],
+          userId,
         });
 
         // Act
@@ -234,6 +249,8 @@ describe('QuizGenerationTaskMapper', () => {
         // Assert
         expect(entity.status).toBe(status);
         expect(mappedBack.getStatus()).toBe(status);
+        expect(entity.userId).toBe(userId);
+        expect(mappedBack.getUserId()).toBe(userId);
       });
     });
   });

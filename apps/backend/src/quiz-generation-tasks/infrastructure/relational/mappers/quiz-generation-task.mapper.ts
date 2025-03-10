@@ -19,6 +19,7 @@ export class QuizGenerationTaskMapper {
     entity.createdAt = domainModel.getCreatedAt();
     entity.updatedAt = domainModel.getUpdatedAt();
     entity.deletedAt = domainModel.getDeletedAt();
+    entity.userId = domainModel.getUserId();
 
     // Map question relationships
     entity.questions = domainModel.getQuestions().map((question) => {
@@ -52,6 +53,7 @@ export class QuizGenerationTaskMapper {
       updatedAt: entity.updatedAt,
       deletedAt: entity.deletedAt,
       generatedAt: entity.generatedAt,
+      userId: entity.userId,
     });
   }
 

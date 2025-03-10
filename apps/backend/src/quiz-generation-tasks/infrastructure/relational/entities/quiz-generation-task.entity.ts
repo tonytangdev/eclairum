@@ -6,9 +6,12 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { QuizGenerationStatus } from '@flash-me/core/entities';
 import { QuestionEntity } from '../../../../questions/infrastructure/relational/entities/question.entity';
+import { UserEntity } from '../../../../users/infrastructure/relational/entities/user.entity';
 
 @Entity('quiz_generation_tasks')
 export class QuizGenerationTaskEntity {
@@ -27,6 +30,13 @@ export class QuizGenerationTaskEntity {
 
   @Column({ type: 'timestamp', nullable: true })
   generatedAt: Date | null;
+
+  @Column()
+  userId: string;
+
+  @ManyToOne(() => UserEntity)
+  @JoinColumn({ name: 'userId' })
+  user: UserEntity;
 
   @CreateDateColumn()
   createdAt: Date;
