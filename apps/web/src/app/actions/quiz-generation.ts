@@ -2,12 +2,17 @@
 
 import { serverApi } from "@/lib/api";
 import { CreateQuizGenerationTaskDto } from "@flash-me/backend/dtos";
+import { auth } from "@clerk/nextjs/server";
 
 export async function createQuizGenerationTask(
-  data: CreateQuizGenerationTaskDto,
+  data: Omit<CreateQuizGenerationTaskDto, "userId">,
 ) {
   try {
-    const response = await serverApi.post("/quiz-generation-tasks", data);
+    const { userId } = await auth();
+    const response = await serverApi.post("/quiz-generation-tasks", {
+      ...data,
+      userId,
+    });
 
     return {
       success: true,

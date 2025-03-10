@@ -43,13 +43,12 @@ export function CreateFlashCards() {
     try {
       const result = await createQuizGenerationTask({
         text,
-        userId: 'zefz'
       });
 
       if (result.success) {
         setFeedback({
           type: "success",
-          message: "Flash cards generation started! This might take a moment."
+          message: "Flash cards generated"
         });
       } else {
         throw new Error(result.error);
