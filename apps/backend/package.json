@@ -30,9 +30,11 @@
     "test:watch": "NODE_ENV=ci jest --watch",
     "test:cov": "NODE_ENV=ci jest --coverage",
     "test:debug": "NODE_ENV=ci node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "NODE_ENV=ci jest --config ./test/jest-e2e.json",
+    "test:e2e": "npm run docker:up:ci && sleep 5 && NODE_ENV=ci jest --config ./test/jest-e2e.json; EXIT_CODE=$?; npm run docker:down:ci; exit $EXIT_CODE",
     "docker:up": "docker compose --env-file .env.dev -f docker-compose.dev.yaml up -d",
-    "docker:down": "docker compose --env-file .env.dev -f docker-compose.dev.yaml down"
+    "docker:down": "docker compose --env-file .env.dev -f docker-compose.dev.yaml down",
+    "docker:up:ci": "docker compose --env-file .env.ci -f docker-compose.ci.yaml up -d",
+    "docker:down:ci": "docker compose --env-file .env.ci -f docker-compose.ci.yaml down"
   },
   "dependencies": {
     "@faker-js/faker": "^9.5.1",
