@@ -127,7 +127,7 @@ export default function MyFlashCards() {
           <BookOpen className="h-12 w-12 text-muted-foreground" />
           <h3 className="mt-4 text-lg font-semibold">No flash cards yet</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            You haven't created any flash cards yet. Get started by creating your first set.
+            You haven&apos;t created any flash cards yet. Get started by creating your first set.
           </p>
           <Button asChild className="mt-4">
             <Link href="/">
