@@ -22,6 +22,7 @@ describe('QuizGenerationTaskRepositoryImpl', () => {
       textContent: faker.lorem.paragraphs(2),
       status: QuizGenerationStatus.PENDING,
       questions: [],
+      userId: faker.string.uuid(),
     });
 
   // Mock entity creation helper
@@ -31,6 +32,7 @@ describe('QuizGenerationTaskRepositoryImpl', () => {
     entity.textContent = faker.lorem.paragraphs(2);
     entity.status = QuizGenerationStatus.PENDING;
     entity.questions = [];
+    entity.userId = faker.string.uuid();
     return entity;
   };
 
