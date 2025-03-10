@@ -3,6 +3,7 @@
 import { Home, BookOpen } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
+import { AppTitle } from "@/components/ui/app-title"
 import {
   Sidebar,
   SidebarContent,
@@ -42,8 +43,7 @@ export function AppSidebar() {
       <Sidebar>
         <SidebarHeader className="flex items-center justify-center p-4">
           <Link href="/" className="flex items-center gap-2">
-            <BookOpen className="h-6 w-6" />
-            <span className="text-xl font-bold">FlashMe</span>
+            <AppTitle />
           </Link>
         </SidebarHeader>
         <SidebarContent>
