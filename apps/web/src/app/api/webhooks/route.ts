@@ -1,6 +1,7 @@
 import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { WebhookEvent } from "@clerk/nextjs/server";
+import { createUser } from "@/app/actions/users";
 
 export async function POST(req: Request) {
   const SIGNING_SECRET = process.env.SIGNING_SECRET;
@@ -48,7 +49,17 @@ export async function POST(req: Request) {
   }
 
   if (evt.type === "user.created") {
-    console.log("userId:", evt.data.id);
+    // Create user in our backend
+    const result = await createUser({
+      email: evt.data.email_addresses[0].email_address,
+      id: evt.data.id,
+    });
+
+    if (!result.success) {
+      console.error("Failed to create user:", result.error);
+    } else {
+      console.log("User created successfully:", result.data);
+    }
   }
 
   return new Response("Webhook received", { status: 200 });
