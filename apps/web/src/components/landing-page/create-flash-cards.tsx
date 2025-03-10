@@ -7,8 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { FileText, Upload, ImageIcon, File, CheckCircle, AlertCircle } from "lucide-react";
 import { createQuizGenerationTask } from "@/app/actions/quiz-generation";
+import { MAX_TEXT_LENGTH } from "@flash-me/core/constants";
 
-const MAX_CHARACTERS = 50000;
 
 export function CreateFlashCards() {
   const [text, setText] = useState("");
@@ -16,7 +16,7 @@ export function CreateFlashCards() {
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const characterCount = text.length;
-  const isOverLimit = characterCount > MAX_CHARACTERS;
+  const isOverLimit = characterCount > MAX_TEXT_LENGTH;
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
@@ -98,7 +98,7 @@ export function CreateFlashCards() {
                     onChange={handleTextChange}
                   />
                   <div className={`text-xs flex justify-end ${isOverLimit ? "text-red-500" : "text-muted-foreground"}`}>
-                    {characterCount}/{MAX_CHARACTERS} characters
+                    {characterCount}/{MAX_TEXT_LENGTH} characters
                   </div>
                 </div>
               </TabsContent>

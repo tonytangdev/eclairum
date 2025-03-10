@@ -296,7 +296,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     expect(userRepository.findById).toHaveBeenCalledWith(mockUserId);
   });
 
-  it("should throw TextTooLongError when text exceeds 50,000 characters", async () => {
+  it(`should throw TextTooLongError when text exceeds ${MAX_TEXT_LENGTH} characters`, async () => {
     // Arrange
     // Create text with MAX_TEXT_LENGTH + 1 characters
     const text = "A".repeat(MAX_TEXT_LENGTH + 1);
@@ -315,7 +315,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     expect(quizGenerationTaskRepository.saveTask).not.toHaveBeenCalled();
   });
 
-  it("should accept text exactly at 50,000 characters", async () => {
+  it(`should accept text exactly at ${MAX_TEXT_LENGTH} characters`, async () => {
     // Arrange
     const text = "A".repeat(MAX_TEXT_LENGTH);
     const mockLLMQuestions: QuizQuestion[] = [

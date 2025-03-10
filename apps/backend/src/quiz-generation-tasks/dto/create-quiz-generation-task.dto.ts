@@ -1,3 +1,4 @@
+import { MAX_TEXT_LENGTH } from '@flash-me/core/constants/quiz.constants';
 import { IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
 
 /**
@@ -11,7 +12,9 @@ export class CreateQuizGenerationTaskDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(10, { message: 'Text must be at least 10 characters' })
-  @MaxLength(50000, { message: 'Text cannot exceed 50000 characters' })
+  @MaxLength(MAX_TEXT_LENGTH, {
+    message: `Text cannot exceed ${MAX_TEXT_LENGTH} characters`,
+  })
   text: string;
 
   /**

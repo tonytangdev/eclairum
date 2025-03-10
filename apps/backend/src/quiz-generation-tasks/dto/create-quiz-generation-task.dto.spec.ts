@@ -2,6 +2,7 @@ import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { faker } from '@faker-js/faker';
 import { CreateQuizGenerationTaskDto } from './create-quiz-generation-task.dto';
+import { MAX_TEXT_LENGTH } from '@flash-me/core/constants/quiz.constants';
 
 describe('CreateQuizGenerationTaskDto', () => {
   let dto: CreateQuizGenerationTaskDto;
@@ -72,8 +73,7 @@ describe('CreateQuizGenerationTaskDto', () => {
     });
 
     it('should fail validation when text is too long', async () => {
-      // Create a string longer than 50000 characters
-      dto.text = faker.string.sample(51000);
+      dto.text = faker.string.sample(MAX_TEXT_LENGTH + 200);
 
       const dtoObj = plainToInstance(CreateQuizGenerationTaskDto, dto);
       const errors = await validate(dtoObj);
