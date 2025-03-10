@@ -33,3 +33,10 @@ export class UserNotFoundError extends Error {
     this.name = "UserNotFoundError";
   }
 }
+
+export class TextTooLongError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TextTooLongError";
+  }
+}

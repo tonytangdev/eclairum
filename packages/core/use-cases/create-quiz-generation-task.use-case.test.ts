@@ -14,8 +14,10 @@ import {
   NoQuestionsGeneratedError,
   QuizStorageError,
   UserNotFoundError,
+  TextTooLongError,
 } from "../errors/quiz-errors";
 import { User } from "../entities/user";
+import { MAX_TEXT_LENGTH } from "../constants/quiz.constants";
 
 describe("CreateQuizGenerationTaskUseCase", () => {
   let createQuizGenerationTaskUseCase: CreateQuizGenerationTaskUseCase;
@@ -292,5 +294,54 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     ).rejects.toThrow(QuizStorageError);
 
     expect(userRepository.findById).toHaveBeenCalledWith(mockUserId);
+  });
+
+  it("should throw TextTooLongError when text exceeds 50,000 characters", async () => {
+    // Arrange
+    // Create text with MAX_TEXT_LENGTH + 1 characters
+    const text = "A".repeat(MAX_TEXT_LENGTH + 1);
+
+    // Act & Assert
+    await expect(
+      createQuizGenerationTaskUseCase.execute({
+        userId: mockUserId,
+        text,
+      }),
+    ).rejects.toThrow(TextTooLongError);
+
+    // Verify that no other methods were called
+    expect(userRepository.findById).not.toHaveBeenCalled();
+    expect(llmService.generateQuiz).not.toHaveBeenCalled();
+    expect(quizGenerationTaskRepository.saveTask).not.toHaveBeenCalled();
+  });
+
+  it("should accept text exactly at 50,000 characters", async () => {
+    // Arrange
+    const text = "A".repeat(MAX_TEXT_LENGTH);
+    const mockLLMQuestions: QuizQuestion[] = [
+      {
+        question: faker.lorem.sentence() + "?",
+        answers: [
+          { text: faker.lorem.sentence(), isCorrect: true },
+          { text: faker.lorem.sentence(), isCorrect: false },
+        ],
+      },
+    ];
+
+    llmService.generateQuiz.mockResolvedValue(mockLLMQuestions);
+
+    // Act
+    const result = await createQuizGenerationTaskUseCase.execute({
+      userId: mockUserId,
+      text,
+    });
+
+    // Assert
+    expect(userRepository.findById).toHaveBeenCalledWith(mockUserId);
+    expect(llmService.generateQuiz).toHaveBeenCalledWith(text);
+    expect(result.quizGenerationTask.getTextContent()).toBe(text);
+    expect(result.quizGenerationTask.getStatus()).toBe(
+      QuizGenerationStatus.COMPLETED,
+    );
   });
 });

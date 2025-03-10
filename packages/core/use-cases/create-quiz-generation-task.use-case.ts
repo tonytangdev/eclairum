@@ -14,8 +14,10 @@ import {
   NoQuestionsGeneratedError,
   QuizStorageError,
   UserNotFoundError,
+  TextTooLongError,
 } from "../errors/quiz-errors";
 import { User } from "../entities";
+import { MAX_TEXT_LENGTH } from "../constants/quiz.constants";
 
 type CreateQuizGenerationTaskUseCaseRequest = {
   userId: User["id"];
@@ -39,6 +41,13 @@ export class CreateQuizGenerationTaskUseCase {
     userId,
     text,
   }: CreateQuizGenerationTaskUseCaseRequest): Promise<CreateQuizGenerationTaskUseCaseResponse> {
+    // Check text length
+    if (text.length > MAX_TEXT_LENGTH) {
+      throw new TextTooLongError(
+        `Text exceeds the maximum length of ${MAX_TEXT_LENGTH} characters`,
+      );
+    }
+
     // Check if user exists
     const user = await this.userRepository.findById(userId);
     if (!user) {
