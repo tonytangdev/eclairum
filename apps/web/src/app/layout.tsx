@@ -5,10 +5,10 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { Footer } from "@/components/footer"
+import { CustomSignInButton } from "@/components/auth/sign-in-button"
 import {
   ClerkProvider,
   SignInButton,
-  SignUpButton,
   SignedIn,
   SignedOut,
   UserButton,
@@ -38,8 +38,9 @@ export default function RootLayout({
           >
             <header className="flex justify-end items-center p-4 gap-4 h-16">
               <SignedOut>
-                <SignInButton />
-                <SignUpButton />
+                <SignInButton>
+                  <CustomSignInButton />
+                </SignInButton>
               </SignedOut>
               <SignedIn>
                 <UserButton />
