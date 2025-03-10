@@ -9,6 +9,13 @@ export async function createQuizGenerationTask(
 ) {
   try {
     const { userId } = await auth();
+    if (!userId) {
+      return {
+        success: false,
+        error: "Authentication required",
+      };
+    }
+
     const response = await serverApi.post("/quiz-generation-tasks", {
       ...data,
       userId,

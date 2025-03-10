@@ -8,12 +8,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { FileText, Upload, CheckCircle, AlertCircle } from "lucide-react";
 import { createQuizGenerationTask } from "@/app/actions/quiz-generation";
 import { MAX_TEXT_LENGTH } from "@flash-me/core/constants";
+import { useClerk, useUser } from "@clerk/nextjs";
 
 
 export function CreateFlashCards() {
   const [text, setText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const { isSignedIn } = useUser();
+  const clerk = useClerk();
 
   const characterCount = text.length;
   const isOverLimit = characterCount > MAX_TEXT_LENGTH;
@@ -41,6 +44,10 @@ export function CreateFlashCards() {
     setFeedback(null);
 
     try {
+      if (!isSignedIn) {
+        return clerk.openSignIn();
+      }
+
       const result = await createQuizGenerationTask({
         text,
       });
