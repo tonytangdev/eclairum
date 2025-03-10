@@ -104,7 +104,8 @@
       ".*\\.entity\\.ts$",
       ".*\\.module\\.ts$",
       "main\\.ts$",
-      ".*\\.provider\\.ts$"
+      ".*\\.provider\\.ts$",
+      "src/dtos/.*"
     ],
     "coverageThreshold": {
       "global": {
