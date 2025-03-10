@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Upload, ImageIcon, File, CheckCircle, AlertCircle } from "lucide-react";
+import { FileText, Upload, CheckCircle, AlertCircle } from "lucide-react";
 import { createQuizGenerationTask } from "@/app/actions/quiz-generation";
 import { MAX_TEXT_LENGTH } from "@flash-me/core/constants";
 
@@ -113,16 +113,6 @@ export function CreateFlashCards() {
                   </div>
                   <Upload className="h-10 w-10 text-muted-foreground mb-2" />
                   <p className="text-muted-foreground mb-4">Drag and drop files here</p>
-                  <div className="flex gap-2">
-                    <Button variant="outline" disabled>
-                      <ImageIcon className="mr-2 h-4 w-4" />
-                      Upload Image
-                    </Button>
-                    <Button variant="outline" disabled>
-                      <File className="mr-2 h-4 w-4" />
-                      Upload File
-                    </Button>
-                  </div>
                 </div>
               </TabsContent>
             </Tabs>
