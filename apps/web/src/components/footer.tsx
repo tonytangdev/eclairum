@@ -2,6 +2,8 @@ import Link from "next/link"
 import { BookOpen } from "lucide-react"
 
 export function Footer() {
+  const currentYear = new Date().getFullYear()
+
   return (
     <footer className="border-t py-8 mt-8">
       <div className="container mx-auto px-4">
@@ -84,7 +86,7 @@ export function Footer() {
         </div>
 
         <div className="mt-8 pt-8 border-t text-center">
-          <p className="text-sm text-muted-foreground">© 2025 FlashMe. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">© {currentYear} FlashMe. All rights reserved.</p>
         </div>
       </div>
     </footer>
