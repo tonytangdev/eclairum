@@ -29,6 +29,18 @@ export class AnswerRepositoryImpl implements AnswerRepository {
     return this.mapEntitiesToDomain(answerEntities);
   }
 
+  async findById(id: string): Promise<Answer | null> {
+    const entity = await this.answerRepository.findOne({
+      where: { id },
+    });
+
+    if (!entity) {
+      return null;
+    }
+
+    return AnswerMapper.toDomain(entity);
+  }
+
   private mapAnswersToPersistence(answers: Answer[]): AnswerEntity[] {
     return answers.map((answer) => AnswerMapper.toPersistence(answer));
   }
