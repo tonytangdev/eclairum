@@ -2,6 +2,7 @@ import { UserAnswer } from "../entities/user_answer";
 import { Answer } from "../entities/answer";
 import { UserRepository } from "../interfaces/user-repository.interface";
 import { UserAnswersRepository } from "../interfaces/user-answers-repository.interface";
+import { AnswerRepository } from "../interfaces/answer-repository.interface";
 import {
   InvalidAnswerError,
   UserAnswerStorageError,
@@ -11,35 +12,39 @@ import { UserNotFoundError } from "../errors/quiz-errors";
 type UserAnswersQuestionRequest = {
   userId: string;
   questionId: string;
-  answer: Answer;
-};
-
-type UserAnswersQuestionResponse = {
-  userAnswer: UserAnswer;
-  isCorrect: boolean;
+  answerId: string;
 };
 
 export class UserAnswersQuestionUseCase {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly userAnswersRepository: UserAnswersRepository,
+    private readonly answerRepository: AnswerRepository,
   ) {}
 
   async execute({
     userId,
     questionId,
-    answer,
-  }: UserAnswersQuestionRequest): Promise<UserAnswersQuestionResponse> {
+    answerId,
+  }: UserAnswersQuestionRequest): Promise<void> {
     await this.ensureUserExists(userId);
+
+    const answer = await this.fetchAnswer(answerId);
+
     this.ensureAnswerBelongsToQuestion(questionId, answer);
 
     const userAnswer = new UserAnswer({ userId, questionId, answer });
-    const savedUserAnswer = await this.persistUserAnswer(userAnswer);
+    await this.persistUserAnswer(userAnswer);
+  }
 
-    return {
-      userAnswer: savedUserAnswer,
-      isCorrect: savedUserAnswer.isCorrect(),
-    };
+  private async fetchAnswer(answerId: string): Promise<Answer> {
+    const answer = await this.answerRepository.findById(answerId);
+
+    if (!answer) {
+      throw new InvalidAnswerError(`Answer with ID ${answerId} not found`);
+    }
+
+    return answer;
   }
 
   private async ensureUserExists(userId: string): Promise<void> {
@@ -61,9 +66,9 @@ export class UserAnswersQuestionUseCase {
     }
   }
 
-  private async persistUserAnswer(userAnswer: UserAnswer): Promise<UserAnswer> {
+  private async persistUserAnswer(userAnswer: UserAnswer): Promise<void> {
     try {
-      return await this.userAnswersRepository.save(userAnswer);
+      await this.userAnswersRepository.save(userAnswer);
     } catch (error) {
       throw new UserAnswerStorageError(
         "Failed to save user answer",
