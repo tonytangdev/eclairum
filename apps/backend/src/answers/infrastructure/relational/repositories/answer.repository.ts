@@ -8,10 +8,16 @@ import { AnswerMapper } from '../mappers/answer.mapper';
 
 @Injectable()
 export class AnswerRepositoryImpl implements AnswerRepository {
+  private currentEntityManager?: EntityManager;
+
   constructor(
     @InjectRepository(AnswerEntity)
     private answerRepository: Repository<AnswerEntity>,
   ) {}
+
+  setEntityManager(entityManager: EntityManager): void {
+    this.currentEntityManager = entityManager;
+  }
 
   async saveAnswers(
     answers: Answer[],
@@ -30,7 +36,8 @@ export class AnswerRepositoryImpl implements AnswerRepository {
   }
 
   async findById(id: string): Promise<Answer | null> {
-    const entity = await this.answerRepository.findOne({
+    const repository = this.getRepository();
+    const entity = await repository.findOne({
       where: { id },
     });
 
@@ -48,8 +55,10 @@ export class AnswerRepositoryImpl implements AnswerRepository {
   private getRepository(
     entityManager?: EntityManager,
   ): Repository<AnswerEntity> {
-    return entityManager
-      ? entityManager.getRepository(AnswerEntity)
+    return entityManager || this.currentEntityManager
+      ? (entityManager || this.currentEntityManager!).getRepository(
+          AnswerEntity,
+        )
       : this.answerRepository;
   }
 
@@ -63,7 +72,8 @@ export class AnswerRepositoryImpl implements AnswerRepository {
   private async queryAnswersByQuestionId(
     questionId: string,
   ): Promise<AnswerEntity[]> {
-    return await this.answerRepository.find({ where: { questionId } });
+    const repository = this.getRepository();
+    return await repository.find({ where: { questionId } });
   }
 
   private mapEntitiesToDomain(entities: AnswerEntity[]): Answer[] {

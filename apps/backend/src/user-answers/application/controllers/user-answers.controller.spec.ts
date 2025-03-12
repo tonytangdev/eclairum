@@ -85,7 +85,7 @@ describe('UserAnswersController', () => {
       const metadata = Reflect.getMetadata(
         '__httpCode__',
         controller.submitAnswer,
-      );
+      ) as number;
       expect(metadata).toBe(HttpStatus.CREATED);
     });
   });

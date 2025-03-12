@@ -10,10 +10,16 @@ import { QuizGenerationTaskMapper } from '../mappers/quiz-generation-task.mapper
 export class QuizGenerationTaskRepositoryImpl
   implements QuizGenerationTaskRepository
 {
+  private currentEntityManager?: EntityManager;
+
   constructor(
     @InjectRepository(QuizGenerationTaskEntity)
     private readonly quizGenerationTaskRepository: Repository<QuizGenerationTaskEntity>,
   ) {}
+
+  setEntityManager(entityManager: EntityManager): void {
+    this.currentEntityManager = entityManager;
+  }
 
   /**
    * Implements the interface method to save a quiz generation task
@@ -34,9 +40,7 @@ export class QuizGenerationTaskRepositoryImpl
     quizGenerationTask: QuizGenerationTask,
     entityManager?: EntityManager,
   ): Promise<QuizGenerationTask> {
-    const repo = entityManager
-      ? entityManager.getRepository(QuizGenerationTaskEntity)
-      : this.quizGenerationTaskRepository;
+    const repo = this.getRepository(entityManager);
 
     const quizGenerationTaskEntity =
       QuizGenerationTaskMapper.toEntity(quizGenerationTask);
@@ -46,11 +50,11 @@ export class QuizGenerationTaskRepositoryImpl
   }
 
   async findById(id: string): Promise<QuizGenerationTask | null> {
-    const quizGenerationTaskEntity =
-      await this.quizGenerationTaskRepository.findOne({
-        where: { id },
-        relations: ['questions'],
-      });
+    const repo = this.getRepository();
+    const quizGenerationTaskEntity = await repo.findOne({
+      where: { id },
+      relations: ['questions'],
+    });
 
     if (!quizGenerationTaskEntity) {
       return null;
@@ -60,10 +64,21 @@ export class QuizGenerationTaskRepositoryImpl
   }
 
   async findAll(): Promise<QuizGenerationTask[]> {
-    const entities = await this.quizGenerationTaskRepository.find({
+    const repo = this.getRepository();
+    const entities = await repo.find({
       relations: ['questions'],
     });
 
     return QuizGenerationTaskMapper.toDomainList(entities);
+  }
+
+  private getRepository(
+    entityManager?: EntityManager,
+  ): Repository<QuizGenerationTaskEntity> {
+    return entityManager || this.currentEntityManager
+      ? (entityManager || this.currentEntityManager!).getRepository(
+          QuizGenerationTaskEntity,
+        )
+      : this.quizGenerationTaskRepository;
   }
 }

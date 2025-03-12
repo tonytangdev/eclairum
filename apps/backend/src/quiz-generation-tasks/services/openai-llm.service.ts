@@ -10,6 +10,8 @@ import {
 } from '../exceptions/quiz-generation.exceptions';
 import { OPENAI_CLIENT } from '../providers/openai.provider';
 
+export const LLM_SERVICE_PROVIDER_KEY = 'LLMService';
+
 // Define the Zod schema for our quiz questions
 const QuizSchema = z.object({
   data: z.array(

@@ -1,5 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { OpenAILLMService } from './openai-llm.service';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  LLM_SERVICE_PROVIDER_KEY,
+  OpenAILLMService,
+} from './openai-llm.service';
 import { QuizQuestion } from '@flash-me/core/interfaces';
 
 export interface QuestionAnswerPair {
@@ -16,7 +19,10 @@ export interface AnswerData {
 export class QuestionGenerationService {
   private readonly logger = new Logger(QuestionGenerationService.name);
 
-  constructor(private readonly openAILLMService: OpenAILLMService) {}
+  constructor(
+    @Inject(LLM_SERVICE_PROVIDER_KEY)
+    private readonly openAILLMService: OpenAILLMService,
+  ) {}
 
   async generateQuestionsFromText(text: string): Promise<QuestionAnswerPair[]> {
     this.logger.debug(`Generating questions from text using OpenAI`);

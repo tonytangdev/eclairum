@@ -8,10 +8,16 @@ import { QuestionMapper } from '../mappers/question.mapper';
 
 @Injectable()
 export class QuestionRepositoryImpl implements QuestionRepository {
+  private currentEntityManager?: EntityManager;
+
   constructor(
     @InjectRepository(QuestionEntity)
     private questionRepository: Repository<QuestionEntity>,
   ) {}
+
+  setEntityManager(entityManager: EntityManager): void {
+    this.currentEntityManager = entityManager;
+  }
 
   async saveQuestions(
     questions: Question[],
@@ -31,8 +37,10 @@ export class QuestionRepositoryImpl implements QuestionRepository {
   private getRepository(
     entityManager?: EntityManager,
   ): Repository<QuestionEntity> {
-    return entityManager
-      ? entityManager.getRepository(QuestionEntity)
+    return entityManager || this.currentEntityManager
+      ? (entityManager || this.currentEntityManager!).getRepository(
+          QuestionEntity,
+        )
       : this.questionRepository;
   }
 

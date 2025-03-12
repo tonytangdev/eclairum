@@ -1,21 +1,20 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { CreateQuizGenerationTaskDto } from '../dto/create-quiz-generation-task.dto';
 import {
-  Question,
-  Answer,
   QuizGenerationTask,
   QuizGenerationStatus,
 } from '@flash-me/core/entities';
 import { QuestionRepositoryImpl } from '../../questions/infrastructure/relational/repositories/question.repository';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { QuizGenerationTaskRepositoryImpl } from '../infrastructure/relational/repositories/quiz-generation-task.repository';
-import {
-  QuestionAnswerPair,
-  QuestionGenerationService,
-} from './question-generation.service';
-import { QuizEntityFactory } from '../factories/quiz-entity.factory';
+import { QuestionGenerationService } from './question-generation.service';
 import { TransactionHelper } from '../../shared/helpers/transaction.helper';
+import { CreateQuizGenerationTaskUseCase } from '@flash-me/core/use-cases';
+import { LLMService } from '@flash-me/core/interfaces/llm-service.interface';
+import { UserRepository } from '@flash-me/core/interfaces/user-repository.interface';
+import { LLM_SERVICE_PROVIDER_KEY } from './openai-llm.service';
+import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
 
 export interface TaskResponse {
   taskId: string;
@@ -34,9 +33,10 @@ export class QuizGenerationTasksService {
     private readonly questionRepository: QuestionRepositoryImpl,
     private readonly answerRepository: AnswerRepositoryImpl,
     private readonly quizGenerationTaskRepository: QuizGenerationTaskRepositoryImpl,
-    private readonly questionGenerationService: QuestionGenerationService,
-    private readonly quizEntityFactory: QuizEntityFactory,
     private readonly transactionHelper: TransactionHelper,
+    @Inject(LLM_SERVICE_PROVIDER_KEY)
+    private readonly llmService: LLMService,
+    private readonly userRepository: UserRepositoryImpl,
   ) {}
 
   async createTask(
@@ -45,21 +45,26 @@ export class QuizGenerationTasksService {
     const { text, userId } = createQuizGenerationTaskDto;
 
     try {
-      const quizGenerationTask = this.quizEntityFactory.createTask(
-        text,
-        userId,
-      );
-      const taskId = quizGenerationTask.getId();
-      this.logTaskCreation(taskId, userId, text);
+      this.logger.log(`Creating quiz generation task for user ${userId}`);
+      this.logger.debug(`Text length: ${text.length} characters`);
 
       return await this.transactionHelper.executeInTransaction(
-        (entityManager) =>
-          this.processTaskWithinTransaction(
-            quizGenerationTask,
-            text,
-            userId,
-            entityManager,
-          ),
+        async (entityManager) => {
+          // Configure repositories to use the transaction context
+          this.configureRepositoriesForTransaction(entityManager);
+
+          // Create the use case instance with the configured repositories
+          const createQuizGenerationTaskUseCase = this.createUseCase();
+
+          // Execute the use case
+          const { quizGenerationTask } =
+            await createQuizGenerationTaskUseCase.execute({
+              userId,
+              text,
+            });
+
+          return this.createTaskResponse(quizGenerationTask, userId);
+        },
       );
     } catch (error) {
       this.logError('Failed to create quiz generation task', error);
@@ -67,53 +72,28 @@ export class QuizGenerationTasksService {
     }
   }
 
+  private createUseCase(): CreateQuizGenerationTaskUseCase {
+    return new CreateQuizGenerationTaskUseCase(
+      this.llmService,
+      this.questionRepository,
+      this.answerRepository,
+      this.quizGenerationTaskRepository,
+      this.userRepository,
+    );
+  }
+
+  // Configure repositories to use the current transaction context
+  private configureRepositoriesForTransaction(
+    entityManager: EntityManager,
+  ): void {
+    this.questionRepository.setEntityManager(entityManager);
+    this.answerRepository.setEntityManager(entityManager);
+    this.quizGenerationTaskRepository.setEntityManager(entityManager);
+    // Add any other repositories that need transaction context
+  }
+
   async getTaskById(taskId: string): Promise<QuizGenerationTask | null> {
     return this.quizGenerationTaskRepository.findById(taskId);
-  }
-
-  private logTaskCreation(taskId: string, userId: string, text: string): void {
-    this.logger.log(
-      `Creating quiz generation task ${taskId} for user ${userId}`,
-    );
-    this.logger.debug(`Text length: ${text.length} characters`);
-  }
-
-  private async processTaskWithinTransaction(
-    quizGenerationTask: QuizGenerationTask,
-    text: string,
-    userId: string,
-    entityManager: EntityManager,
-  ): Promise<TaskResponse> {
-    await this.saveInitialTask(quizGenerationTask, entityManager);
-    const questions = await this.generateAndSaveQuestions(text, entityManager);
-    await this.finalizeTask(quizGenerationTask, questions, entityManager);
-    return this.createTaskResponse(quizGenerationTask, userId);
-  }
-
-  private async saveInitialTask(
-    task: QuizGenerationTask,
-    entityManager: EntityManager,
-  ): Promise<void> {
-    await this.quizGenerationTaskRepository.save(task, entityManager);
-  }
-
-  private async generateAndSaveQuestions(
-    text: string,
-    entityManager: EntityManager,
-  ): Promise<Question[]> {
-    const questionAnswerPairs =
-      await this.questionGenerationService.generateQuestionsFromText(text);
-    return this.saveQuestionsAndAnswers(questionAnswerPairs, entityManager);
-  }
-
-  private async finalizeTask(
-    task: QuizGenerationTask,
-    questions: Question[],
-    entityManager: EntityManager,
-  ): Promise<void> {
-    this.quizEntityFactory.addQuestionsToTask(task, questions);
-    task.updateStatus(QuizGenerationStatus.COMPLETED);
-    await this.quizGenerationTaskRepository.save(task, entityManager);
   }
 
   private createTaskResponse(
@@ -135,26 +115,6 @@ export class QuizGenerationTasksService {
       message: `Quiz generation task created with ${questionsCount} questions`,
       generatedAt: task.getGeneratedAt()!,
     };
-  }
-
-  private async saveQuestionsAndAnswers(
-    questionAnswerPairs: QuestionAnswerPair[],
-    entityManager?: EntityManager,
-  ): Promise<Question[]> {
-    const questions =
-      this.quizEntityFactory.createQuestionEntities(questionAnswerPairs);
-    const allAnswers = this.quizEntityFactory.extractAllAnswers(questions);
-    await this.persistEntities(questions, allAnswers, entityManager);
-    return questions;
-  }
-
-  private async persistEntities(
-    questions: Question[],
-    answers: Answer[],
-    entityManager?: EntityManager,
-  ): Promise<void> {
-    await this.questionRepository.saveQuestions(questions, entityManager);
-    await this.answerRepository.saveAnswers(answers, entityManager);
   }
 
   private logError(message: string, error: unknown): void {
