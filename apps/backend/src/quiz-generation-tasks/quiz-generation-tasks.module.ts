@@ -11,8 +11,6 @@ import {
 import { OpenAIProvider } from './providers/openai.provider';
 import { QuizGenerationTaskEntity } from './infrastructure/relational/entities/quiz-generation-task.entity';
 import { QuizGenerationTaskRepositoryImpl } from './infrastructure/relational/repositories/quiz-generation-task.repository';
-import { QuestionGenerationService } from './services/question-generation.service';
-import { QuizEntityFactory } from './factories/quiz-entity.factory';
 import { TransactionHelper } from '../shared/helpers/transaction.helper';
 import { QuestionEntity } from '../questions/infrastructure/relational/entities/question.entity';
 import { AnswerEntity } from '../answers/infrastructure/relational/entities/answer.entity';
@@ -38,8 +36,6 @@ import { UsersModule } from '../users/users.module';
     },
     OpenAIProvider,
     QuizGenerationTaskRepositoryImpl,
-    QuestionGenerationService,
-    QuizEntityFactory,
     TransactionHelper,
   ],
   exports: [QuizGenerationTasksService],

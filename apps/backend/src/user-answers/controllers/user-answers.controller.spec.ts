@@ -81,7 +81,7 @@ describe('UserAnswersController', () => {
       //   .expect(HttpStatus.CREATED);
 
       // For now, we can verify that the decorator is applied
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const metadata = Reflect.getMetadata(
         '__httpCode__',
         controller.submitAnswer,

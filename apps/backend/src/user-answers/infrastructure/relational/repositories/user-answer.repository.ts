@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserAnswerEntity } from '../entities/user-answer.entity';
 import { UserAnswersRepository } from '@flash-me/core/interfaces/user-answers-repository.interface';
-import { UserAnswer } from '@flash-me/core/entities/user_answer';
+import { UserAnswer } from '@flash-me/core/entities';
 import { UserAnswerMapper } from '../mappers/user-answer.mapper';
 
 @Injectable()

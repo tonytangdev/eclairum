@@ -8,11 +8,9 @@ import {
 import { QuestionRepositoryImpl } from '../../questions/infrastructure/relational/repositories/question.repository';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { QuizGenerationTaskRepositoryImpl } from '../infrastructure/relational/repositories/quiz-generation-task.repository';
-import { QuestionGenerationService } from './question-generation.service';
 import { TransactionHelper } from '../../shared/helpers/transaction.helper';
 import { CreateQuizGenerationTaskUseCase } from '@flash-me/core/use-cases';
 import { LLMService } from '@flash-me/core/interfaces/llm-service.interface';
-import { UserRepository } from '@flash-me/core/interfaces/user-repository.interface';
 import { LLM_SERVICE_PROVIDER_KEY } from './openai-llm.service';
 import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
 

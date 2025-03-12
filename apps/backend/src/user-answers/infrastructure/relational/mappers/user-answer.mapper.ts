@@ -21,10 +21,10 @@ export class UserAnswerMapper {
 
   private static createAnswerFromEntity(entity: UserAnswerEntity): Answer {
     return new Answer({
-      id: entity.answer?.id || entity.answerId,
+      id: entity.answer.id,
       questionId: entity.questionId,
-      content: entity.answer?.content || '',
-      isCorrect: entity.answer?.isCorrect || false,
+      content: entity.answer.content,
+      isCorrect: entity.answer.isCorrect,
     });
   }
 
