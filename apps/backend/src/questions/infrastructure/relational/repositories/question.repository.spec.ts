@@ -11,10 +11,32 @@ describe('QuestionRepositoryImpl', () => {
   let questionRepository: QuestionRepositoryImpl;
   let typeOrmRepository: jest.Mocked<Repository<QuestionEntity>>;
 
+  // Helper functions to create test data
+  const createMockQuestion = (overrides = {}) =>
+    new Question({
+      id: faker.string.uuid(),
+      content: faker.lorem.paragraph(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+      answers: [],
+      ...overrides,
+    });
+
+  const createMockEntity = (question: Question) => {
+    const entity = new QuestionEntity();
+    entity.id = question.getId();
+    entity.content = question.getContent();
+    entity.createdAt = question.getCreatedAt();
+    entity.updatedAt = question.getUpdatedAt();
+    entity.deletedAt = question.getDeletedAt();
+    return entity;
+  };
+
   beforeEach(async () => {
     // Create mock for the TypeORM repository
     const mockRepository = {
-      save: jest.fn(),
+      save: jest.fn().mockReturnValue(Promise.resolve([])),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -43,33 +65,8 @@ describe('QuestionRepositoryImpl', () => {
   describe('saveQuestions', () => {
     it('should save multiple questions', async () => {
       // Arrange
-      const questions = [
-        new Question({
-          id: faker.string.uuid(),
-          content: faker.lorem.paragraph(),
-          answers: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          deletedAt: null,
-        }),
-        new Question({
-          id: faker.string.uuid(),
-          content: faker.lorem.paragraph(),
-          answers: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          deletedAt: null,
-        }),
-      ];
-
-      const entities = questions.map((q) => {
-        const entity = new QuestionEntity();
-        entity.id = q.getId();
-        entity.content = q.getContent();
-        entity.createdAt = q.getCreatedAt();
-        entity.updatedAt = q.getUpdatedAt();
-        return entity;
-      });
+      const questions = [createMockQuestion(), createMockQuestion()];
+      const entities = questions.map((q) => createMockEntity(q));
 
       QuestionMapper.toPersistence = jest
         .fn()
@@ -104,20 +101,8 @@ describe('QuestionRepositoryImpl', () => {
 
     it('should handle database errors', async () => {
       // Arrange
-      const question = new Question({
-        id: faker.string.uuid(),
-        content: faker.lorem.paragraph(),
-        answers: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        deletedAt: null,
-      });
-
-      const entity = new QuestionEntity();
-      entity.id = question.getId();
-      entity.content = question.getContent();
-      entity.createdAt = question.getCreatedAt();
-      entity.updatedAt = question.getUpdatedAt();
+      const question = createMockQuestion();
+      const entity = createMockEntity(question);
 
       QuestionMapper.toPersistence = jest.fn().mockReturnValueOnce(entity);
       const dbError = new Error('Database connection error');
@@ -131,50 +116,16 @@ describe('QuestionRepositoryImpl', () => {
       expect(typeOrmRepository.save).toHaveBeenCalledWith([entity]);
     });
 
-    it('should properly map domain objects to entities', async () => {
-      // Arrange
-      const question = new Question({
-        id: faker.string.uuid(),
-        content: faker.lorem.paragraph(),
-        answers: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        deletedAt: null,
-      });
-
-      const mockEntity = new QuestionEntity();
-      jest
-        .spyOn(QuestionMapper, 'toPersistence')
-        .mockReturnValueOnce(mockEntity);
-
-      // Act
-      await questionRepository.saveQuestions([question]);
-
-      // Assert
-      expect(QuestionMapper.toPersistence).toHaveBeenCalledWith(question);
-      expect(typeOrmRepository.save).toHaveBeenCalledWith([mockEntity]);
-    });
-
     it('should use provided entity manager when available', async () => {
       // Arrange
-      const question = new Question({
-        id: faker.string.uuid(),
-        content: faker.lorem.paragraph(),
-        answers: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        deletedAt: null,
-      });
-
-      const entity = new QuestionEntity();
-      entity.id = question.getId();
-      entity.content = question.getContent();
+      const question = createMockQuestion();
+      const entity = createMockEntity(question);
 
       QuestionMapper.toPersistence = jest.fn().mockReturnValueOnce(entity);
 
       // Mock entityManager and its repository
       const mockTransactionRepo = {
-        save: jest.fn().mockResolvedValue([entity]),
+        save: jest.fn().mockReturnValue(Promise.resolve([entity])),
       };
 
       const mockEntityManager = {
@@ -192,6 +143,70 @@ describe('QuestionRepositoryImpl', () => {
       expect(mockTransactionRepo.save).toHaveBeenCalledWith([entity]);
       // Verify default repository was not used
       expect(typeOrmRepository.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('setEntityManager', () => {
+    it('should store the entity manager for future use', async () => {
+      // Arrange
+      const question = createMockQuestion();
+      const entity = createMockEntity(question);
+
+      QuestionMapper.toPersistence = jest.fn().mockReturnValue(entity);
+
+      const mockTransactionRepo = {
+        save: jest.fn().mockReturnValue(Promise.resolve([entity])),
+      };
+
+      const mockEntityManager = {
+        getRepository: jest.fn().mockReturnValue(mockTransactionRepo),
+      } as unknown as EntityManager;
+
+      // Act
+      questionRepository.setEntityManager(mockEntityManager);
+      await questionRepository.saveQuestions([question]);
+
+      // Assert
+      expect(mockEntityManager.getRepository).toHaveBeenCalledWith(
+        QuestionEntity,
+      );
+      expect(mockTransactionRepo.save).toHaveBeenCalledWith([entity]);
+      expect(typeOrmRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('should allow overriding the stored entity manager', async () => {
+      // Arrange
+      const question = createMockQuestion();
+      const entity = createMockEntity(question);
+
+      QuestionMapper.toPersistence = jest.fn().mockReturnValue(entity);
+
+      const mockRepo1 = {
+        save: jest.fn().mockReturnValue(Promise.resolve([])),
+      };
+
+      const mockRepo2 = {
+        save: jest.fn().mockReturnValue(Promise.resolve([entity])),
+      };
+
+      const mockEntityManager1 = {
+        getRepository: jest.fn().mockReturnValue(mockRepo1),
+      } as unknown as EntityManager;
+
+      const mockEntityManager2 = {
+        getRepository: jest.fn().mockReturnValue(mockRepo2),
+      } as unknown as EntityManager;
+
+      // Act
+      questionRepository.setEntityManager(mockEntityManager1);
+      await questionRepository.saveQuestions([question], mockEntityManager2); // Override with EM2
+
+      // Assert
+      expect(mockEntityManager2.getRepository).toHaveBeenCalledWith(
+        QuestionEntity,
+      );
+      expect(mockRepo2.save).toHaveBeenCalledWith([entity]);
+      expect(mockRepo1.save).not.toHaveBeenCalled();
     });
   });
 });
