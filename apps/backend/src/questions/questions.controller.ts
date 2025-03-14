@@ -1,15 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
+import { QuestionsService } from './services/questions.service';
 
 @Controller('/users/:id/questions')
 export class QuestionsController {
+  constructor(private readonly questionsService: QuestionsService) {}
   @Get()
   getQuestions() {
-    return {
-      data: [],
-      metadata: {
-        count: 0,
-      },
-      success: true,
-    };
+    return this.questionsService.getQuestions();
   }
 }
