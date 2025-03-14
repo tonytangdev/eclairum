@@ -122,8 +122,8 @@ export class FetchQuestionsForUserUseCase {
     );
 
     return [...questions].sort((a, b) => {
-      const countA = answerFrequencyMap.get(a.getId()) ?? 0;
-      const countB = answerFrequencyMap.get(b.getId()) ?? 0;
+      const countA = answerFrequencyMap.get(a.getId())!;
+      const countB = answerFrequencyMap.get(b.getId())!;
       return countA - countB;
     });
   }
