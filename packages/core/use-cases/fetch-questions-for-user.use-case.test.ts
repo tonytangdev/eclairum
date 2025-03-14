@@ -5,7 +5,6 @@ import { QuestionRepository } from "../interfaces/question-repository.interface"
 import { UserAnswersRepository } from "../interfaces/user-answers-repository.interface";
 import { User } from "../entities/user";
 import { Question } from "../entities/question";
-import { UserAnswer } from "../entities/user_answer";
 import { UserNotFoundError } from "../errors/quiz-errors";
 
 describe("FetchQuestionsForUserUseCase", () => {
@@ -33,12 +32,6 @@ describe("FetchQuestionsForUserUseCase", () => {
     createMockQuestion(faker.string.uuid()),
     createMockQuestion(faker.string.uuid()),
   ];
-
-  const createMockUserAnswer = (questionId: string) =>
-    ({
-      getUserId: () => userId,
-      getQuestionId: () => questionId,
-    }) as UserAnswer;
 
   beforeEach(() => {
     jest.resetAllMocks();
