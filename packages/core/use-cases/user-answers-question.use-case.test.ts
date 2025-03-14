@@ -44,6 +44,7 @@ describe("UserAnswersQuestionUseCase", () => {
     userAnswersRepository = {
       findById: jest.fn(),
       save: jest.fn(),
+      findByUserId: jest.fn(),
     };
 
     answerRepository = {
