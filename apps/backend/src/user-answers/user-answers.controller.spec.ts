@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpStatus } from '@nestjs/common';
 import { UserAnswersController } from './user-answers.controller';
-import { UserAnswersService } from '../services/user-answers.service';
-import { SubmitAnswerDto } from '../dtos/submit-answer.dto';
+import { UserAnswersService } from './services/user-answers.service';
+import { SubmitAnswerDto } from './dtos/submit-answer.dto';
 import { faker } from '@faker-js/faker';
 
 describe('UserAnswersController', () => {
