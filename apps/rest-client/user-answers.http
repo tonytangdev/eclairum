@@ -1,0 +1,8 @@
+POST http://localhost:3001/user-answers
+Content-Type: application/json
+
+{
+    "userId": "user_2u8Kcbjf35kbI4YhB0MFQSqLlT2",
+    "questionId": "9fd15e93-27cc-45b8-95c6-19192de017f2",
+    "answerId": "9aa27a49-5bf8-4300-a8f0-153d08cc89e1"
+}

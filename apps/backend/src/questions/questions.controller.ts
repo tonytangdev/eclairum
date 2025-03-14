@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 
-@Controller('questions')
+@Controller('/users/:id/questions')
 export class QuestionsController {
   @Get()
   getQuestions() {
