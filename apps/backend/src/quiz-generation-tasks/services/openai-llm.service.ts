@@ -36,18 +36,22 @@ export class OpenAILLMService implements LLMService {
   async generateQuiz(text: string): Promise<QuizQuestion[]> {
     try {
       this.logger.log(`Generating quiz from text of length: ${text.length}`);
+
+      // 1 question per 200 characters
+      // maximum 50 questions
+      const count = Math.min(Math.ceil(text.length / 200), 50);
+
       // Use the parse method with zodResponseFormat
       const completion = await this.openai.beta.chat.completions.parse({
         model: 'o3-mini',
         messages: [
           {
             role: 'system',
-            content:
-              'You are a specialized quiz generation assistant. Create concise, accurate quiz questions based on provided text. You must provide 10 questions and for each 4 answers.',
+            content: `You are a specialized quiz generation assistant. Create concise, accurate quiz questions based on provided text. You must provide ${count} questions and for each 4 answers.`,
           },
           {
             role: 'user',
-            content: `Generate 10 quiz questions based on this text: "${text}"`,
+            content: `Generate ${count} quiz questions based on this text: "${text}"`,
           },
         ],
         // temperature: 0.5,
