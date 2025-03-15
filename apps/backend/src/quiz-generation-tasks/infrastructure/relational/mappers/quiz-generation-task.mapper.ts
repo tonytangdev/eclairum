@@ -1,6 +1,7 @@
 import { QuizGenerationTask, Question } from '@flash-me/core/entities';
 import { QuizGenerationTaskEntity } from '../entities/quiz-generation-task.entity';
 import { QuestionEntity } from '../../../../questions/infrastructure/relational/entities/question.entity';
+import { QuestionMapper } from '../../../../questions/infrastructure/relational/mappers/question.mapper';
 
 export class QuizGenerationTaskMapper {
   /**
@@ -23,8 +24,7 @@ export class QuizGenerationTaskMapper {
 
     // Map question relationships
     entity.questions = domainModel.getQuestions().map((question) => {
-      const questionEntity = new QuestionEntity();
-      questionEntity.id = question.getId();
+      const questionEntity = QuestionMapper.toPersistence(question);
       return questionEntity;
     });
 
@@ -47,6 +47,7 @@ export class QuizGenerationTaskMapper {
             id: questionEntity.id,
             content: questionEntity.content,
             answers: [], // We don't need answers for this mapping
+            quizGenerationTaskId: entity.id,
           }),
       ),
       createdAt: entity.createdAt,

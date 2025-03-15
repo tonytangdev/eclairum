@@ -10,14 +10,14 @@ import { QuizGenerationTaskMapper } from '../mappers/quiz-generation-task.mapper
 export class QuizGenerationTaskRepositoryImpl
   implements QuizGenerationTaskRepository
 {
-  private currentEntityManager?: EntityManager;
+  private currentEntityManager?: EntityManager | null;
 
   constructor(
     @InjectRepository(QuizGenerationTaskEntity)
     private readonly quizGenerationTaskRepository: Repository<QuizGenerationTaskEntity>,
   ) {}
 
-  setEntityManager(entityManager: EntityManager): void {
+  setEntityManager(entityManager: EntityManager | null): void {
     this.currentEntityManager = entityManager;
   }
 

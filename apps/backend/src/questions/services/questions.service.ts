@@ -22,6 +22,8 @@ export class QuestionsService {
     try {
       const result = await fetchQuestionsUseCase.execute({ userId, limit });
 
+      console.log({ result });
+
       return {
         data: result.questions,
         metadata: {

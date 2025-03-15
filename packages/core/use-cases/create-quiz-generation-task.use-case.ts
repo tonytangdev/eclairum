@@ -57,7 +57,10 @@ export class CreateQuizGenerationTaskUseCase {
     const quizGenerationTask = this.createTask(text, userId);
 
     try {
-      const questions = await this.generateQuestions(text);
+      const questions = await this.generateQuestions(
+        quizGenerationTask.getId(),
+        text,
+      );
       this.addQuestionsToTask(quizGenerationTask, questions);
       quizGenerationTask.updateStatus(QuizGenerationStatus.COMPLETED);
       await this.saveQuizData(quizGenerationTask, questions);
@@ -77,10 +80,16 @@ export class CreateQuizGenerationTaskUseCase {
     });
   }
 
-  private async generateQuestions(text: string): Promise<Question[]> {
+  private async generateQuestions(
+    quizGenerationTaskId: QuizGenerationTask["id"],
+    text: string,
+  ): Promise<Question[]> {
     const llmQuestions = await this.fetchQuestionsFromLLM(text);
     this.validateLLMResponse(llmQuestions, text);
-    return this.convertLLMQuestionsToEntities(llmQuestions);
+    return this.convertLLMQuestionsToEntities(
+      quizGenerationTaskId,
+      llmQuestions,
+    );
   }
 
   private async fetchQuestionsFromLLM(text: string): Promise<QuizQuestion[]> {
@@ -101,12 +110,14 @@ export class CreateQuizGenerationTaskUseCase {
   }
 
   private convertLLMQuestionsToEntities(
+    quizGenerationTaskId: QuizGenerationTask["id"],
     llmQuestions: QuizQuestion[],
   ): Question[] {
     return llmQuestions.map((llmQuestion) => {
       const question = new Question({
         content: llmQuestion.question,
         answers: [],
+        quizGenerationTaskId,
       });
 
       this.addAnswersToQuestion(question, llmQuestion);

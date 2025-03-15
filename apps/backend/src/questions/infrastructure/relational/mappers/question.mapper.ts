@@ -1,5 +1,6 @@
-import { Question } from '@flash-me/core/entities';
+import { Answer, Question } from '@flash-me/core/entities';
 import { QuestionEntity } from '../entities/question.entity';
+import { AnswerMapper } from '../../../../answers/infrastructure/relational/mappers/answer.mapper';
 
 export class QuestionMapper {
   /**
@@ -12,6 +13,7 @@ export class QuestionMapper {
     entity.createdAt = question.getCreatedAt();
     entity.updatedAt = question.getUpdatedAt();
     entity.deletedAt = question.getDeletedAt();
+    entity.quizGenerationTaskId = question.getQuizGenerationTaskId();
 
     return entity;
   }
@@ -21,13 +23,19 @@ export class QuestionMapper {
    * Note: This would need Answer instances to fully construct a Question
    */
   public static toDomain(entity: QuestionEntity): Question {
+    let answers: Answer[] = [];
+    if (entity.answers) {
+      answers = entity.answers.map((answer) => AnswerMapper.toDomain(answer));
+    }
+
     return new Question({
       id: entity.id,
       content: entity.content,
-      answers: [], // Would need to be populated from a separate query
+      answers: answers,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       deletedAt: entity.deletedAt,
+      quizGenerationTaskId: entity.quizGenerationTaskId,
     });
   }
 }

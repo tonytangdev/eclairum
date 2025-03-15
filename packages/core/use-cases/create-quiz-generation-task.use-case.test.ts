@@ -55,7 +55,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
 
     questionRepository = {
       saveQuestions: jest.fn().mockResolvedValue(undefined),
-      findAll: jest.fn().mockResolvedValue([]),
+      findByUserId: jest.fn().mockResolvedValue([]),
       findById: jest.fn().mockResolvedValue(null),
       save: jest.fn().mockResolvedValue(undefined),
     };

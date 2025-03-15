@@ -82,7 +82,7 @@ describe("FetchQuestionsForUserUseCase", () => {
 
     // Assert
     expect(result).toEqual({ questions: [] });
-    expect(mockQuestionRepository.findAll).not.toHaveBeenCalled();
+    expect(mockQuestionRepository.findByUserId).not.toHaveBeenCalled();
     expect(
       mockUserAnswersRepository.findQuestionAnswerFrequencies,
     ).not.toHaveBeenCalled();
@@ -91,14 +91,14 @@ describe("FetchQuestionsForUserUseCase", () => {
   it("should return empty array if no questions exist", async () => {
     // Setup
     mockUserRepository.findById.mockResolvedValue(mockUser);
-    mockQuestionRepository.findAll.mockResolvedValue([]);
+    mockQuestionRepository.findByUserId.mockResolvedValue([]);
 
     // Test
     const result = await useCase.execute({ userId });
 
     // Assert
     expect(result).toEqual({ questions: [] });
-    expect(mockQuestionRepository.findAll).toHaveBeenCalled();
+    expect(mockQuestionRepository.findByUserId).toHaveBeenCalled();
     expect(
       mockUserAnswersRepository.findQuestionAnswerFrequencies,
     ).not.toHaveBeenCalled();
@@ -112,7 +112,7 @@ describe("FetchQuestionsForUserUseCase", () => {
     ]);
 
     mockUserRepository.findById.mockResolvedValue(mockUser);
-    mockQuestionRepository.findAll.mockResolvedValue(mockQuestions);
+    mockQuestionRepository.findByUserId.mockResolvedValue(mockQuestions);
     mockUserAnswersRepository.findQuestionAnswerFrequencies.mockResolvedValue(
       questionFrequencies,
     );
@@ -125,7 +125,7 @@ describe("FetchQuestionsForUserUseCase", () => {
 
     // Assert
     expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
-    expect(mockQuestionRepository.findAll).toHaveBeenCalled();
+    expect(mockQuestionRepository.findByUserId).toHaveBeenCalled();
     expect(
       mockUserAnswersRepository.findQuestionAnswerFrequencies,
     ).toHaveBeenCalledWith(userId);
@@ -140,7 +140,7 @@ describe("FetchQuestionsForUserUseCase", () => {
     const questionFrequencies = new Map<string, number>();
 
     mockUserRepository.findById.mockResolvedValue(mockUser);
-    mockQuestionRepository.findAll.mockResolvedValue(mockQuestions);
+    mockQuestionRepository.findByUserId.mockResolvedValue(mockQuestions);
     mockUserAnswersRepository.findQuestionAnswerFrequencies.mockResolvedValue(
       questionFrequencies,
     );

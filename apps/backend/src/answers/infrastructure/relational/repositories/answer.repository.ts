@@ -8,14 +8,14 @@ import { AnswerMapper } from '../mappers/answer.mapper';
 
 @Injectable()
 export class AnswerRepositoryImpl implements AnswerRepository {
-  private currentEntityManager?: EntityManager;
+  private currentEntityManager?: EntityManager | null;
 
   constructor(
     @InjectRepository(AnswerEntity)
     private answerRepository: Repository<AnswerEntity>,
   ) {}
 
-  setEntityManager(entityManager: EntityManager): void {
+  setEntityManager(entityManager: EntityManager | null): void {
     this.currentEntityManager = entityManager;
   }
 

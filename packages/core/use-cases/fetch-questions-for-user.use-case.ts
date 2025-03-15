@@ -30,13 +30,16 @@ export class FetchQuestionsForUserUseCase {
     userId,
     limit = 3,
   }: FetchQuestionsForUserInput): Promise<FetchQuestionsForUserOutput> {
+    console.log({ userId, limit, test: "test" });
     await this.validateUser(userId);
+    console.log({ userId, limit });
 
     if (limit <= 0) {
       return { questions: [] };
     }
 
-    const allQuestions = await this.questionRepository.findAll();
+    const allQuestions = await this.questionRepository.findByUserId(userId);
+    console.log({ allQuestions });
     if (allQuestions.length === 0) {
       return { questions: [] };
     }

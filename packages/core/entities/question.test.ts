@@ -21,6 +21,7 @@ describe("Question", () => {
     const question = new Question({
       content,
       answers,
+      quizGenerationTaskId: randomUUID(),
     });
 
     expect(question).toBeInstanceOf(Question);
@@ -47,6 +48,7 @@ describe("Question", () => {
       createdAt,
       updatedAt,
       deletedAt,
+      quizGenerationTaskId: randomUUID(),
     });
 
     expect(question.getId()).toBe(id);
@@ -66,6 +68,7 @@ describe("Question", () => {
       id,
       content,
       answers,
+      quizGenerationTaskId: randomUUID(),
     });
 
     expect(question.getId()).toBe(id);
@@ -86,6 +89,7 @@ describe("Question", () => {
     const question = new Question({
       content: faker.lorem.sentence(),
       answers,
+      quizGenerationTaskId: randomUUID(),
     });
 
     expect(question.getAnswers().length).toBe(3);
@@ -97,6 +101,7 @@ describe("Question", () => {
       new Question({
         content: "",
         answers: [],
+        quizGenerationTaskId: randomUUID(),
       });
     }).toThrow(RequiredContentError);
 
@@ -113,6 +118,7 @@ describe("Question", () => {
     const question = new Question({
       content: faker.lorem.sentence(),
       answers: [],
+      quizGenerationTaskId: randomUUID(),
     });
 
     const newAnswer = createAnswer(true);
@@ -126,6 +132,7 @@ describe("Question", () => {
     const question = new Question({
       content: faker.lorem.sentence(),
       answers: [],
+      quizGenerationTaskId: randomUUID(),
     });
 
     const originalUpdatedAt = question.getUpdatedAt();

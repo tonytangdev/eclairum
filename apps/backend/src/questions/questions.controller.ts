@@ -19,6 +19,7 @@ export class QuestionsController {
     @Optional()
     limit?: number,
   ) {
+    console.log({ userId, limit });
     return this.questionsService.getQuestions(userId, limit);
   }
 }

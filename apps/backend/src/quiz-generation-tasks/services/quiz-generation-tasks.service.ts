@@ -61,6 +61,8 @@ export class QuizGenerationTasksService {
               text,
             });
 
+          this.freeRepositoriesFromTransaction();
+
           return this.createTaskResponse(quizGenerationTask, userId);
         },
       );
@@ -88,6 +90,12 @@ export class QuizGenerationTasksService {
     this.answerRepository.setEntityManager(entityManager);
     this.quizGenerationTaskRepository.setEntityManager(entityManager);
     // Add any other repositories that need transaction context
+  }
+
+  private freeRepositoriesFromTransaction(): void {
+    this.questionRepository.setEntityManager(null);
+    this.answerRepository.setEntityManager(null);
+    this.quizGenerationTaskRepository.setEntityManager(null);
   }
 
   async getTaskById(taskId: string): Promise<QuizGenerationTask | null> {

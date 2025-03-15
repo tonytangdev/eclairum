@@ -2,20 +2,20 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { QuestionRepository } from '@flash-me/core/interfaces/question-repository.interface';
-import { Question } from '@flash-me/core/entities';
+import { Question, User } from '@flash-me/core/entities';
 import { QuestionEntity } from '../entities/question.entity';
 import { QuestionMapper } from '../mappers/question.mapper';
 
 @Injectable()
 export class QuestionRepositoryImpl implements QuestionRepository {
-  private currentEntityManager?: EntityManager;
+  private currentEntityManager?: EntityManager | null;
 
   constructor(
     @InjectRepository(QuestionEntity)
     private questionRepository: Repository<QuestionEntity>,
   ) {}
 
-  setEntityManager(entityManager: EntityManager): void {
+  setEntityManager(entityManager: EntityManager | null): void {
     this.currentEntityManager = entityManager;
   }
 
@@ -24,7 +24,6 @@ export class QuestionRepositoryImpl implements QuestionRepository {
     entityManager?: EntityManager,
   ): Promise<void> {
     if (questions.length === 0) return;
-
     const questionEntities = this.mapQuestionsToEntities(questions);
     const repository = this.getRepository(entityManager);
     await this.persistQuestions(repository, questionEntities);
@@ -35,7 +34,10 @@ export class QuestionRepositoryImpl implements QuestionRepository {
     entityManager?: EntityManager,
   ): Promise<Question | null> {
     const repository = this.getRepository(entityManager);
-    const questionEntity = await repository.findOne({ where: { id } });
+    const questionEntity = await repository.findOne({
+      where: { id },
+      relations: ['answers'],
+    });
 
     if (!questionEntity) {
       return null;
@@ -44,9 +46,15 @@ export class QuestionRepositoryImpl implements QuestionRepository {
     return QuestionMapper.toDomain(questionEntity);
   }
 
-  async findAll(entityManager?: EntityManager): Promise<Question[]> {
+  async findByUserId(
+    userId: User['id'],
+    entityManager?: EntityManager,
+  ): Promise<Question[]> {
     const repository = this.getRepository(entityManager);
-    const questionEntities = await repository.find();
+    const questionEntities = await repository.find({
+      where: { quizGenerationTask: { user: { id: userId } } },
+      relations: ['answers'],
+    });
 
     return questionEntities.map((entity) => QuestionMapper.toDomain(entity));
   }

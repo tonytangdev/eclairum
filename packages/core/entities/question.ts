@@ -1,5 +1,6 @@
 import { Answer } from "./answer";
 import { RequiredContentError } from "../errors/validation-errors";
+import { QuizGenerationTask } from "./quiz-generation-task";
 
 type QuestionConstructor = {
   id?: string;
@@ -8,6 +9,7 @@ type QuestionConstructor = {
   createdAt?: Date;
   updatedAt?: Date;
   deletedAt?: Date | null;
+  quizGenerationTaskId: QuizGenerationTask["id"];
 };
 
 export class Question {
@@ -17,11 +19,13 @@ export class Question {
   private createdAt: Date;
   private updatedAt: Date;
   private deletedAt: Date | null;
+  private quizGenerationTaskId: QuizGenerationTask["id"];
 
   constructor({
     id = crypto.randomUUID(),
     content,
     answers,
+    quizGenerationTaskId,
     createdAt = new Date(),
     updatedAt = new Date(),
     deletedAt = null,
@@ -36,6 +40,7 @@ export class Question {
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
     this.deletedAt = deletedAt;
+    this.quizGenerationTaskId = quizGenerationTaskId;
   }
 
   public getId(): string {
@@ -65,5 +70,9 @@ export class Question {
   public addAnswer(answer: Answer): void {
     this.answers.push(answer);
     this.updatedAt = new Date();
+  }
+
+  public getQuizGenerationTaskId(): QuizGenerationTask["id"] {
+    return this.quizGenerationTaskId;
   }
 }

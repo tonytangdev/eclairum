@@ -23,6 +23,7 @@ describe("QuizGenerationTask", () => {
     return new Question({
       content: faker.lorem.sentence(),
       answers: [createAnswer(true), createAnswer(false)],
+      quizGenerationTaskId: randomUUID(),
     });
   };
 

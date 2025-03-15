@@ -316,7 +316,7 @@ describe('QuestionRepositoryImpl', () => {
         .mockReturnValueOnce(questions[1]);
 
       // Act
-      const result = await questionRepository.findAll();
+      const result = await questionRepository.findByUserId();
 
       // Assert
       expect(result).toEqual(questions);
@@ -331,7 +331,7 @@ describe('QuestionRepositoryImpl', () => {
       typeOrmRepository.find.mockResolvedValue([]);
 
       // Act
-      const result = await questionRepository.findAll();
+      const result = await questionRepository.findByUserId();
 
       // Assert
       expect(result).toEqual([]);
@@ -355,7 +355,7 @@ describe('QuestionRepositoryImpl', () => {
       jest.spyOn(QuestionMapper, 'toDomain').mockReturnValue(questions[0]);
 
       // Act
-      const result = await questionRepository.findAll(mockEntityManager);
+      const result = await questionRepository.findByUserId(mockEntityManager);
 
       // Assert
       expect(result).toEqual(questions);
