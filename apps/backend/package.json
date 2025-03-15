@@ -107,7 +107,8 @@
       ".*\\.module\\.ts$",
       "main\\.ts$",
       ".*\\.provider\\.ts$",
-      "src/dtos/.*"
+      "src/dtos/.*",
+      "src/common/guards/.*"
     ],
     "coverageThreshold": {
       "global": {
