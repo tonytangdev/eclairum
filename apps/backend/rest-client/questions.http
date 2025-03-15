@@ -1,1 +1,2 @@
 GET http://localhost:3001/users/user_2u8Kcbjf35kbI4YhB0MFQSqLlT2/questions?limit=10
+x-api-key: {{$dotenv API_KEY}}
