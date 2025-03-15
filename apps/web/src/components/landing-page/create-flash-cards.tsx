@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Upload, CheckCircle, AlertCircle } from "lucide-react";
+import { FileText, Upload, CheckCircle, AlertCircle, ArrowRight } from "lucide-react";
 import { createQuizGenerationTask } from "@/app/actions/quiz-generation";
 import { MAX_TEXT_LENGTH } from "@flash-me/core/constants";
 import { useClerk, useUser } from "@clerk/nextjs";
-
+import Link from "next/link";
 
 export function CreateFlashCards() {
   const [text, setText] = useState("");
@@ -127,11 +127,21 @@ export function CreateFlashCards() {
               <div className={`p-3 rounded-md flex items-start gap-2 ${feedback.type === "success" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
                 }`}>
                 {feedback.type === "success" ? (
-                  <CheckCircle className="h-5 w-5 shrink-0" />
+                  <>
+                    <CheckCircle className="h-5 w-5 shrink-0" />
+                    <p className="flex-grow">{feedback.message}</p>
+                    <Link href="/flash-cards-session">
+                      <Button size="sm" variant="outline" className="flex items-center gap-1 cursor-pointer">
+                        Start Flashing session <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </>
                 ) : (
-                  <AlertCircle className="h-5 w-5 shrink-0" />
+                  <>
+                    <AlertCircle className="h-5 w-5 shrink-0" />
+                    <p>{feedback.message}</p>
+                  </>
                 )}
-                <p>{feedback.message}</p>
               </div>
             )}
 
