@@ -13,7 +13,6 @@ export class QuestionsService {
   ) {}
 
   async getQuestions(userId: string, limit: number = 3) {
-    // Create the use case instance when needed (not in constructor)
     const fetchQuestionsUseCase = new FetchQuestionsForUserUseCase(
       this.userRepository,
       this.questionRepository,
