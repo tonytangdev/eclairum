@@ -1,12 +1,23 @@
-import { Question } from '@flash-me/core/entities';
+import { Answer, Question } from '@flash-me/core/entities';
 import { QuestionMapper } from './question.mapper';
 import { QuestionEntity } from '../entities/question.entity';
+import { AnswerEntity } from '../../../../answers/infrastructure/relational/entities/answer.entity';
+import { AnswerMapper } from '../../../../answers/infrastructure/relational/mappers/answer.mapper';
 import { faker } from '@faker-js/faker';
+
+jest.mock(
+  '../../../../answers/infrastructure/relational/mappers/answer.mapper',
+);
 
 describe('QuestionMapper', () => {
   const mockDate = faker.date.past();
   const mockId = faker.string.uuid();
   const mockContent = faker.lorem.paragraph();
+  const mockQuizGenerationTaskId = faker.string.uuid();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
   describe('toPersistence', () => {
     it('should convert a domain Question to a QuestionEntity', () => {
@@ -18,7 +29,7 @@ describe('QuestionMapper', () => {
         createdAt: mockDate,
         updatedAt: mockDate,
         deletedAt: null,
-        quizGenerationTaskId: faker.string.uuid(),
+        quizGenerationTaskId: mockQuizGenerationTaskId,
       });
 
       // Act
@@ -31,6 +42,9 @@ describe('QuestionMapper', () => {
       expect(persistenceQuestion.createdAt).toBe(mockDate);
       expect(persistenceQuestion.updatedAt).toBe(mockDate);
       expect(persistenceQuestion.deletedAt).toBeNull();
+      expect(persistenceQuestion.quizGenerationTaskId).toBe(
+        mockQuizGenerationTaskId,
+      );
     });
 
     it('should handle a Question with deletedAt date', () => {
@@ -63,6 +77,7 @@ describe('QuestionMapper', () => {
       questionEntity.createdAt = mockDate;
       questionEntity.updatedAt = mockDate;
       questionEntity.deletedAt = null;
+      questionEntity.quizGenerationTaskId = mockQuizGenerationTaskId;
 
       // Act
       const domainQuestion = QuestionMapper.toDomain(questionEntity);
@@ -75,6 +90,9 @@ describe('QuestionMapper', () => {
       expect(domainQuestion.getUpdatedAt()).toBe(mockDate);
       expect(domainQuestion.getDeletedAt()).toBeNull();
       expect(domainQuestion.getAnswers()).toEqual([]);
+      expect(domainQuestion.getQuizGenerationTaskId()).toBe(
+        mockQuizGenerationTaskId,
+      );
     });
 
     it('should handle a QuestionEntity with deletedAt date', () => {
@@ -86,12 +104,16 @@ describe('QuestionMapper', () => {
       questionEntity.createdAt = faker.date.past();
       questionEntity.updatedAt = faker.date.past();
       questionEntity.deletedAt = deletedDate;
+      questionEntity.quizGenerationTaskId = mockQuizGenerationTaskId;
 
       // Act
       const domainQuestion = QuestionMapper.toDomain(questionEntity);
 
       // Assert
       expect(domainQuestion.getDeletedAt()).toBe(deletedDate);
+      expect(domainQuestion.getQuizGenerationTaskId()).toBe(
+        mockQuizGenerationTaskId,
+      );
     });
 
     it('should initialize answers as an empty array', () => {
@@ -108,6 +130,58 @@ describe('QuestionMapper', () => {
       // Assert
       expect(domainQuestion.getAnswers()).toEqual([]);
       expect(domainQuestion.getAnswers()).toHaveLength(0);
+    });
+
+    it('should map associated answer entities to domain answer objects', () => {
+      // Arrange
+      const mockAnswerEntity1 = new AnswerEntity();
+      const mockAnswerEntity2 = new AnswerEntity();
+
+      const mockAnswerDomain1 = new Answer({
+        id: faker.string.uuid(),
+        content: faker.lorem.sentence(),
+        isCorrect: true,
+        questionId: mockId,
+        createdAt: mockDate,
+        updatedAt: mockDate,
+      });
+
+      const mockAnswerDomain2 = new Answer({
+        id: faker.string.uuid(),
+        content: faker.lorem.sentence(),
+        isCorrect: false,
+        questionId: mockId,
+        createdAt: mockDate,
+        updatedAt: mockDate,
+      });
+
+      // Mock the AnswerMapper.toDomain method
+      (AnswerMapper.toDomain as jest.Mock)
+        .mockReturnValueOnce(mockAnswerDomain1)
+        .mockReturnValueOnce(mockAnswerDomain2);
+
+      const questionEntity = new QuestionEntity();
+      questionEntity.id = mockId;
+      questionEntity.content = mockContent;
+      questionEntity.createdAt = mockDate;
+      questionEntity.updatedAt = mockDate;
+      questionEntity.deletedAt = null;
+      questionEntity.answers = [mockAnswerEntity1, mockAnswerEntity2];
+      questionEntity.quizGenerationTaskId = mockQuizGenerationTaskId;
+
+      // Act
+      const domainQuestion = QuestionMapper.toDomain(questionEntity);
+
+      // Assert
+      expect(AnswerMapper.toDomain).toHaveBeenCalledTimes(2);
+      expect(AnswerMapper.toDomain).toHaveBeenCalledWith(mockAnswerEntity1);
+      expect(AnswerMapper.toDomain).toHaveBeenCalledWith(mockAnswerEntity2);
+      expect(domainQuestion.getAnswers()).toHaveLength(2);
+      expect(domainQuestion.getAnswers()).toContain(mockAnswerDomain1);
+      expect(domainQuestion.getAnswers()).toContain(mockAnswerDomain2);
+      expect(domainQuestion.getQuizGenerationTaskId()).toBe(
+        mockQuizGenerationTaskId,
+      );
     });
   });
 });
