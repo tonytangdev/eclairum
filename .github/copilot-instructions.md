@@ -2,6 +2,8 @@
 
 - Always apply clean code principles
 - Always create tests using jest and @faker-js
+- The any type is forbidden
+- Always use the strict mode in TypeScript
 - The project uses pnpm as package manager
 - The project uses pnpm workspaces
 

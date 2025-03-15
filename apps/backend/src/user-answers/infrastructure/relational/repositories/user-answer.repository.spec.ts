@@ -11,9 +11,19 @@ import { QuestionEntity } from '../../../../questions/infrastructure/relational/
 import { AnswerEntity } from '../../../../answers/infrastructure/relational/entities/answer.entity';
 import { Answer } from '@flash-me/core/entities';
 
+// Define a type for the mock query builder
+interface MockQueryBuilder {
+  select: jest.Mock;
+  addSelect: jest.Mock;
+  where: jest.Mock;
+  groupBy: jest.Mock;
+  getRawMany: jest.Mock;
+}
+
 describe('UserAnswerRepositoryImpl', () => {
   let userAnswerRepositoryImpl: UserAnswerRepositoryImpl;
   let userAnswerRepository: jest.Mocked<Repository<UserAnswerEntity>>;
+  let mockQueryBuilder: MockQueryBuilder;
 
   const createMockUserAnswerEntity = (): UserAnswerEntity => {
     const questionId = faker.string.uuid();
@@ -76,6 +86,15 @@ describe('UserAnswerRepositoryImpl', () => {
   };
 
   beforeEach(async () => {
+    // Mock query builder chain
+    mockQueryBuilder = {
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn(),
+    };
+
     const module = await Test.createTestingModule({
       providers: [
         UserAnswerRepositoryImpl,
@@ -84,6 +103,7 @@ describe('UserAnswerRepositoryImpl', () => {
           useValue: {
             findOne: jest.fn(),
             save: jest.fn(),
+            createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
           },
         },
       ],
@@ -150,6 +170,119 @@ describe('UserAnswerRepositoryImpl', () => {
       );
       expect(userAnswerRepository.save).toHaveBeenCalledWith(mockEntity);
       expect(result).toEqual(mockUserAnswer);
+    });
+  });
+
+  describe('findAnsweredQuestionIds', () => {
+    it('should return an array of question IDs answered by the user', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const mockQuestionIds = [
+        { questionId: faker.string.uuid() },
+        { questionId: faker.string.uuid() },
+        { questionId: faker.string.uuid() },
+      ];
+      mockQueryBuilder.getRawMany.mockResolvedValue(mockQuestionIds);
+
+      // Act
+      const result =
+        await userAnswerRepositoryImpl.findAnsweredQuestionIds(userId);
+
+      // Assert
+      expect(userAnswerRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'userAnswer',
+      );
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
+        'DISTINCT userAnswer.questionId',
+        'questionId',
+      );
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        'userAnswer.userId = :userId',
+        { userId },
+      );
+      expect(mockQueryBuilder.getRawMany).toHaveBeenCalled();
+      expect(result).toEqual(mockQuestionIds.map((item) => item.questionId));
+    });
+
+    it('should return an empty array when the user has not answered any questions', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      mockQueryBuilder.getRawMany.mockResolvedValue([]);
+
+      // Act
+      const result =
+        await userAnswerRepositoryImpl.findAnsweredQuestionIds(userId);
+
+      // Assert
+      expect(userAnswerRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'userAnswer',
+      );
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('findQuestionAnswerFrequencies', () => {
+    it('should return a map of question IDs and their frequencies', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const mockFrequencies = [
+        { questionId: faker.string.uuid(), frequency: '3' },
+        { questionId: faker.string.uuid(), frequency: '1' },
+        { questionId: faker.string.uuid(), frequency: '5' },
+      ];
+      mockQueryBuilder.getRawMany.mockResolvedValue(mockFrequencies);
+
+      const expectedMap = new Map<string, number>();
+      mockFrequencies.forEach((item) => {
+        expectedMap.set(item.questionId, parseInt(item.frequency, 10));
+      });
+
+      // Act
+      const result =
+        await userAnswerRepositoryImpl.findQuestionAnswerFrequencies(userId);
+
+      // Assert
+      expect(userAnswerRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'userAnswer',
+      );
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
+        'userAnswer.questionId',
+        'questionId',
+      );
+      expect(mockQueryBuilder.addSelect).toHaveBeenCalledWith(
+        'COUNT(userAnswer.id)',
+        'frequency',
+      );
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        'userAnswer.userId = :userId',
+        { userId },
+      );
+      expect(mockQueryBuilder.groupBy).toHaveBeenCalledWith(
+        'userAnswer.questionId',
+      );
+      expect(mockQueryBuilder.getRawMany).toHaveBeenCalled();
+
+      // Compare maps by converting to objects
+      expect(Object.fromEntries(result)).toEqual(
+        Object.fromEntries(expectedMap),
+      );
+    });
+
+    it('should return an empty map when the user has not answered any questions', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      mockQueryBuilder.getRawMany.mockResolvedValue([]);
+
+      // Act
+      const result =
+        await userAnswerRepositoryImpl.findQuestionAnswerFrequencies(userId);
+
+      // Assert
+      expect(userAnswerRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'userAnswer',
+      );
+      expect(result.size).toBe(0);
+      expect(result).toEqual(new Map());
     });
   });
 });
