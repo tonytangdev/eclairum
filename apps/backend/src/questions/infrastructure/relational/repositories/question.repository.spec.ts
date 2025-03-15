@@ -6,6 +6,7 @@ import { QuestionEntity } from '../entities/question.entity';
 import { QuestionRepositoryImpl } from './question.repository';
 import { QuestionMapper } from '../mappers/question.mapper';
 import { faker } from '@faker-js/faker';
+import { randomUUID } from 'node:crypto';
 
 describe('QuestionRepositoryImpl', () => {
   let questionRepository: QuestionRepositoryImpl;
@@ -20,6 +21,7 @@ describe('QuestionRepositoryImpl', () => {
       updatedAt: new Date(),
       deletedAt: null,
       answers: [],
+      quizGenerationTaskId: faker.string.uuid(),
       ...overrides,
     });
 
@@ -247,6 +249,7 @@ describe('QuestionRepositoryImpl', () => {
       expect(result).toEqual(expectedQuestion);
       expect(typeOrmRepository.findOne).toHaveBeenCalledWith({
         where: { id: questionId },
+        relations: ['answers'],
       });
       expect(QuestionMapper.toDomain).toHaveBeenCalledWith(entity);
     });
@@ -263,6 +266,7 @@ describe('QuestionRepositoryImpl', () => {
       expect(result).toBeNull();
       expect(typeOrmRepository.findOne).toHaveBeenCalledWith({
         where: { id: questionId },
+        relations: ['answers'],
       });
       expect(QuestionMapper.toDomain).not.toHaveBeenCalled();
     });
@@ -296,12 +300,13 @@ describe('QuestionRepositoryImpl', () => {
       );
       expect(mockTransactionRepo.findOne).toHaveBeenCalledWith({
         where: { id: questionId },
+        relations: ['answers'],
       });
       expect(typeOrmRepository.findOne).not.toHaveBeenCalled();
     });
   });
 
-  describe('findAll', () => {
+  describe('findByUserId', () => {
     it('should return all questions', async () => {
       // Arrange
       const questions = [createMockQuestion(), createMockQuestion()];
@@ -316,7 +321,7 @@ describe('QuestionRepositoryImpl', () => {
         .mockReturnValueOnce(questions[1]);
 
       // Act
-      const result = await questionRepository.findByUserId();
+      const result = await questionRepository.findByUserId(randomUUID());
 
       // Assert
       expect(result).toEqual(questions);
@@ -331,7 +336,7 @@ describe('QuestionRepositoryImpl', () => {
       typeOrmRepository.find.mockResolvedValue([]);
 
       // Act
-      const result = await questionRepository.findByUserId();
+      const result = await questionRepository.findByUserId(randomUUID());
 
       // Assert
       expect(result).toEqual([]);
@@ -355,7 +360,10 @@ describe('QuestionRepositoryImpl', () => {
       jest.spyOn(QuestionMapper, 'toDomain').mockReturnValue(questions[0]);
 
       // Act
-      const result = await questionRepository.findByUserId(mockEntityManager);
+      const result = await questionRepository.findByUserId(
+        randomUUID(),
+        mockEntityManager,
+      );
 
       // Assert
       expect(result).toEqual(questions);

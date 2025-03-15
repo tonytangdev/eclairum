@@ -17,11 +17,13 @@ describe('QuizGenerationTaskMapper', () => {
           id: faker.string.uuid(),
           content: faker.lorem.sentence(),
           answers: [],
+          quizGenerationTaskId: faker.string.uuid(),
         }),
         new Question({
           id: faker.string.uuid(),
           content: faker.lorem.sentence(),
           answers: [],
+          quizGenerationTaskId: faker.string.uuid(),
         }),
       ];
 

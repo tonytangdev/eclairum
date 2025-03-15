@@ -18,6 +18,7 @@ describe('QuestionMapper', () => {
         createdAt: mockDate,
         updatedAt: mockDate,
         deletedAt: null,
+        quizGenerationTaskId: faker.string.uuid(),
       });
 
       // Act
@@ -42,6 +43,7 @@ describe('QuestionMapper', () => {
         createdAt: mockDate,
         updatedAt: mockDate,
         deletedAt: deletedDate,
+        quizGenerationTaskId: faker.string.uuid(),
       });
 
       // Act

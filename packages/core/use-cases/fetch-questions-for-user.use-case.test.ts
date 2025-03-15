@@ -37,7 +37,7 @@ describe("FetchQuestionsForUserUseCase", () => {
     } as unknown as jest.Mocked<UserRepository>;
 
     mockQuestionRepository = {
-      findAll: jest.fn(),
+      findByUserId: jest.fn(),
     } as unknown as jest.Mocked<QuestionRepository>;
 
     mockUserAnswersRepository = {
