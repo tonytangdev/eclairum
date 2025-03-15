@@ -1,0 +1,2 @@
+http://localhost:3001
+x-api-key: {{$dotenv API_KEY}}
