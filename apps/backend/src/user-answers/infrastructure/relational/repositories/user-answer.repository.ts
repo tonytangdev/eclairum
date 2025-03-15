@@ -23,15 +23,6 @@ export class UserAnswerRepositoryImpl implements UserAnswersRepository {
     return UserAnswerMapper.toDomain(entity);
   }
 
-  async findByUserId(userId: string): Promise<UserAnswer[]> {
-    const entities = await this.userAnswerRepository.find({
-      where: { userId },
-      relations: ['answer'],
-    });
-
-    return entities.map((entity) => UserAnswerMapper.toDomain(entity));
-  }
-
   async save(userAnswer: UserAnswer): Promise<UserAnswer> {
     const entity = UserAnswerMapper.toPersistence(userAnswer);
     await this.userAnswerRepository.save(entity);

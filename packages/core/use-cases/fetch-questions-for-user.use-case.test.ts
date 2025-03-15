@@ -1,106 +1,163 @@
 import { faker } from "@faker-js/faker";
 import { FetchQuestionsForUserUseCase } from "./fetch-questions-for-user.use-case";
-import { UserRepository } from "../interfaces/user-repository.interface";
 import { QuestionRepository } from "../interfaces/question-repository.interface";
+import { UserRepository } from "../interfaces/user-repository.interface";
 import { UserAnswersRepository } from "../interfaces/user-answers-repository.interface";
-import { User } from "../entities/user";
 import { Question } from "../entities/question";
+import { User } from "../entities/user";
 import { UserNotFoundError } from "../errors/quiz-errors";
+import { QuestionSelector } from "../services/question-selector.service";
+
+// Mock the QuestionSelector to control its behavior
+jest.mock("../services/question-selector.service");
 
 describe("FetchQuestionsForUserUseCase", () => {
-  let userRepository: jest.Mocked<UserRepository>;
-  let questionRepository: jest.Mocked<QuestionRepository>;
-  let userAnswersRepository: jest.Mocked<UserAnswersRepository>;
   let useCase: FetchQuestionsForUserUseCase;
+  let mockUserRepository: jest.Mocked<UserRepository>;
+  let mockQuestionRepository: jest.Mocked<QuestionRepository>;
+  let mockUserAnswersRepository: jest.Mocked<UserAnswersRepository>;
+  let mockQuestionSelector: jest.Mocked<QuestionSelector>;
 
   const userId = faker.string.uuid();
-  const mockUser = {
-    getId: () => userId,
-    getEmail: () => "user@example.com",
-  } as User;
-
-  const createMockQuestion = (id: string) =>
-    ({
-      getId: () => id,
-      getContent: () => `Question ${id}`,
-    }) as Question;
+  const mockUser = { id: userId } as unknown as User;
 
   const mockQuestions = [
-    createMockQuestion(faker.string.uuid()),
-    createMockQuestion(faker.string.uuid()),
-    createMockQuestion(faker.string.uuid()),
-    createMockQuestion(faker.string.uuid()),
-    createMockQuestion(faker.string.uuid()),
+    { getId: () => faker.string.uuid() } as Question,
+    { getId: () => faker.string.uuid() } as Question,
+    { getId: () => faker.string.uuid() } as Question,
   ];
 
   beforeEach(() => {
-    jest.resetAllMocks();
+    // Clear all mocks
+    jest.clearAllMocks();
 
-    userRepository = {
+    // Setup repository mocks
+    mockUserRepository = {
       findById: jest.fn(),
-      findByEmail: jest.fn(),
-      save: jest.fn(),
-    };
+    } as unknown as jest.Mocked<UserRepository>;
 
-    questionRepository = {
-      saveQuestions: jest.fn(),
+    mockQuestionRepository = {
       findAll: jest.fn(),
-      findById: jest.fn(),
-      save: jest.fn(),
-    };
+    } as unknown as jest.Mocked<QuestionRepository>;
 
-    userAnswersRepository = {
-      findById: jest.fn(),
-      save: jest.fn(),
-      findByUserId: jest.fn(),
-    };
+    mockUserAnswersRepository = {
+      findQuestionAnswerFrequencies: jest.fn(),
+    } as unknown as jest.Mocked<UserAnswersRepository>;
 
-    useCase = new FetchQuestionsForUserUseCase(
-      userRepository,
-      questionRepository,
-      userAnswersRepository,
+    // Setup the mocked QuestionSelector
+    mockQuestionSelector = {
+      selectQuestionsWithFrequencies: jest.fn(),
+    } as unknown as jest.Mocked<QuestionSelector>;
+
+    // Set the mock implementation to return the mock instance
+    (QuestionSelector as jest.Mock).mockImplementation(
+      () => mockQuestionSelector,
     );
 
-    userRepository.findById.mockResolvedValue(mockUser);
-    questionRepository.findAll.mockResolvedValue([...mockQuestions]);
-    userAnswersRepository.findByUserId.mockResolvedValue([]);
+    // Create the use case with mocked repositories
+    useCase = new FetchQuestionsForUserUseCase(
+      mockUserRepository,
+      mockQuestionRepository,
+      mockUserAnswersRepository,
+    );
   });
 
-  it("should throw UserNotFoundError when user does not exist", async () => {
-    userRepository.findById.mockResolvedValue(null);
+  it("should throw error if user does not exist", async () => {
+    // Setup
+    mockUserRepository.findById.mockResolvedValue(null);
 
+    // Test
     await expect(useCase.execute({ userId })).rejects.toThrow(
       UserNotFoundError,
     );
-
-    expect(userRepository.findById).toHaveBeenCalledWith(userId);
-    expect(questionRepository.findAll).not.toHaveBeenCalled();
+    expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
   });
 
-  it("should return empty array when no questions exist", async () => {
-    questionRepository.findAll.mockResolvedValue([]);
+  it("should return empty array if limit is zero or negative", async () => {
+    // Setup
+    mockUserRepository.findById.mockResolvedValue(mockUser);
 
+    // Test with limit = 0
+    const result = await useCase.execute({ userId, limit: 0 });
+
+    // Assert
+    expect(result).toEqual({ questions: [] });
+    expect(mockQuestionRepository.findAll).not.toHaveBeenCalled();
+    expect(
+      mockUserAnswersRepository.findQuestionAnswerFrequencies,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("should return empty array if no questions exist", async () => {
+    // Setup
+    mockUserRepository.findById.mockResolvedValue(mockUser);
+    mockQuestionRepository.findAll.mockResolvedValue([]);
+
+    // Test
     const result = await useCase.execute({ userId });
 
-    expect(result.questions).toEqual([]);
-    expect(userRepository.findById).toHaveBeenCalledWith(userId);
-    expect(questionRepository.findAll).toHaveBeenCalled();
-  });
-
-  it("should return empty array for zero or negative limit", async () => {
-    const result = await useCase.execute({ userId, limit: 0 });
-    expect(result.questions).toEqual([]);
-
-    const result2 = await useCase.execute({ userId, limit: -5 });
-    expect(result2.questions).toEqual([]);
+    // Assert
+    expect(result).toEqual({ questions: [] });
+    expect(mockQuestionRepository.findAll).toHaveBeenCalled();
+    expect(
+      mockUserAnswersRepository.findQuestionAnswerFrequencies,
+    ).not.toHaveBeenCalled();
   });
 
   it("should call repositories and return questions", async () => {
-    const result = await useCase.execute({ userId });
+    // Setup
+    const questionFrequencies = new Map<string, number>([
+      [mockQuestions[0].getId(), 1],
+      [mockQuestions[1].getId(), 0],
+    ]);
 
-    expect(userRepository.findById).toHaveBeenCalledWith(userId);
-    expect(questionRepository.findAll).toHaveBeenCalled();
-    expect(userAnswersRepository.findByUserId).toHaveBeenCalledWith(userId);
-    expect(result.questions.length).toBeGreaterThan(0);
+    mockUserRepository.findById.mockResolvedValue(mockUser);
+    mockQuestionRepository.findAll.mockResolvedValue(mockQuestions);
+    mockUserAnswersRepository.findQuestionAnswerFrequencies.mockResolvedValue(
+      questionFrequencies,
+    );
+    mockQuestionSelector.selectQuestionsWithFrequencies.mockReturnValue(
+      mockQuestions,
+    );
+
+    // Test
+    const result = await useCase.execute({ userId, limit: 3 });
+
+    // Assert
+    expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
+    expect(mockQuestionRepository.findAll).toHaveBeenCalled();
+    expect(
+      mockUserAnswersRepository.findQuestionAnswerFrequencies,
+    ).toHaveBeenCalledWith(userId);
+    expect(
+      mockQuestionSelector.selectQuestionsWithFrequencies,
+    ).toHaveBeenCalledWith(mockQuestions, questionFrequencies, 3);
+    expect(result).toEqual({ questions: mockQuestions });
+  });
+
+  it("should use default limit of 3 when not specified", async () => {
+    // Setup
+    const questionFrequencies = new Map<string, number>();
+
+    mockUserRepository.findById.mockResolvedValue(mockUser);
+    mockQuestionRepository.findAll.mockResolvedValue(mockQuestions);
+    mockUserAnswersRepository.findQuestionAnswerFrequencies.mockResolvedValue(
+      questionFrequencies,
+    );
+    mockQuestionSelector.selectQuestionsWithFrequencies.mockReturnValue(
+      mockQuestions,
+    );
+
+    // Test (without specifying limit)
+    await useCase.execute({ userId });
+
+    // Assert default limit is used
+    expect(
+      mockQuestionSelector.selectQuestionsWithFrequencies,
+    ).toHaveBeenCalledWith(
+      mockQuestions,
+      questionFrequencies,
+      3, // Default limit
+    );
   });
 });

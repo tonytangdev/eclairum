@@ -33,6 +33,91 @@ export class QuestionSelector {
     );
   }
 
+  selectQuestionsWithAnsweredIds(
+    questions: Question[],
+    answeredQuestionIds: string[],
+    limit: number,
+  ): Question[] {
+    // Create a Set for O(1) lookups
+    const answeredQuestionsSet = new Set(answeredQuestionIds);
+
+    // First, get questions that haven't been answered yet
+    const unansweredQuestions = questions.filter(
+      (question) => !answeredQuestionsSet.has(question.getId()),
+    );
+
+    // If we have enough unanswered questions, return them
+    if (unansweredQuestions.length >= limit) {
+      return this.shuffleArray(unansweredQuestions).slice(0, limit);
+    }
+
+    // Otherwise, fill the remainder with questions that have been answered
+    const answeredQuestions = questions.filter((question) =>
+      answeredQuestionsSet.has(question.getId()),
+    );
+
+    // Combine unanswered and answered questions
+    const selectedQuestions = [
+      ...unansweredQuestions,
+      ...this.shuffleArray(answeredQuestions).slice(
+        0,
+        limit - unansweredQuestions.length,
+      ),
+    ];
+
+    return this.shuffleArray(selectedQuestions);
+  }
+
+  selectQuestionsWithFrequencies(
+    questions: Question[],
+    questionFrequencies: Map<string, number>,
+    limit: number,
+  ): Question[] {
+    // First, get unanswered questions (frequency = 0 or not in the map)
+    const unansweredQuestions = questions.filter(
+      (question) =>
+        !questionFrequencies.has(question.getId()) ||
+        questionFrequencies.get(question.getId()) === 0,
+    );
+
+    // If we have enough unanswered questions, return a random selection
+    if (unansweredQuestions.length >= limit) {
+      return this.shuffleArray(unansweredQuestions).slice(0, limit);
+    }
+
+    // For the remaining slots, prioritize questions with lower frequencies
+    const answeredQuestions = questions.filter(
+      (question) =>
+        questionFrequencies.has(question.getId()) &&
+        questionFrequencies.get(question.getId())! > 0,
+    );
+
+    // Sort by frequency (ascending)
+    const sortedAnsweredQuestions = [...answeredQuestions].sort((a, b) => {
+      const freqA = questionFrequencies.get(a.getId())!;
+      const freqB = questionFrequencies.get(b.getId())!;
+      return freqA - freqB;
+    });
+
+    // Combine unanswered questions with the least frequently answered ones
+    const selectedQuestions = [
+      ...unansweredQuestions,
+      ...sortedAnsweredQuestions.slice(0, limit - unansweredQuestions.length),
+    ];
+
+    // Return the questions in a random order
+    return this.shuffleArray(selectedQuestions);
+  }
+
+  private shuffleArray<T>(array: T[]): T[] {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+  }
+
   private getUnansweredQuestions(
     allQuestions: Question[],
     userAnswers: UserAnswer[],

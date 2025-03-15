@@ -41,13 +41,15 @@ export class FetchQuestionsForUserUseCase {
       return { questions: [] };
     }
 
-    const userAnswers = await this.userAnswersRepository.findByUserId(userId);
+    const questionFrequencies =
+      await this.userAnswersRepository.findQuestionAnswerFrequencies(userId);
 
-    const selectedQuestions = this.questionSelector.selectQuestions(
-      allQuestions,
-      userAnswers,
-      limit,
-    );
+    const selectedQuestions =
+      this.questionSelector.selectQuestionsWithFrequencies(
+        allQuestions,
+        questionFrequencies,
+        limit,
+      );
 
     return { questions: selectedQuestions };
   }
