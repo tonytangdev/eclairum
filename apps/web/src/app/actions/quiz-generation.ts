@@ -26,7 +26,10 @@ export async function createQuizGenerationTask(
       data: response.data,
     };
   } catch (error) {
-    console.error("Error in createQuizGenerationTask server action:", error);
+    console.error(
+      "Error in createQuizGenerationTask server action:",
+      JSON.stringify(error),
+    );
     return {
       success: false,
       error:
