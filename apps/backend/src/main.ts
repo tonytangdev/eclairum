@@ -16,6 +16,6 @@ async function bootstrap() {
   app.useGlobalFilters(new DomainExceptionsFilter());
 
   console.log(`Listening on port ${process.env.PORT ?? 3001}`);
-  await app.listen(`0.0.0.0:${process.env.PORT ?? 3001}`);
+  await app.listen(process.env.PORT ?? 3001, '0.0.0.0');
 }
 void bootstrap();
