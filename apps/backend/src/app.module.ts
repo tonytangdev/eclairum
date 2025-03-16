@@ -29,7 +29,6 @@ import { ApiKeyGuard } from './common/guards/api-key.guard';
         database: configService.getOrThrow('DATABASE_NAME'),
         synchronize: configService.getOrThrow('DATABASE_SYNCHRONIZE'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        logging: true,
       }),
     }),
     QuizGenerationTasksModule,
