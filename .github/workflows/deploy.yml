@@ -1,0 +1,71 @@
+name: Deploy to Self-Hosted Server
+
+on:
+  push:
+    branches: [main]
+  workflow_run:
+    workflows: ["Build Backend Docker Image"]
+    branches: [main]
+    types:
+      - completed
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name != 'workflow_run' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create .env file
+        run: |
+          echo "Creating .env file for deployment"
+          cat > .env << EOF
+          DATABASE_HOST={{ secrets.DATABASE_HOST }}
+          DATABASE_PORT={{ secrets.DATABASE_PORT }}
+          DATABASE_USERNAME={{ secrets.DATABASE_USERNAME }}
+          DATABASE_PASSWORD={{ secrets.DATABASE_PASSWORD }}
+          DATABASE_NAME={{ secrets.DATABASE_NAME }}
+          DATABASE_SYNCHRONIZE={{ secrets.DATABASE_SYNCHRONIZE }}
+          OPENAI_API_KEY={{ secrets.OPENAI_API_KEY }}
+          API_KEY={{ secrets.API_KEY }}
+          # Add other environment variables as needed
+          EOF
+
+      - name: Deploy with Docker Compose
+        run: |
+          # Pull the latest image
+          docker pull ghcr.io/${{ github.repository }}-backend:latest
+
+          # Stop and remove existing containers
+          docker-compose down || true
+
+          # Create or update docker-compose.yml
+          cat > docker-compose.yml << 'EOF'
+          version: '3'
+          services:
+            backend:
+              image: ghcr.io/${{ github.repository }}-backend:latest
+              restart: always
+              ports:
+                - "3000:3000"
+              env_file:
+                - .env
+              volumes:
+                - ./data:/app/data
+          EOF
+
+          # Start new containers
+          docker-compose up -d
+
+          # Clean up unused images
+          docker image prune -af --filter "until=24h"
