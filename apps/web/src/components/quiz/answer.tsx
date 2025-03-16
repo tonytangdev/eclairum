@@ -22,7 +22,7 @@ export function Answer({
 }: AnswerProps) {
   const { id, content, isCorrect } = answer;
 
-  let buttonClass = "justify-start text-left h-auto py-4 px-6 ";
+  let buttonClass = "justify-start text-left h-auto py-4 px-6 w-full ";
 
   if (showResult) {
     if (isSelected && isCorrect) {
@@ -44,9 +44,9 @@ export function Answer({
       disabled={disabled}
     >
       <div className="flex items-center w-full">
-        <span className="flex-1">{content}</span>
-        {showResult && isCorrect && <CheckCircle className="h-5 w-5 text-green-500 ml-2" />}
-        {showResult && isSelected && !isCorrect && <XCircle className="h-5 w-5 text-red-500 ml-2" />}
+        <span className="flex-1 overflow-hidden whitespace-normal break-words text-left">{content}</span>
+        {showResult && isCorrect && <CheckCircle className="h-5 w-5 text-green-500 ml-2 flex-shrink-0" />}
+        {showResult && isSelected && !isCorrect && <XCircle className="h-5 w-5 text-red-500 ml-2 flex-shrink-0" />}
       </div>
     </Button>
   );

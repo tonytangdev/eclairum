@@ -43,12 +43,6 @@ export default function Quiz({ questions }: QuizProps) {
     }
   };
 
-  const handleRestart = () => {
-    setCurrentQuestion(0);
-    setSelectedAnswers(Array(questions.length).fill(""));
-    setShowResults(false);
-  };
-
   const calculateScore = () => {
     return questions.reduce((score, question, index) => {
       const selectedAnswerId = selectedAnswers[index];
@@ -63,7 +57,6 @@ export default function Quiz({ questions }: QuizProps) {
         questions={questions}
         selectedAnswers={selectedAnswers}
         score={calculateScore()}
-        onRestart={handleRestart}
       />
     );
   }

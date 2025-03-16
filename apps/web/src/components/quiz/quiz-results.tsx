@@ -14,33 +14,38 @@ interface QuizResultsProps {
   }[];
   selectedAnswers: string[];
   score: number;
-  onRestart: () => void;
 }
 
-export function QuizResults({ 
-  questions, 
-  selectedAnswers, 
-  score, 
-  onRestart 
+export function QuizResults({
+  questions,
+  selectedAnswers,
+  score
 }: QuizResultsProps) {
+  // Remove onRestart prop since we're reloading the page instead
+
   const getAnswerContent = (
-    question: QuizResultsProps['questions'][0], 
+    question: QuizResultsProps['questions'][0],
     answerId: string
   ) => {
     const answer = question.answers.find(a => a.id === answerId);
     return answer?.content || 'No answer';
   };
-  
+
   const getCorrectAnswerId = (question: QuizResultsProps['questions'][0]) => {
     const correctAnswer = question.answers.find(answer => answer.isCorrect);
     return correctAnswer?.id || '';
+  };
+
+  const handleNewSession = () => {
+    // Reload the page to start a new session
+    window.location.reload();
   };
 
   return (
     <div className="max-w-2xl mx-auto">
       <Card className="overflow-hidden">
         <CardContent className="p-6">
-          <h2 className="text-2xl font-bold text-center mb-6">Quiz Results</h2>
+          <h2 className="text-2xl font-bold text-center mb-6">Results</h2>
           <div className="text-center mb-8">
             <p className="text-4xl font-bold mb-2">
               {score} / {questions.length}
@@ -96,8 +101,8 @@ export function QuizResults({
             })}
           </div>
 
-          <Button onClick={onRestart} className="w-full">
-            Restart Quiz
+          <Button onClick={handleNewSession} className="w-full">
+            Start new flashing session
           </Button>
         </CardContent>
       </Card>

@@ -2,7 +2,7 @@ import Quiz from "@/components/quiz";
 import { getUserQuestions } from "../actions/questions";
 
 export default async function Page() {
-  const result = await getUserQuestions();
+  const result = await getUserQuestions(10);
 
   if (!result.success) {
     return (
