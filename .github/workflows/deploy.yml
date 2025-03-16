@@ -62,7 +62,7 @@ jobs:
               ports:
                 - "3000:3000"
               env_file:
-                - .env
+                - ./apps/backend/.env
               volumes:
                 - ./data:/app/data
               networks:
