@@ -4,6 +4,7 @@ services:
     build:
       context: ../../ # Points to root of monorepo
       dockerfile: apps/backend/Dockerfile
+    network_mode: 'host'
     ports:
       - '${PORT:-3000}:${PORT:-3000}'
     environment:
