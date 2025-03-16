@@ -36,9 +36,9 @@ import { ApiKeyGuard } from './common/guards/api-key.guard';
               ? { rejectUnauthorized: false }
               : false,
           // Force IPv4 connections
-          extra: {
-            family: 4,
-          },
+          // extra: {
+          //   family: 4,
+          // },
           logging: configService.get('TYPEORM_LOGGING') === 'true',
         };
       },
