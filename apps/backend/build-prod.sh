@@ -20,8 +20,8 @@ DB_PORT=$(grep DATABASE_PORT apps/backend/.env.production | cut -d'=' -f2)
 echo "Testing connection to database at $DB_HOST:$DB_PORT"
 nc -zv $DB_HOST $DB_PORT || echo "Warning: Unable to connect directly to database, but container might still work"
 
-# Build using docker-compose with proper context
-docker-compose -f apps/backend/docker-compose.prod.yaml build
+# Build using docker compose with proper context
+docker compose -f apps/backend/docker-compose.prod.yaml build
 
 # Ask if we should run the container
 read -p "Do you want to run the container now? (y/n) " -n 1 -r
@@ -29,7 +29,7 @@ echo
 if [[ $REPLY =~ ^[Yy]$ ]]
 then
   echo "Starting container..."
-  docker-compose --env-file apps/backend/.env.production -f apps/backend/docker-compose.prod.yaml up -d
+  docker compose --env-file apps/backend/.env.production -f apps/backend/docker-compose.prod.yaml up -d
   
   echo "Checking logs for database connection issues..."
   sleep 5
