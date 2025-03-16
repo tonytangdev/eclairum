@@ -46,6 +46,9 @@ jobs:
           # Pull the latest image
           docker pull ghcr.io/${{ github.repository }}-backend:latest
 
+          # Copy the Caddyfile to the deployment directory
+          cp ./apps/backend/caddyFile ./Caddyfile
+
           # Stop and remove existing containers
           docker-compose down || true
 
@@ -62,6 +65,32 @@ jobs:
                 - .env
               volumes:
                 - ./data:/app/data
+              networks:
+                - app-network
+
+            caddy:
+              image: caddy:2
+              restart: always
+              ports:
+                - "80:80"
+                - "443:443"
+                - "3007:3007"
+              volumes:
+                - ./Caddyfile:/etc/caddy/Caddyfile
+                - caddy_data:/data
+                - caddy_config:/config
+              networks:
+                - app-network
+              depends_on:
+                - backend
+
+          volumes:
+            caddy_data:
+            caddy_config:
+
+          networks:
+            app-network:
+              driver: bridge
           EOF
 
           # Start new containers
