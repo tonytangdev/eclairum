@@ -44,4 +44,4 @@ WORKDIR /app/apps/backend
 CMD ["node", "dist/main.js"]
 
 # Expose the port
-EXPOSE 3000
+EXPOSE 4000
