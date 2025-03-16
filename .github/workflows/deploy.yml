@@ -50,7 +50,7 @@ jobs:
           docker-compose down || true
 
           # Create or update docker-compose.yml
-          cat > docker-compose.yml << 'EOF'
+          cat > docker-compose.yml << EOF
           version: '3'
           services:
             backend:
