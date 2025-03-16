@@ -57,11 +57,14 @@ jobs:
         run: pnpm install
 
       - name: Build packages
-        run: pnpm build
-
+        run: |
+          pnpm --filter @flash-me/core build
+          pnpm --filter backend build
 
       - name: Run tests
-        run: pnpm test
+        run: |
+          pnpm --filter @flash-me/core test
+          pnpm --filter backend test
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
