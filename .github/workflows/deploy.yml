@@ -29,15 +29,15 @@ jobs:
       - name: Create .env file
         run: |
           echo "Creating .env file for deployment"
-          cat > .env << EOF
-          DATABASE_HOST=${{ secrets.DATABASE_HOST }}
-          DATABASE_PORT=${{ secrets.DATABASE_PORT }}
-          DATABASE_USERNAME=${{ secrets.DATABASE_USERNAME }}
-          DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}
-          DATABASE_NAME=${{ secrets.DATABASE_NAME }}
-          DATABASE_SYNCHRONIZE=${{ secrets.DATABASE_SYNCHRONIZE }}
-          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-          API_KEY=${{ secrets.API_KEY }}
+          cat > ./apps/backend/.env << EOF
+          DATABASE_HOST={{ secrets.DATABASE_HOST }}
+          DATABASE_PORT={{ secrets.DATABASE_PORT }}
+          DATABASE_USERNAME={{ secrets.DATABASE_USERNAME }}
+          DATABASE_PASSWORD={{ secrets.DATABASE_PASSWORD }}
+          DATABASE_NAME={{ secrets.DATABASE_NAME }}
+          DATABASE_SYNCHRONIZE={{ secrets.DATABASE_SYNCHRONIZE }}
+          OPENAI_API_KEY={{ secrets.OPENAI_API_KEY }}
+          API_KEY={{ secrets.API_KEY }}
           # Add other environment variables as needed
           EOF
 
