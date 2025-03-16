@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { QuizProgress } from "./quiz-progress";
 import { QuizQuestion } from "./quiz-question";
 import { QuizResults } from "./quiz-results";
+import { submitAnswer } from "@/app/actions/user-answers";
 
 interface QuizProps {
   questions: {
@@ -22,11 +23,27 @@ export default function Quiz({ questions }: QuizProps) {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<string[]>(Array(questions.length).fill(""));
   const [showResults, setShowResults] = useState(false);
+  const [submissionErrors, setSubmissionErrors] = useState<string[]>(Array(questions.length).fill(""));
 
-  const handleAnswerSelect = (answerId: string) => {
+  const handleAnswerSelect = async (answerId: string) => {
     const newAnswers = [...selectedAnswers];
     newAnswers[currentQuestion] = answerId;
     setSelectedAnswers(newAnswers);
+
+    // Submit the answer to the backend
+    const currentQuestionId = questions[currentQuestion].id;
+    const result = await submitAnswer({
+      questionId: currentQuestionId,
+      answerId: answerId,
+    });
+
+    // If there was an error submitting the answer, store it
+    if (!result.success) {
+      const newErrors = [...submissionErrors];
+      newErrors[currentQuestion] = result.error || "Failed to submit answer";
+      setSubmissionErrors(newErrors);
+      console.error(`Error submitting answer for question ${currentQuestionId}:`, result.error);
+    }
   };
 
   const handleNext = () => {
