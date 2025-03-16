@@ -5,7 +5,7 @@ services:
       context: ../../ # Points to root of monorepo
       dockerfile: apps/backend/Dockerfile
     ports:
-      - '${PORT:-3000}:3000'
+      - '${PORT:-3000}:${PORT:-3000}'
     environment:
       NODE_ENV: production
       # Database connection parameters to match app.module.ts
