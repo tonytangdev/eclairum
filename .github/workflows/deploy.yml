@@ -66,7 +66,7 @@ jobs:
               volumes:
                 - ./data:/app/data
               healthcheck:
-                test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+                test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
                 interval: 30s
                 timeout: 10s
                 retries: 3
@@ -75,7 +75,10 @@ jobs:
             caddy:
               image: caddy:2
               restart: always
-              network_mode: host
+              ports:
+                - "80:80"
+                - "443:443"
+                - "3007:3007"
               volumes:
                 - ./Caddyfile:/etc/caddy/Caddyfile
                 - caddy_data:/data
@@ -89,11 +92,16 @@ jobs:
                 timeout: 10s
                 retries: 3
                 start_period: 5s
+              extra_hosts:
+                - "host.docker.internal:host-gateway"
 
           volumes:
             caddy_data:
             caddy_config:
           EOF
+
+          # Update the Caddyfile to use host.docker.internal
+          sed -i 's/localhost:3000/host.docker.internal:3000/g' ./Caddyfile
 
           # Start new containers
           docker compose up -d
