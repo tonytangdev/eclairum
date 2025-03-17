@@ -5,11 +5,11 @@ import { faker } from '@faker-js/faker';
 import { UserAnswerRepositoryImpl } from './user-answer.repository';
 import { UserAnswerEntity } from '../entities/user-answer.entity';
 import { UserAnswerMapper } from '../mappers/user-answer.mapper';
-import { UserAnswer } from '@flash-me/core/entities';
+import { UserAnswer } from '@eclairum/core/entities';
 import { UserEntity } from '../../../../users/infrastructure/relational/entities/user.entity';
 import { QuestionEntity } from '../../../../questions/infrastructure/relational/entities/question.entity';
 import { AnswerEntity } from '../../../../answers/infrastructure/relational/entities/answer.entity';
-import { Answer } from '@flash-me/core/entities';
+import { Answer } from '@eclairum/core/entities';
 
 // Define a type for the mock query builder
 interface MockQueryBuilder {

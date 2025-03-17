@@ -1,7 +1,7 @@
 "use server";
 
 import { serverApi } from "@/lib/api";
-import { CreateQuizGenerationTaskDto } from "@flash-me/backend/dtos";
+import { CreateQuizGenerationTaskDto } from "@eclairum/backend/dtos";
 import { auth } from "@clerk/nextjs/server";
 
 export async function createQuizGenerationTask(

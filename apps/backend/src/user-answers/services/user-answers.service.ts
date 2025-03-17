@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { UserAnswersQuestionUseCase } from '@flash-me/core/use-cases';
+import { UserAnswersQuestionUseCase } from '@eclairum/core/use-cases';
 import { UserAnswerRepositoryImpl } from '../infrastructure/relational/repositories/user-answer.repository';
 import { SubmitAnswerDto } from '../dtos/submit-answer.dto';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';

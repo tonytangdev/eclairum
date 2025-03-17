@@ -1,15 +1,15 @@
 services:
   postgres:
-    container_name: flash-me-db-dev
+    container_name: eclairum-db-dev
     image: postgres:17.0-alpine
     ports:
       - ${DATABASE_PORT}:5432
     volumes:
-      - flash-me-db-dev:/var/lib/postgresql/data
+      - eclairum-db-dev:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: ${DATABASE_USERNAME}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: ${DATABASE_NAME}
 
 volumes:
-  flash-me-db-dev:
+  eclairum-db-dev:

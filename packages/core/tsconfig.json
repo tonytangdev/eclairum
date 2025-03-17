@@ -1,5 +1,5 @@
 {
-  "extends": "@flash-me/typescript-config/base.json",
+  "extends": "@eclairum/typescript-config/base.json",
   "compilerOptions": {
     "outDir": "dist"
   },

@@ -1,4 +1,4 @@
-import { QuizGenerationTask, Question } from '@flash-me/core/entities';
+import { QuizGenerationTask, Question } from '@eclairum/core/entities';
 import { QuizGenerationTaskEntity } from '../entities/quiz-generation-task.entity';
 import { QuestionEntity } from '../../../../questions/infrastructure/relational/entities/question.entity';
 import { QuestionMapper } from '../../../../questions/infrastructure/relational/mappers/question.mapper';

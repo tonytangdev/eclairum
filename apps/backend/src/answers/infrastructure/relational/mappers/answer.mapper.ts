@@ -1,4 +1,4 @@
-import { Answer } from '@flash-me/core/entities';
+import { Answer } from '@eclairum/core/entities';
 import { AnswerEntity } from '../entities/answer.entity';
 
 export class AnswerMapper {

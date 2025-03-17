@@ -1,6 +1,6 @@
 import { UserAnswerEntity } from '../entities/user-answer.entity';
-import { UserAnswer } from '@flash-me/core/entities';
-import { Answer } from '@flash-me/core/entities';
+import { UserAnswer } from '@eclairum/core/entities';
+import { Answer } from '@eclairum/core/entities';
 
 export class UserAnswerMapper {
   static toDomain(entity: UserAnswerEntity): UserAnswer {

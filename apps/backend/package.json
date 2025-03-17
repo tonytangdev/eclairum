@@ -1,5 +1,5 @@
 {
-  "name": "@flash-me/backend",
+  "name": "@eclairum/backend",
   "version": "0.0.1",
   "description": "",
   "author": "",
@@ -38,8 +38,8 @@
   },
   "dependencies": {
     "@faker-js/faker": "^9.5.1",
-    "@flash-me/core": "workspace:*",
-    "@flash-me/eslint-config": "workspace:*",
+    "@eclairum/core": "workspace:*",
+    "@eclairum/eslint-config": "workspace:*",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.1",
     "@nestjs/core": "^11.0.1",
@@ -57,7 +57,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
-    "@flash-me/typescript-config": "workspace:*",
+    "@eclairum/typescript-config": "workspace:*",
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",

@@ -1,5 +1,5 @@
 import { ArgumentsHost, HttpStatus } from '@nestjs/common';
-import { UserAlreadyExistsError } from '@flash-me/core/errors';
+import { UserAlreadyExistsError } from '@eclairum/core/errors';
 import { DomainExceptionsFilter } from './domain-exceptions.filter';
 import { faker } from '@faker-js/faker';
 

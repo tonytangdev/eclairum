@@ -1,5 +1,5 @@
 {
-  "name": "@flash-me/eslint-config",
+  "name": "@eclairum/eslint-config",
   "version": "0.0.0",
   "type": "module",
   "private": true,

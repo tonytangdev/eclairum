@@ -30,10 +30,10 @@ importers:
       '@faker-js/faker':
         specifier: ^9.5.1
         version: 9.5.1
-      '@flash-me/core':
+      '@eclairum/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@flash-me/eslint-config':
+      '@eclairum/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
       '@nestjs/common':
@@ -82,7 +82,7 @@ importers:
       '@eslint/js':
         specifier: ^9.18.0
         version: 9.21.0
-      '@flash-me/typescript-config':
+      '@eclairum/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
       '@nestjs/cli':
@@ -160,10 +160,10 @@ importers:
       '@clerk/nextjs':
         specifier: ^6.12.4
         version: 6.12.4(next@15.2.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@flash-me/backend':
+      '@eclairum/backend':
         specifier: workspace:*
         version: link:../backend
-      '@flash-me/core':
+      '@eclairum/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@radix-ui/react-dialog':
@@ -251,10 +251,10 @@ importers:
       '@faker-js/faker':
         specifier: ^9.5.1
         version: 9.5.1
-      '@flash-me/eslint-config':
+      '@eclairum/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
-      '@flash-me/typescript-config':
+      '@eclairum/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
     devDependencies:

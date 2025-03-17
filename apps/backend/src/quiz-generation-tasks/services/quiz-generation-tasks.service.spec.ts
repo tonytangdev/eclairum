@@ -9,16 +9,16 @@ import { TransactionHelper } from '../../shared/helpers/transaction.helper';
 import {
   QuizGenerationTask,
   QuizGenerationStatus,
-} from '@flash-me/core/entities';
+} from '@eclairum/core/entities';
 import { faker } from '@faker-js/faker';
-import { LLMService } from '@flash-me/core/interfaces/llm-service.interface';
+import { LLMService } from '@eclairum/core/interfaces/llm-service.interface';
 import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
 import { LLM_SERVICE_PROVIDER_KEY } from './openai-llm.service';
 
 // Fix for hoisting issue - mock the module before imports
-jest.mock('@flash-me/core/use-cases', () => {
+jest.mock('@eclairum/core/use-cases', () => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const originalModule = jest.requireActual('@flash-me/core/use-cases');
+  const originalModule = jest.requireActual('@eclairum/core/use-cases');
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return {
@@ -31,7 +31,7 @@ jest.mock('@flash-me/core/use-cases', () => {
 });
 
 // Import after mocking to avoid hoisting issues
-import { CreateQuizGenerationTaskUseCase } from '@flash-me/core/use-cases';
+import { CreateQuizGenerationTaskUseCase } from '@eclairum/core/use-cases';
 
 describe('QuizGenerationTasksService', () => {
   let quizGenerationTasksService: QuizGenerationTasksService;

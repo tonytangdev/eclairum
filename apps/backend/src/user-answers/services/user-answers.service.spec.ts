@@ -1,7 +1,7 @@
 // Fix for hoisting issue - mock the module before imports
-jest.mock('@flash-me/core/use-cases', () => {
+jest.mock('@eclairum/core/use-cases', () => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const originalModule = jest.requireActual('@flash-me/core/use-cases');
+  const originalModule = jest.requireActual('@eclairum/core/use-cases');
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return {
@@ -20,7 +20,7 @@ import { UserAnswerRepositoryImpl } from '../infrastructure/relational/repositor
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { SubmitAnswerDto } from '../dtos/submit-answer.dto';
 import { faker } from '@faker-js/faker';
-import { UserAnswersQuestionUseCase } from '@flash-me/core/use-cases';
+import { UserAnswersQuestionUseCase } from '@eclairum/core/use-cases';
 
 describe('UserAnswersService', () => {
   let service: UserAnswersService;

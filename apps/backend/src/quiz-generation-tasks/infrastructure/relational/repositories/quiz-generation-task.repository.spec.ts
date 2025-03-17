@@ -7,7 +7,7 @@ import { QuizGenerationTaskMapper } from '../mappers/quiz-generation-task.mapper
 import {
   QuizGenerationTask,
   QuizGenerationStatus,
-} from '@flash-me/core/entities';
+} from '@eclairum/core/entities';
 import { faker } from '@faker-js/faker';
 
 describe('QuizGenerationTaskRepositoryImpl', () => {

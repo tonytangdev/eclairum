@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
-import { Question } from '@flash-me/core/entities';
+import { Question } from '@eclairum/core/entities';
 import { QuestionEntity } from '../entities/question.entity';
 import { QuestionRepositoryImpl } from './question.repository';
 import { QuestionMapper } from '../mappers/question.mapper';

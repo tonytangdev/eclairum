@@ -1,6 +1,6 @@
 services:
   backend:
-    container_name: flash-me-backend
+    container_name: eclairum-backend
     build:
       context: ../../ # Points to root of monorepo
       dockerfile: apps/backend/Dockerfile

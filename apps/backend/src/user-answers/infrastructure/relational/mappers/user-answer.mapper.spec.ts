@@ -1,7 +1,7 @@
 import { UserAnswerMapper } from './user-answer.mapper';
 import { UserAnswerEntity } from '../entities/user-answer.entity';
-import { UserAnswer } from '@flash-me/core/entities';
-import { Answer } from '@flash-me/core/entities';
+import { UserAnswer } from '@eclairum/core/entities';
+import { Answer } from '@eclairum/core/entities';
 import { faker } from '@faker-js/faker';
 import { AnswerEntity } from '../../../../answers/infrastructure/relational/entities/answer.entity';
 

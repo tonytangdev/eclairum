@@ -4,13 +4,13 @@ import { CreateQuizGenerationTaskDto } from '../dto/create-quiz-generation-task.
 import {
   QuizGenerationTask,
   QuizGenerationStatus,
-} from '@flash-me/core/entities';
+} from '@eclairum/core/entities';
 import { QuestionRepositoryImpl } from '../../questions/infrastructure/relational/repositories/question.repository';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { QuizGenerationTaskRepositoryImpl } from '../infrastructure/relational/repositories/quiz-generation-task.repository';
 import { TransactionHelper } from '../../shared/helpers/transaction.helper';
-import { CreateQuizGenerationTaskUseCase } from '@flash-me/core/use-cases';
-import { LLMService } from '@flash-me/core/interfaces/llm-service.interface';
+import { CreateQuizGenerationTaskUseCase } from '@eclairum/core/use-cases';
+import { LLMService } from '@eclairum/core/interfaces/llm-service.interface';
 import { LLM_SERVICE_PROVIDER_KEY } from './openai-llm.service';
 import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
 

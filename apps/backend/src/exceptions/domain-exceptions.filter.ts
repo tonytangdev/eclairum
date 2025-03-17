@@ -5,7 +5,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { UserAlreadyExistsError } from '@flash-me/core/errors';
+import { UserAlreadyExistsError } from '@eclairum/core/errors';
 
 @Catch(UserAlreadyExistsError)
 export class DomainExceptionsFilter implements ExceptionFilter {

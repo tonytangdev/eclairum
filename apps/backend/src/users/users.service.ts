@@ -1,4 +1,4 @@
-import { CreateUserUseCase } from '@flash-me/core/use-cases';
+import { CreateUserUseCase } from '@eclairum/core/use-cases';
 import { Injectable } from '@nestjs/common';
 import { UserRepositoryImpl } from './infrastructure/relational/user.repository';
 import { CreateUserDto } from './dto/create-user.dto';

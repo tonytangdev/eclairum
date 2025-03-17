@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { UserRepositoryImpl } from './user.repository';
 import { UserEntity } from './entities/user.entity';
 import { UserMapper } from './mappers/user.mapper';
-import { User } from '@flash-me/core/entities';
+import { User } from '@eclairum/core/entities';
 import { faker } from '@faker-js/faker';
 
 // Mock the UserMapper

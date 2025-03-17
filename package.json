@@ -1,5 +1,5 @@
 {
-  "name": "flash-me",
+  "name": "eclairum",
   "private": true,
   "scripts": {
     "build": "turbo run build",

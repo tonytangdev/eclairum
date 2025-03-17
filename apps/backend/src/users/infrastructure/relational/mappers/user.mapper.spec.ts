@@ -1,6 +1,6 @@
 import { UserMapper } from './user.mapper';
 import { UserEntity } from '../entities/user.entity';
-import { User } from '@flash-me/core/entities';
+import { User } from '@eclairum/core/entities';
 import { faker } from '@faker-js/faker';
 
 describe('UserMapper', () => {

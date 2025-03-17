@@ -33,10 +33,10 @@ then
   
   echo "Checking logs for database connection issues..."
   sleep 5
-  docker logs flash-me-backend
+  docker logs eclairum-backend
 
   echo "If you still see connection errors, try these troubleshooting steps:"
   echo "1. Make sure your Supabase database allows external connections"
   echo "2. Check if your DATABASE_HOST is correct (should be something like db.xxxxx.supabase.co)"
-  echo "3. Try running: docker exec -it flash-me-backend ping \$DATABASE_HOST"
+  echo "3. Try running: docker exec -it eclairum-backend ping \$DATABASE_HOST"
 fi

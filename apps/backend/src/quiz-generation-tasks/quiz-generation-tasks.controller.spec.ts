@@ -3,7 +3,7 @@ import { QuizGenerationTasksController } from './quiz-generation-tasks.controlle
 import { QuizGenerationTasksService } from './services/quiz-generation-tasks.service';
 import { CreateQuizGenerationTaskDto } from './dto/create-quiz-generation-task.dto';
 import { faker } from '@faker-js/faker';
-import { QuizGenerationStatus } from '@flash-me/core/entities';
+import { QuizGenerationStatus } from '@eclairum/core/entities';
 import { HttpStatus } from '@nestjs/common';
 
 describe('QuizGenerationTasksController', () => {

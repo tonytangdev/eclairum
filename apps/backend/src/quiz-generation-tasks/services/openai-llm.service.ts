@@ -1,5 +1,5 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
-import { LLMService, QuizQuestion } from '@flash-me/core/interfaces';
+import { LLMService, QuizQuestion } from '@eclairum/core/interfaces';
 import OpenAI from 'openai';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import { z } from 'zod';

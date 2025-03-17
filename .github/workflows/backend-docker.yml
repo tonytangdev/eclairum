@@ -58,12 +58,12 @@ jobs:
 
       - name: Build packages
         run: |
-          pnpm --filter @flash-me/core build
+          pnpm --filter @eclairum/core build
           pnpm --filter backend build
 
       - name: Run tests
         run: |
-          pnpm --filter @flash-me/core test
+          pnpm --filter @eclairum/core test
           pnpm --filter backend test
 
       - name: Log in to the Container registry

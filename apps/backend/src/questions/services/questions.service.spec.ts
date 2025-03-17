@@ -4,10 +4,10 @@ import { QuestionsService } from './questions.service';
 import { QuestionRepositoryImpl } from '../infrastructure/relational/repositories/question.repository';
 import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
 import { UserAnswerRepositoryImpl } from '../../user-answers/infrastructure/relational/repositories/user-answer.repository';
-import { FetchQuestionsForUserUseCase } from '@flash-me/core/use-cases';
+import { FetchQuestionsForUserUseCase } from '@eclairum/core/use-cases';
 
 // Mock the core use case
-jest.mock('@flash-me/core/use-cases', () => {
+jest.mock('@eclairum/core/use-cases', () => {
   return {
     FetchQuestionsForUserUseCase: jest.fn().mockImplementation(() => {
       return {

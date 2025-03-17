@@ -9,7 +9,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { QuizGenerationStatus } from '@flash-me/core/entities';
+import { QuizGenerationStatus } from '@eclairum/core/entities';
 import { QuestionEntity } from '../../../../questions/infrastructure/relational/entities/question.entity';
 import { UserEntity } from '../../../../users/infrastructure/relational/entities/user.entity';
 

@@ -3,7 +3,7 @@ import {
   QuizGenerationTask,
   Question,
   QuizGenerationStatus,
-} from '@flash-me/core/entities';
+} from '@eclairum/core/entities';
 import { QuizGenerationTaskEntity } from '../entities/quiz-generation-task.entity';
 import { QuestionEntity } from '../../../../questions/infrastructure/relational/entities/question.entity';
 import { faker } from '@faker-js/faker';

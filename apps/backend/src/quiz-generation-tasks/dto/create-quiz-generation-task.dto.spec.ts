@@ -2,7 +2,7 @@ import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { faker } from '@faker-js/faker';
 import { CreateQuizGenerationTaskDto } from './create-quiz-generation-task.dto';
-import { MAX_TEXT_LENGTH } from '@flash-me/core/constants';
+import { MAX_TEXT_LENGTH } from '@eclairum/core/constants';
 
 describe('CreateQuizGenerationTaskDto', () => {
   let dto: CreateQuizGenerationTaskDto;

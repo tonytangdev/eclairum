@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { UserRepositoryImpl } from './infrastructure/relational/user.repository';
-import { CreateUserUseCase } from '@flash-me/core/use-cases';
+import { CreateUserUseCase } from '@eclairum/core/use-cases';
 import { CreateUserDto } from './dto/create-user.dto';
 import { faker } from '@faker-js/faker';
 
 // Mock the CreateUserUseCase class
-jest.mock('@flash-me/core/use-cases', () => {
+jest.mock('@eclairum/core/use-cases', () => {
   return {
     CreateUserUseCase: jest.fn().mockImplementation(() => ({
       execute: jest.fn().mockResolvedValue({}),

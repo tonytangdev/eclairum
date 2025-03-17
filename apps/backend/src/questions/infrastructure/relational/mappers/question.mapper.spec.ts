@@ -1,4 +1,4 @@
-import { Answer, Question } from '@flash-me/core/entities';
+import { Answer, Question } from '@eclairum/core/entities';
 import { QuestionMapper } from './question.mapper';
 import { QuestionEntity } from '../entities/question.entity';
 import { AnswerEntity } from '../../../../answers/infrastructure/relational/entities/answer.entity';

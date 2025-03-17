@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { UserEntity } from '../entities/user.entity';
-import { User } from '@flash-me/core/entities';
+import { User } from '@eclairum/core/entities';
 
 @Injectable()
 export class UserMapper {

@@ -1,7 +1,7 @@
 "use server";
 
 import { serverApi } from "@/lib/api";
-import { CreateUserDto } from "@flash-me/backend/dtos";
+import { CreateUserDto } from "@eclairum/backend/dtos";
 
 export async function createUser(data: CreateUserDto) {
   try {

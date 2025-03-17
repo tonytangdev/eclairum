@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
-import { QuestionRepository } from '@flash-me/core/interfaces/question-repository.interface';
-import { Question, User } from '@flash-me/core/entities';
+import { QuestionRepository } from '@eclairum/core/interfaces/question-repository.interface';
+import { Question, User } from '@eclairum/core/entities';
 import { QuestionEntity } from '../entities/question.entity';
 import { QuestionMapper } from '../mappers/question.mapper';
 

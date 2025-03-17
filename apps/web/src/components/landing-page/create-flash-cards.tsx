@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { FileText, Upload, CheckCircle, AlertCircle, ArrowRight } from "lucide-react";
 import { createQuizGenerationTask } from "@/app/actions/quiz-generation";
-import { MAX_TEXT_LENGTH } from "@flash-me/core/constants";
+import { MAX_TEXT_LENGTH } from "@eclairum/core/constants";
 import { useClerk, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 
