@@ -35,10 +35,6 @@ import { ApiKeyGuard } from './common/guards/api-key.guard';
             configService.get('DATABASE_SSL') === 'true'
               ? { rejectUnauthorized: false }
               : false,
-          // Force IPv4 connections
-          // extra: {
-          //   family: 4,
-          // },
           logging: configService.get('TYPEORM_LOGGING') === 'true',
         };
       },

@@ -49,4 +49,7 @@ export class QuizGenerationTaskEntity {
 
   @OneToMany(() => QuestionEntity, (question) => question.quizGenerationTask)
   questions: QuestionEntity[];
+
+  @Column({ type: 'text', nullable: true })
+  title: string | null;
 }

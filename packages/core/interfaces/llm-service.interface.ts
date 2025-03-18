@@ -8,6 +8,11 @@ export interface QuizQuestion {
   answers: Answer[];
 }
 
+export interface GenerateQuizResponse {
+  questions: QuizQuestion[];
+  title: string;
+}
+
 export interface LLMService {
-  generateQuiz(text: string): Promise<QuizQuestion[]>;
+  generateQuiz(text: string): Promise<GenerateQuizResponse>;
 }

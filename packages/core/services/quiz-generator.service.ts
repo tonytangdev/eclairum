@@ -1,4 +1,8 @@
-import { LLMService, QuizQuestion } from "../interfaces/llm-service.interface";
+import {
+  GenerateQuizResponse,
+  LLMService,
+  QuizQuestion,
+} from "../interfaces/llm-service.interface";
 import { Question } from "../entities/question";
 import { Answer } from "../entities/answer";
 import { QuizGenerationTask } from "../entities/quiz-generation-task";
@@ -10,19 +14,24 @@ import {
 export class QuizGeneratorService {
   constructor(private readonly llmService: LLMService) {}
 
-  async generateQuestions(
+  async generateQuestionsAndTitle(
     quizGenerationTaskId: QuizGenerationTask["id"],
     text: string,
-  ): Promise<Question[]> {
-    const llmQuestions = await this.fetchQuestionsFromLLM(text);
+  ): Promise<{ title: string; questions: Question[] }> {
+    const { questions: llmQuestions, title } =
+      await this.fetchQuestionsFromLLM(text);
     this.validateLLMResponse(llmQuestions, text);
-    return this.convertLLMQuestionsToEntities(
+    const questions = this.convertLLMQuestionsToEntities(
       quizGenerationTaskId,
       llmQuestions,
     );
+
+    return { questions, title };
   }
 
-  private async fetchQuestionsFromLLM(text: string): Promise<QuizQuestion[]> {
+  private async fetchQuestionsFromLLM(
+    text: string,
+  ): Promise<GenerateQuizResponse> {
     try {
       return await this.llmService.generateQuiz(text);
     } catch (error) {

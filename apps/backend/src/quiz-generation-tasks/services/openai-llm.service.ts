@@ -1,5 +1,9 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
-import { LLMService, QuizQuestion } from '@eclairum/core/interfaces';
+import {
+  GenerateQuizResponse,
+  LLMService,
+  QuizQuestion,
+} from '@eclairum/core/interfaces';
 import OpenAI from 'openai';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
@@ -14,6 +18,7 @@ export const LLM_SERVICE_PROVIDER_KEY = 'LLMService';
 
 // Define the Zod schema for our quiz questions
 const QuizSchema = z.object({
+  title: z.string(),
   data: z.array(
     z.object({
       question: z.string(),
@@ -33,7 +38,7 @@ export class OpenAILLMService implements LLMService {
 
   constructor(@Inject(OPENAI_CLIENT) private readonly openai: OpenAI) {}
 
-  async generateQuiz(text: string): Promise<QuizQuestion[]> {
+  async generateQuiz(text: string): Promise<GenerateQuizResponse> {
     try {
       this.logger.log(`Generating quiz from text of length: ${text.length}`);
 
@@ -47,7 +52,7 @@ export class OpenAILLMService implements LLMService {
         messages: [
           {
             role: 'system',
-            content: `You are a specialized quiz generation assistant. Create concise, accurate quiz questions based on provided text. You must provide ${count} questions and for each 4 answers.`,
+            content: `You are a specialized quiz generation assistant. Create concise, accurate quiz questions based on provided text. You must provide ${count} questions and for each 4 answers. Also, create a title for the quiz. Do not mention Quiz in the title`,
           },
           {
             role: 'user',
@@ -65,8 +70,13 @@ export class OpenAILLMService implements LLMService {
         throw new InvalidResponseError('No quiz data received from OpenAI');
       }
 
-      this.logger.debug('Successfully generated quiz questions');
-      return quiz.data;
+      this.logger.debug(
+        `Successfully generated quiz questions with title ${quiz.title}`,
+      );
+      return {
+        questions: quiz.data,
+        title: quiz.title,
+      } as GenerateQuizResponse;
     } catch (error) {
       if (error instanceof Error) {
         if (error instanceof InvalidResponseError) {

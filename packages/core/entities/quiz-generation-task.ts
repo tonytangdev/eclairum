@@ -19,6 +19,7 @@ type QuizGenerationTaskConstructor = {
   status?: QuizGenerationStatus;
   generatedAt?: Date | null;
   userId: User["id"];
+  title?: string | null;
 };
 
 export class QuizGenerationTask {
@@ -31,6 +32,7 @@ export class QuizGenerationTask {
   private status: QuizGenerationStatus;
   private generatedAt: Date | null;
   private userId: User["id"];
+  private title: string | null;
 
   constructor({
     id = crypto.randomUUID(),
@@ -42,6 +44,7 @@ export class QuizGenerationTask {
     status = QuizGenerationStatus.PENDING,
     generatedAt = null,
     userId,
+    title = null,
   }: QuizGenerationTaskConstructor) {
     if (!textContent) {
       throw new RequiredTextContentError();
@@ -60,6 +63,7 @@ export class QuizGenerationTask {
     this.status = status;
     this.generatedAt = generatedAt;
     this.userId = userId;
+    this.title = title;
   }
 
   public getId(): string {
@@ -114,5 +118,13 @@ export class QuizGenerationTask {
 
   public isGenerationComplete(): boolean {
     return this.status === QuizGenerationStatus.COMPLETED;
+  }
+
+  public setTitle(title: string): void {
+    this.title = title;
+  }
+
+  public getTitle(): string | null {
+    return this.title;
   }
 }

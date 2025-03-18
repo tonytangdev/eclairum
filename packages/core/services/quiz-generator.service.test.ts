@@ -1,6 +1,9 @@
 import { faker } from "@faker-js/faker";
 import { QuizGeneratorService } from "./quiz-generator.service";
-import { LLMService, QuizQuestion } from "../interfaces/llm-service.interface";
+import {
+  GenerateQuizResponse,
+  LLMService,
+} from "../interfaces/llm-service.interface";
 import { Question } from "../entities/question";
 import {
   LLMServiceError,
@@ -16,18 +19,21 @@ describe("QuizGeneratorService", () => {
   const sampleText = faker.lorem.paragraphs(2);
 
   // Helper function to generate mock quiz questions
-  const createMockQuizQuestions = (count = 1): QuizQuestion[] => {
-    return Array(count)
-      .fill(null)
-      .map(() => ({
-        question: faker.lorem.sentence() + "?",
-        answers: [
-          { text: faker.lorem.sentence(), isCorrect: true },
-          { text: faker.lorem.sentence(), isCorrect: false },
-          { text: faker.lorem.sentence(), isCorrect: false },
-          { text: faker.lorem.sentence(), isCorrect: false },
-        ],
-      }));
+  const createMockQuizQuestions = (count = 1): GenerateQuizResponse => {
+    return {
+      title: faker.lorem.sentence(),
+      questions: Array(count)
+        .fill(null)
+        .map(() => ({
+          question: faker.lorem.sentence() + "?",
+          answers: [
+            { text: faker.lorem.sentence(), isCorrect: true },
+            { text: faker.lorem.sentence(), isCorrect: false },
+            { text: faker.lorem.sentence(), isCorrect: false },
+            { text: faker.lorem.sentence(), isCorrect: false },
+          ],
+        })),
+    };
   };
 
   beforeEach(() => {
@@ -46,7 +52,7 @@ describe("QuizGeneratorService", () => {
       mockLLMService.generateQuiz.mockResolvedValue(mockQuestions);
 
       // Act
-      const result = await quizGeneratorService.generateQuestions(
+      const result = await quizGeneratorService.generateQuestionsAndTitle(
         quizGenerationTaskId,
         sampleText,
       );
@@ -55,10 +61,12 @@ describe("QuizGeneratorService", () => {
       expect(mockLLMService.generateQuiz).toHaveBeenCalledWith(sampleText);
       expect(result).toHaveLength(3);
       expect(result[0]).toBeInstanceOf(Question);
-      expect(result[0].getContent()).toBe(mockQuestions[0].question);
+      expect(result.questions[0].getContent()).toBe(
+        mockQuestions.questions[0].question,
+      );
 
       // Verify answers
-      const answers = result[0].getAnswers();
+      const answers = result.questions[0].getAnswers();
       expect(answers).toHaveLength(4);
 
       // Verify at least one answer is correct
@@ -68,11 +76,14 @@ describe("QuizGeneratorService", () => {
 
     it("should throw NoQuestionsGeneratedError when LLM returns empty array", async () => {
       // Arrange
-      mockLLMService.generateQuiz.mockResolvedValue([]);
+      mockLLMService.generateQuiz.mockResolvedValue({
+        title: faker.lorem.sentence(),
+        questions: [],
+      });
 
       // Act & Assert
       await expect(
-        quizGeneratorService.generateQuestions(
+        quizGeneratorService.generateQuestionsAndTitle(
           quizGenerationTaskId,
           sampleText,
         ),
@@ -82,12 +93,12 @@ describe("QuizGeneratorService", () => {
     it("should throw NoQuestionsGeneratedError when LLM returns null", async () => {
       // Arrange
       mockLLMService.generateQuiz.mockResolvedValue(
-        null as unknown as QuizQuestion[],
+        null as unknown as GenerateQuizResponse,
       );
 
       // Act & Assert
       await expect(
-        quizGeneratorService.generateQuestions(
+        quizGeneratorService.generateQuestionsAndTitle(
           quizGenerationTaskId,
           sampleText,
         ),
@@ -101,7 +112,7 @@ describe("QuizGeneratorService", () => {
 
       // Act & Assert
       await expect(
-        quizGeneratorService.generateQuestions(
+        quizGeneratorService.generateQuestionsAndTitle(
           quizGenerationTaskId,
           sampleText,
         ),
@@ -118,16 +129,19 @@ describe("QuizGeneratorService", () => {
           { text: faker.lorem.sentence(), isCorrect: false },
         ],
       };
-      mockLLMService.generateQuiz.mockResolvedValue([mockQuestion]);
+      mockLLMService.generateQuiz.mockResolvedValue({
+        title: faker.lorem.sentence(),
+        questions: [mockQuestion],
+      });
 
       // Act
-      const result = await quizGeneratorService.generateQuestions(
+      const result = await quizGeneratorService.generateQuestionsAndTitle(
         quizGenerationTaskId,
         sampleText,
       );
 
       // Assert
-      expect(result[0].getAnswers()).toHaveLength(3);
+      expect(result.questions[0].getAnswers()).toHaveLength(3);
     });
 
     it("should associate questions with the provided task ID", async () => {
@@ -137,13 +151,13 @@ describe("QuizGeneratorService", () => {
       const customTaskId = faker.string.uuid();
 
       // Act
-      const result = await quizGeneratorService.generateQuestions(
+      const result = await quizGeneratorService.generateQuestionsAndTitle(
         customTaskId,
         sampleText,
       );
 
       // Assert
-      expect(result[0].getQuizGenerationTaskId()).toBe(customTaskId);
+      expect(result.questions[0].getQuizGenerationTaskId()).toBe(customTaskId);
     });
   });
 });

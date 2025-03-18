@@ -96,17 +96,26 @@ export class CreateQuizGenerationTaskUseCase {
     text: string,
   ): Promise<void> {
     try {
-      const questions = await this.quizGenerator.generateQuestions(
-        quizGenerationTask.getId(),
-        text,
-      );
+      const { questions, title } =
+        await this.quizGenerator.generateQuestionsAndTitle(
+          quizGenerationTask.getId(),
+          text,
+        );
 
+      this.setTitleForTask(quizGenerationTask, title);
       this.addQuestionsToTask(quizGenerationTask, questions);
       quizGenerationTask.updateStatus(QuizGenerationStatus.COMPLETED);
       await this.quizStorage.saveQuizData(quizGenerationTask, questions);
     } catch (error) {
       await this.handleFailedTask(quizGenerationTask, error);
     }
+  }
+
+  private setTitleForTask(
+    quizGenerationTask: QuizGenerationTask,
+    title: string,
+  ): void {
+    quizGenerationTask.setTitle(title);
   }
 
   private async handleFailedTask(

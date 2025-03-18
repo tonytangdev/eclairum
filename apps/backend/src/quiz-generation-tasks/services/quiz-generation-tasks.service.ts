@@ -43,9 +43,6 @@ export class QuizGenerationTasksService {
     const { text, userId } = createQuizGenerationTaskDto;
 
     try {
-      this.logger.log(`Creating quiz generation task for user ${userId}`);
-      this.logger.debug(`Text length: ${text.length} characters`);
-
       return await this.transactionHelper.executeInTransaction(
         async (entityManager) => {
           // Configure repositories to use the transaction context
@@ -108,10 +105,6 @@ export class QuizGenerationTasksService {
   ): TaskResponse {
     const taskId = task.getId();
     const questionsCount = task.getQuestions().length;
-
-    this.logger.log(
-      `Successfully generated ${questionsCount} questions for task ${taskId}`,
-    );
 
     return {
       taskId,
