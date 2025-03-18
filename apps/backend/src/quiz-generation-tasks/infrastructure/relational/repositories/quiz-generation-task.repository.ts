@@ -63,6 +63,22 @@ export class QuizGenerationTaskRepositoryImpl
     return QuizGenerationTaskMapper.toDomain(quizGenerationTaskEntity);
   }
 
+  /**
+   * Find all quiz generation tasks associated with a specific user
+   * @param userId The ID of the user
+   * @returns Promise that resolves to an array of quiz generation tasks
+   */
+  async findByUserId(userId: string): Promise<QuizGenerationTask[]> {
+    const repo = this.getRepository();
+    const entities = await repo.find({
+      where: { userId },
+      relations: ['questions'],
+      order: { createdAt: 'DESC' }, // Return newest tasks first
+    });
+
+    return QuizGenerationTaskMapper.toDomainList(entities);
+  }
+
   async findAll(): Promise<QuizGenerationTask[]> {
     const repo = this.getRepository();
     const entities = await repo.find({
