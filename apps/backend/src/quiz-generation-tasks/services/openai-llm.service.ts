@@ -1,9 +1,5 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
-import {
-  GenerateQuizResponse,
-  LLMService,
-  QuizQuestion,
-} from '@eclairum/core/interfaces';
+import { GenerateQuizResponse, LLMService } from '@eclairum/core/interfaces';
 import OpenAI from 'openai';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
