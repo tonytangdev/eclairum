@@ -68,6 +68,8 @@ describe("QuizStorageService", () => {
     mockQuizGenerationTaskRepository = {
       saveTask: jest.fn(),
       findByUserId: jest.fn(),
+      findById: jest.fn(),
+      findByUserIdPaginated: jest.fn(),
     };
 
     quizStorageService = new QuizStorageService(

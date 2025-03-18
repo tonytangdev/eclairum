@@ -103,6 +103,8 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     mockQuizGenerationTaskRepository = {
       saveTask: jest.fn(),
       findByUserId: jest.fn(),
+      findByUserIdPaginated: jest.fn(),
+      findById: jest.fn(),
     } as jest.Mocked<QuizGenerationTaskRepository>;
 
     mockUserRepository = {
