@@ -17,6 +17,7 @@ import { LLMService } from '@eclairum/core/interfaces/llm-service.interface';
 import { LLM_SERVICE_PROVIDER_KEY } from './openai-llm.service';
 import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
 import { FetchQuizGenerationTasksDto } from '../dto/fetch-quiz-generation-tasks.dto';
+import { PaginationMeta } from '@eclairum/core/shared/pagination.interface';
 
 export interface TaskResponse {
   taskId: string;
@@ -34,6 +35,11 @@ export interface TaskSummaryResponse {
   createdAt: Date;
   updatedAt: Date;
   questionsCount: number;
+}
+
+export interface PaginatedTasksResponse {
+  data: TaskSummaryResponse[];
+  meta: PaginationMeta;
 }
 
 @Injectable()
@@ -114,16 +120,30 @@ export class QuizGenerationTasksService {
 
   async fetchTasksByUserId(
     fetchQuizGenerationTasksDto: FetchQuizGenerationTasksDto,
-  ): Promise<TaskSummaryResponse[]> {
+  ): Promise<PaginatedTasksResponse> {
     try {
       const fetchQuizGenerationTasksForUserUseCase =
         this.createFetchTasksUseCase();
 
-      const { tasks } = await fetchQuizGenerationTasksForUserUseCase.execute({
-        userId: fetchQuizGenerationTasksDto.userId,
-      });
+      console.log('fetchQuizGenerationTasksDto', fetchQuizGenerationTasksDto);
 
-      return tasks.map((task) => this.mapTaskToSummaryResponse(task));
+      const { tasks, pagination } =
+        await fetchQuizGenerationTasksForUserUseCase.execute({
+          userId: fetchQuizGenerationTasksDto.userId,
+          pagination: {
+            page: fetchQuizGenerationTasksDto.page || 1,
+            limit: fetchQuizGenerationTasksDto.limit || 10,
+          },
+        });
+
+      const taskSummaries = tasks.map((task) =>
+        this.mapTaskToSummaryResponse(task),
+      );
+
+      return {
+        data: taskSummaries,
+        meta: pagination!,
+      };
     } catch (error) {
       this.logError('Failed to fetch quiz generation tasks', error);
       throw error;

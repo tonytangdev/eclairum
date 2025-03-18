@@ -5,6 +5,10 @@ import { QuizGenerationTask } from '@eclairum/core/entities';
 import { QuizGenerationTaskRepository } from '@eclairum/core/interfaces';
 import { QuizGenerationTaskEntity } from '../entities/quiz-generation-task.entity';
 import { QuizGenerationTaskMapper } from '../mappers/quiz-generation-task.mapper';
+import {
+  PaginationParams,
+  PaginatedResult,
+} from '@eclairum/core/shared/pagination.interface';
 
 @Injectable()
 export class QuizGenerationTaskRepositoryImpl
@@ -77,6 +81,49 @@ export class QuizGenerationTaskRepositoryImpl
     });
 
     return QuizGenerationTaskMapper.toDomainList(entities);
+  }
+
+  /**
+   * Find quiz generation tasks associated with a specific user with pagination
+   * @param userId The ID of the user
+   * @param pagination Pagination parameters (page and limit)
+   * @returns Promise that resolves to a paginated result of quiz generation tasks
+   */
+  async findByUserIdPaginated(
+    userId: string,
+    pagination: PaginationParams,
+  ): Promise<PaginatedResult<QuizGenerationTask>> {
+    const repo = this.getRepository();
+
+    const skip = (pagination.page - 1) * pagination.limit;
+
+    // Get total count for pagination metadata
+    const totalItems = await repo.count({
+      where: { userId },
+    });
+
+    // Get paginated results
+    const entities = await repo.find({
+      where: { userId },
+      relations: ['questions'],
+      order: { createdAt: 'DESC' },
+      skip,
+      take: pagination.limit,
+    });
+
+    const tasks = QuizGenerationTaskMapper.toDomainList(entities);
+
+    const totalPages = Math.ceil(totalItems / pagination.limit);
+
+    return {
+      data: tasks,
+      meta: {
+        page: pagination.page,
+        limit: pagination.limit,
+        totalItems,
+        totalPages,
+      },
+    };
   }
 
   async findAll(): Promise<QuizGenerationTask[]> {
