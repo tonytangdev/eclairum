@@ -45,6 +45,7 @@ describe('QuizGenerationTaskRepositoryImpl', () => {
       save: jest.fn().mockReturnValue(Promise.resolve({})),
       findOne: jest.fn(),
       find: jest.fn(),
+      count: jest.fn(), // Add count method for pagination tests
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -416,6 +417,178 @@ describe('QuizGenerationTaskRepositoryImpl', () => {
         where: { userId },
         relations: ['questions'],
         order: { createdAt: 'DESC' },
+      });
+    });
+  });
+
+  describe('findByUserIdPaginated', () => {
+    it('should return paginated tasks for a specific user', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const pagination = { page: 2, limit: 10 };
+      const totalItems = 25;
+      const expectedTotalPages = 3;
+
+      const tasks = Array.from({ length: pagination.limit }, () =>
+        createMockTask({ userId }),
+      );
+      const entities = tasks.map((task) => createMockEntity(task));
+
+      typeOrmRepository.count.mockResolvedValueOnce(totalItems);
+      typeOrmRepository.find.mockResolvedValueOnce(entities);
+      QuizGenerationTaskMapper.toDomainList = jest
+        .fn()
+        .mockReturnValueOnce(tasks);
+
+      // Act
+      const result = await repository.findByUserIdPaginated(userId, pagination);
+
+      // Assert
+      expect(typeOrmRepository.count).toHaveBeenCalledWith({
+        where: { userId },
+      });
+      expect(typeOrmRepository.find).toHaveBeenCalledWith({
+        where: { userId },
+        relations: ['questions'],
+        order: { createdAt: 'DESC' },
+        skip: 10, // (page-1) * limit
+        take: 10,
+      });
+      expect(QuizGenerationTaskMapper.toDomainList).toHaveBeenCalledWith(
+        entities,
+      );
+      expect(result).toEqual({
+        data: tasks,
+        meta: {
+          page: pagination.page,
+          limit: pagination.limit,
+          totalItems,
+          totalPages: expectedTotalPages,
+        },
+      });
+    });
+
+    it('should return empty data array when no tasks are found for user', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const pagination = { page: 1, limit: 10 };
+
+      typeOrmRepository.count.mockResolvedValueOnce(0);
+      typeOrmRepository.find.mockResolvedValueOnce([]);
+      QuizGenerationTaskMapper.toDomainList = jest.fn().mockReturnValueOnce([]);
+
+      // Act
+      const result = await repository.findByUserIdPaginated(userId, pagination);
+
+      // Assert
+      expect(result).toEqual({
+        data: [],
+        meta: {
+          page: pagination.page,
+          limit: pagination.limit,
+          totalItems: 0,
+          totalPages: 0,
+        },
+      });
+    });
+
+    it('should correctly calculate pagination metadata', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const pagination = { page: 3, limit: 5 };
+      const totalItems = 21;
+      const expectedTotalPages = 5; // ceil(21/5) = 5
+
+      const tasks = Array.from({ length: 1 }, () => createMockTask({ userId }));
+      const entities = tasks.map((task) => createMockEntity(task));
+
+      typeOrmRepository.count.mockResolvedValueOnce(totalItems);
+      typeOrmRepository.find.mockResolvedValueOnce(entities); // Last page with only 1 item
+      QuizGenerationTaskMapper.toDomainList = jest
+        .fn()
+        .mockReturnValueOnce(tasks);
+
+      // Act
+      const result = await repository.findByUserIdPaginated(userId, pagination);
+
+      // Assert
+      expect(typeOrmRepository.find).toHaveBeenCalledWith({
+        where: { userId },
+        relations: ['questions'],
+        order: { createdAt: 'DESC' },
+        skip: 10, // (3-1) * 5
+        take: 5,
+      });
+      expect(result.meta).toEqual({
+        page: pagination.page,
+        limit: pagination.limit,
+        totalItems,
+        totalPages: expectedTotalPages,
+      });
+      expect(result.data).toHaveLength(1);
+    });
+
+    it('should use stored entity manager when available', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const pagination = { page: 1, limit: 10 };
+      const totalItems = 15;
+
+      const tasks = Array.from({ length: 10 }, () =>
+        createMockTask({ userId }),
+      );
+      const entities = tasks.map((task) => createMockEntity(task));
+
+      const mockTransactionRepo = {
+        count: jest.fn().mockResolvedValueOnce(totalItems),
+        find: jest.fn().mockResolvedValueOnce(entities),
+      };
+
+      const mockEntityManager = {
+        getRepository: jest.fn().mockReturnValue(mockTransactionRepo),
+      } as unknown as EntityManager;
+
+      repository.setEntityManager(mockEntityManager);
+      QuizGenerationTaskMapper.toDomainList = jest
+        .fn()
+        .mockReturnValueOnce(tasks);
+
+      // Act
+      const result = await repository.findByUserIdPaginated(userId, pagination);
+
+      // Assert
+      expect(mockEntityManager.getRepository).toHaveBeenCalledWith(
+        QuizGenerationTaskEntity,
+      );
+      expect(mockTransactionRepo.count).toHaveBeenCalledWith({
+        where: { userId },
+      });
+      expect(mockTransactionRepo.find).toHaveBeenCalledWith({
+        where: { userId },
+        relations: ['questions'],
+        order: { createdAt: 'DESC' },
+        skip: 0,
+        take: 10,
+      });
+      expect(result.data).toBe(tasks);
+      expect(typeOrmRepository.find).not.toHaveBeenCalled();
+      expect(typeOrmRepository.count).not.toHaveBeenCalled();
+    });
+
+    it('should handle database errors', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const pagination = { page: 1, limit: 10 };
+      const dbError = new Error('Database error');
+
+      typeOrmRepository.count.mockRejectedValueOnce(dbError);
+
+      // Act & Assert
+      await expect(
+        repository.findByUserIdPaginated(userId, pagination),
+      ).rejects.toThrow(dbError);
+      expect(typeOrmRepository.count).toHaveBeenCalledWith({
+        where: { userId },
       });
     });
   });
