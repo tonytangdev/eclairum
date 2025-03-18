@@ -56,17 +56,11 @@ export class CreateQuizGenerationTaskUseCase {
 
     const quizGenerationTask = this.createTask(text, userId);
 
-    try {
-      const questions = await this.generateQuestions(
-        quizGenerationTask.getId(),
-        text,
-      );
-      this.addQuestionsToTask(quizGenerationTask, questions);
-      quizGenerationTask.updateStatus(QuizGenerationStatus.COMPLETED);
-      await this.saveQuizData(quizGenerationTask, questions);
-    } catch (error) {
-      await this.handleFailedTask(quizGenerationTask, error);
-    }
+    await this.quizGenerationTaskRepository.saveTask(quizGenerationTask);
+
+    this.processQuizGeneration(quizGenerationTask, text).catch((error) => {
+      console.error(`Error during async quiz generation: ${error}`);
+    });
 
     return { quizGenerationTask };
   }
@@ -191,6 +185,23 @@ export class CreateQuizGenerationTaskUseCase {
     const questions = quizGenerationTask.getQuestions();
     if (questions.length > 0) {
       await this.questionRepository.saveQuestions(questions);
+    }
+  }
+
+  private async processQuizGeneration(
+    quizGenerationTask: QuizGenerationTask,
+    text: string,
+  ): Promise<void> {
+    try {
+      const questions = await this.generateQuestions(
+        quizGenerationTask.getId(),
+        text,
+      );
+      this.addQuestionsToTask(quizGenerationTask, questions);
+      quizGenerationTask.updateStatus(QuizGenerationStatus.COMPLETED);
+      await this.saveQuizData(quizGenerationTask, questions);
+    } catch (error) {
+      await this.handleFailedTask(quizGenerationTask, error);
     }
   }
 }
