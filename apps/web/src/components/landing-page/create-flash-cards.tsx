@@ -55,7 +55,7 @@ export function CreateFlashCards() {
       if (result.success) {
         setFeedback({
           type: "success",
-          message: "Flash cards generated"
+          message: "Your request is being processed. Feel free to create more flash cards while waiting!"
         });
       } else {
         throw new Error(result.error);

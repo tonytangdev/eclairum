@@ -26,10 +26,10 @@ export function AppSidebar() {
       isActive: pathname === "/",
     },
     {
-      title: "My flash cards",
+      title: "Flash Cards",
       icon: BookOpen,
-      href: "/my-flash-cards",
-      isActive: pathname === "/my-flash-cards",
+      href: "/flash-cards",
+      isActive: pathname === "/flash-cards",
     },
   ]
 

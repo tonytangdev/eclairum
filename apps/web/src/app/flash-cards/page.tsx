@@ -57,7 +57,7 @@ export default function MyFlashCards() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">My Flash Cards</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Flash Cards</h1>
           <p className="text-muted-foreground">View and manage your created flash cards.</p>
         </div>
         <Button asChild>
