@@ -30,12 +30,17 @@ export async function getUserQuestions(limit?: number) {
       };
     }
 
-    const response = await serverApi.get<QuestionResponse>(
-      `/users/${userId}/questions`,
-      {
-        params: limit ? { limit } : undefined,
-      },
-    );
+    const params: {
+      userId: string;
+      limit?: number | undefined;
+    } = { userId, limit: undefined };
+    if (limit) {
+      params.limit ??= limit;
+    }
+
+    const response = await serverApi.get<QuestionResponse>(`/questions`, {
+      params,
+    });
 
     return {
       success: true,
