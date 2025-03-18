@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DeepPartial, EntityManager, Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Answer } from '@eclairum/core/entities';
 import { AnswerEntity } from '../entities/answer.entity';
 import { AnswerRepositoryImpl } from './answer.repository';

@@ -11,7 +11,6 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
   @Public()
   @Get('health')
   healthCheck(): { status: string; timestamp: string } {
