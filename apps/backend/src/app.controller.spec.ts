@@ -19,4 +19,25 @@ describe('AppController', () => {
       expect(appController.getHello()).toBe('Hello World!');
     });
   });
+
+  describe('health', () => {
+    it('should return status ok and a valid timestamp', () => {
+      // Arrange
+      jest.useFakeTimers();
+      const now = new Date();
+      jest.setSystemTime(now);
+
+      // Act
+      const result = appController.healthCheck();
+
+      // Assert
+      expect(result).toEqual({
+        status: 'ok',
+        timestamp: now.toISOString(),
+      });
+
+      // Cleanup
+      jest.useRealTimers();
+    });
+  });
 });

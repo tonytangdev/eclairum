@@ -140,7 +140,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       expect(mockQuizStorageInstance.saveTask).not.toHaveBeenCalled();
     });
 
-    it.skip("should create a task with correct initial state", async () => {
+    it("should create a task with correct initial state", async () => {
       // Arrange
       // Spy on the createTask method to verify the initial status set by the use case
       const createTaskSpy = jest.spyOn(useCase as any, "createTask");
@@ -156,8 +156,12 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       // mock questions to be returned by the generator
       const mockQuestions = [];
 
-      mockQuizGeneratorInstance.generateQuestions.mockResolvedValueOnce(
-        mockQuestions,
+      mockQuizGeneratorInstance.generateQuestions.mockImplementationOnce(
+        async () => {
+          // wait 2 seconds before returning the mock questions
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          return mockQuestions;
+        },
       );
 
       // Act
