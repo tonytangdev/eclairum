@@ -8,14 +8,15 @@ import {
 } from '@nestjs/common';
 import { QuestionsService } from './services/questions.service';
 
-@Controller('/users/:id/questions')
+@Controller('questions')
 export class QuestionsController {
   constructor(private readonly questionsService: QuestionsService) {}
 
   @Get()
   async getQuestions(
-    @Param('id') userId: string,
     @Query('limit', new ParseIntPipe({ optional: true }))
+    @Query('userId')
+    userId: string,
     @Optional()
     limit?: number,
   ) {
