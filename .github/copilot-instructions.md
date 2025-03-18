@@ -80,6 +80,15 @@ The project is a mono-repo with the following structure:
 
 The core package contains the business logic of the project. It should not have any dependencies on the other packages.
 
+### Testing
+
+When using expect.any() in tests, always use the type of the expected value as the argument.
+
+```ts
+expect.any(String) as string; // Good
+expect.any(String); // Bad
+```
+
 ## Backend
 
 The backend app is a NestJS application.
