@@ -1,2 +1,5 @@
 GET http://localhost:3001/users/user_2u8Kcbjf35kbI4YhB0MFQSqLlT2/questions?limit=10
 x-api-key: {{$dotenv API_KEY}}
+
+GET http://localhost:3001/quiz-generation-tasks?userId=user_2uUrK0tnBC1Eb8Tn5N7lFvlx1RF
+x-api-key: {{$dotenv API_KEY}}

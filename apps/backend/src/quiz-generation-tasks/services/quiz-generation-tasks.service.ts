@@ -9,10 +9,14 @@ import { QuestionRepositoryImpl } from '../../questions/infrastructure/relationa
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { QuizGenerationTaskRepositoryImpl } from '../infrastructure/relational/repositories/quiz-generation-task.repository';
 import { TransactionHelper } from '../../shared/helpers/transaction.helper';
-import { CreateQuizGenerationTaskUseCase } from '@eclairum/core/use-cases';
+import {
+  CreateQuizGenerationTaskUseCase,
+  FetchQuizGenerationTasksForUserUseCase,
+} from '@eclairum/core/use-cases';
 import { LLMService } from '@eclairum/core/interfaces/llm-service.interface';
 import { LLM_SERVICE_PROVIDER_KEY } from './openai-llm.service';
 import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
+import { FetchQuizGenerationTasksDto } from '../dto/fetch-quiz-generation-tasks.dto';
 
 export interface TaskResponse {
   taskId: string;
@@ -21,6 +25,15 @@ export interface TaskResponse {
   questionsCount: number;
   message: string;
   generatedAt: Date;
+}
+
+export interface TaskSummaryResponse {
+  id: string;
+  status: QuizGenerationStatus;
+  title: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  questionsCount: number;
 }
 
 @Injectable()
@@ -97,6 +110,44 @@ export class QuizGenerationTasksService {
 
   async getTaskById(taskId: string): Promise<QuizGenerationTask | null> {
     return this.quizGenerationTaskRepository.findById(taskId);
+  }
+
+  async fetchTasksByUserId(
+    fetchQuizGenerationTasksDto: FetchQuizGenerationTasksDto,
+  ): Promise<TaskSummaryResponse[]> {
+    try {
+      const fetchQuizGenerationTasksForUserUseCase =
+        this.createFetchTasksUseCase();
+
+      const { tasks } = await fetchQuizGenerationTasksForUserUseCase.execute({
+        userId: fetchQuizGenerationTasksDto.userId,
+      });
+
+      return tasks.map((task) => this.mapTaskToSummaryResponse(task));
+    } catch (error) {
+      this.logError('Failed to fetch quiz generation tasks', error);
+      throw error;
+    }
+  }
+
+  private createFetchTasksUseCase(): FetchQuizGenerationTasksForUserUseCase {
+    return new FetchQuizGenerationTasksForUserUseCase(
+      this.userRepository,
+      this.quizGenerationTaskRepository,
+    );
+  }
+
+  private mapTaskToSummaryResponse(
+    task: QuizGenerationTask,
+  ): TaskSummaryResponse {
+    return {
+      id: task.getId(),
+      status: task.getStatus(),
+      title: task.getTitle(),
+      createdAt: task.getCreatedAt(),
+      updatedAt: task.getUpdatedAt(),
+      questionsCount: task.getQuestions().length,
+    };
   }
 
   private createTaskResponse(
