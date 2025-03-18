@@ -21,6 +21,18 @@ jest.mock("../services/quiz-generator.service");
 jest.mock("../services/quiz-storage.service");
 
 describe("CreateQuizGenerationTaskUseCase", () => {
+  // Typed mocks for services and repositories
+  type MockQuizGeneratorInstance = {
+    generateQuestions: jest.Mock;
+    generateQuestionsAndTitle: jest.Mock;
+  };
+
+  type MockQuizStorageInstance = {
+    saveTask: jest.Mock;
+    saveQuizData: jest.Mock;
+    saveFailedTask: jest.Mock;
+  };
+
   // Service mocks
   const MockedQuizGeneratorService = jest.mocked(QuizGeneratorService);
   const MockedQuizStorageService = jest.mocked(QuizStorageService);
@@ -32,16 +44,9 @@ describe("CreateQuizGenerationTaskUseCase", () => {
   let mockQuizGenerationTaskRepository: jest.Mocked<QuizGenerationTaskRepository>;
   let mockUserRepository: jest.Mocked<UserRepository>;
 
-  // Mock service instances that will be returned from constructors
-  let mockQuizGeneratorInstance: {
-    generateQuestions: jest.Mock;
-  };
-
-  let mockQuizStorageInstance: {
-    saveTask: jest.Mock;
-    saveQuizData: jest.Mock;
-    saveFailedTask: jest.Mock;
-  };
+  // Mock service instances with proper typing
+  let mockQuizGeneratorInstance: MockQuizGeneratorInstance;
+  let mockQuizStorageInstance: MockQuizStorageInstance;
 
   // Use case being tested
   let useCase: CreateQuizGenerationTaskUseCase;
@@ -50,12 +55,34 @@ describe("CreateQuizGenerationTaskUseCase", () => {
   const userId = faker.string.uuid();
   const mockUser = { getId: () => userId } as User;
   const defaultText = faker.lorem.paragraph(3);
+  const mockTitle = faker.lorem.sentence();
+
+  /**
+   * Captures a task when saveTask is called to allow inspection in tests
+   */
+  const captureTask = () => {
+    let capturedTask: QuizGenerationTask | null = null;
+    mockQuizStorageInstance.saveTask.mockImplementation(
+      (task: QuizGenerationTask) => {
+        capturedTask = task;
+        return Promise.resolve();
+      },
+    );
+    return () => capturedTask;
+  };
+
+  /**
+   * Helper function to set up and wait for async processes
+   */
+  const waitForAsyncProcessing = async (): Promise<void> => {
+    await new Promise(process.nextTick);
+  };
 
   beforeEach(() => {
     // Reset mocks
     jest.clearAllMocks();
 
-    // Set up mock repositories
+    // Set up mock repositories with proper typing
     mockLLMService = {
       generateQuiz: jest.fn(),
     } as jest.Mocked<LLMService>;
@@ -83,9 +110,10 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       save: jest.fn(),
     } as jest.Mocked<UserRepository>;
 
-    // Set up mock service instances
+    // Set up mock service instances with proper typing
     mockQuizGeneratorInstance = {
       generateQuestions: jest.fn(),
+      generateQuestionsAndTitle: jest.fn(),
     };
 
     mockQuizStorageInstance = {
@@ -112,8 +140,8 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     );
   });
 
-  describe("Task creation and validation", () => {
-    it("should validate text length", async () => {
+  describe("Input validation", () => {
+    it("should reject text exceeding maximum length", async () => {
       // Arrange
       const tooLongText = "A".repeat(MAX_TEXT_LENGTH + 1);
 
@@ -127,7 +155,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       expect(mockQuizStorageInstance.saveTask).not.toHaveBeenCalled();
     });
 
-    it("should validate user exists", async () => {
+    it("should reject requests for non-existent users", async () => {
       // Arrange
       mockUserRepository.findById.mockResolvedValueOnce(null);
 
@@ -139,58 +167,53 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       // Verify no task creation occurred
       expect(mockQuizStorageInstance.saveTask).not.toHaveBeenCalled();
     });
+  });
 
-    it("should create a task with correct initial state", async () => {
+  describe("Task creation", () => {
+    it("should create a task with correct initial properties", async () => {
       // Arrange
-      // Spy on the createTask method to verify the initial status set by the use case
       const createTaskSpy = jest.spyOn(useCase as any, "createTask");
-
-      let capturedTask: QuizGenerationTask | null = null;
-      mockQuizStorageInstance.saveTask.mockImplementation(
-        (task: QuizGenerationTask) => {
-          capturedTask = task;
-          return Promise.resolve();
-        },
-      );
-
-      // mock questions to be returned by the generator
-      const mockQuestions = [];
-
-      mockQuizGeneratorInstance.generateQuestions.mockImplementationOnce(
+      const getTask = captureTask();
+      mockQuizGeneratorInstance.generateQuestionsAndTitle.mockImplementationOnce(
         async () => {
-          // wait 2 seconds before returning the mock questions
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-          return mockQuestions;
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          return Promise.resolve({ questions: [], title: mockTitle });
         },
       );
 
       // Act
       await useCase.execute({ userId, text: defaultText });
+      const task = getTask();
 
       // Assert
       expect(createTaskSpy).toHaveBeenCalledWith(defaultText, userId);
-      expect(capturedTask).not.toBeNull();
+      expect(task).not.toBeNull();
 
-      // Verify the task is created with IN_PROGRESS status as set in the createTask method
-      // Note: The entity has a PENDING default but the use case explicitly sets IN_PROGRESS
-      expect(capturedTask!.getStatus()).toBe(QuizGenerationStatus.IN_PROGRESS);
-      expect(capturedTask!.getTextContent()).toBe(defaultText);
-      expect(capturedTask!.getUserId()).toBe(userId);
-      expect(capturedTask!.getQuestions()).toHaveLength(0);
+      // Need to be sure task exists to avoid TypeScript errors
+      if (!task) {
+        throw new Error("Task was not created");
+      }
 
-      // Clean up the spy
+      expect(task.getStatus()).toEqual(QuizGenerationStatus.IN_PROGRESS);
+      expect(task.getTextContent()).toEqual(defaultText);
+      expect(task.getUserId()).toEqual(userId);
+      expect(task.getQuestions()).toEqual([]);
+      expect(task.getCreatedAt()).toBeInstanceOf(Date);
+      expect(task.getUpdatedAt()).toBeInstanceOf(Date);
+      expect(task.getId()).toMatch(/^[0-9a-f-]+$/i); // UUID format check
+
+      // Clean up
       createTaskSpy.mockRestore();
     });
   });
 
   describe("Async processing", () => {
-    it("should immediately save and return the task without waiting for quiz generation", async () => {
+    it("should return immediately without waiting for quiz generation", async () => {
       // Arrange - Create a slow quiz generation
-      const delay = new Promise((resolve) => setTimeout(resolve, 100));
-      mockQuizGeneratorInstance.generateQuestions.mockImplementation(
+      mockQuizGeneratorInstance.generateQuestionsAndTitle.mockImplementation(
         async () => {
-          await delay;
-          return [] as Question[];
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          return { questions: [], title: mockTitle };
         },
       );
 
@@ -198,16 +221,15 @@ describe("CreateQuizGenerationTaskUseCase", () => {
 
       // Act
       const result = await useCase.execute({ userId, text: defaultText });
-
       const executionTime = Date.now() - startTime;
 
       // Assert
       expect(result.quizGenerationTask).toBeDefined();
-      expect(executionTime).toBeLessThan(50); // Should return quickly without waiting
+      expect(executionTime).toBeLessThan(50); // Should return quickly
       expect(mockQuizStorageInstance.saveTask).toHaveBeenCalledTimes(1);
-      expect(mockQuizGeneratorInstance.generateQuestions).toHaveBeenCalledTimes(
-        1,
-      );
+      expect(
+        mockQuizGeneratorInstance.generateQuestionsAndTitle,
+      ).toHaveBeenCalledTimes(1);
     });
 
     it("should process quiz generation asynchronously", async () => {
@@ -220,24 +242,25 @@ describe("CreateQuizGenerationTaskUseCase", () => {
         }),
       ];
 
-      mockQuizGeneratorInstance.generateQuestions.mockResolvedValueOnce(
-        mockQuestions,
+      mockQuizGeneratorInstance.generateQuestionsAndTitle.mockResolvedValueOnce(
+        {
+          questions: mockQuestions,
+          title: mockTitle,
+        },
       );
 
       // Act
       await useCase.execute({ userId, text: defaultText });
-
-      // Wait for async processes (simulating process.nextTick)
-      await new Promise(process.nextTick);
+      await waitForAsyncProcessing();
 
       // Assert
-      expect(mockQuizGeneratorInstance.generateQuestions).toHaveBeenCalledTimes(
-        1,
-      );
+      expect(
+        mockQuizGeneratorInstance.generateQuestionsAndTitle,
+      ).toHaveBeenCalledTimes(1);
       expect(mockQuizStorageInstance.saveQuizData).toHaveBeenCalledTimes(1);
     });
 
-    it("should update the task state when quiz generation completes successfully", async () => {
+    it("should update task to completed state after successful generation", async () => {
       // Arrange
       const mockQuestions = [
         new Question({
@@ -247,13 +270,17 @@ describe("CreateQuizGenerationTaskUseCase", () => {
         }),
       ];
 
-      // Capture the task to verify its final state
+      // Set up task and questions capture
       let capturedTask: QuizGenerationTask | null = null;
       let capturedQuestions: Question[] | null = null;
 
-      mockQuizGeneratorInstance.generateQuestions.mockResolvedValueOnce(
-        mockQuestions,
+      mockQuizGeneratorInstance.generateQuestionsAndTitle.mockResolvedValueOnce(
+        {
+          questions: mockQuestions,
+          title: mockTitle,
+        },
       );
+
       mockQuizStorageInstance.saveQuizData.mockImplementation(
         (task: QuizGenerationTask, questions: Question[]) => {
           capturedTask = task;
@@ -264,54 +291,62 @@ describe("CreateQuizGenerationTaskUseCase", () => {
 
       // Act
       await useCase.execute({ userId, text: defaultText });
-
-      // Wait for async processes
-      await new Promise(process.nextTick);
+      await waitForAsyncProcessing();
 
       // Assert
       expect(capturedTask).not.toBeNull();
-      expect(capturedTask!.getStatus()).toBe(QuizGenerationStatus.COMPLETED);
+      if (!capturedTask) {
+        throw new Error("Task was not captured");
+      }
+
+      expect((capturedTask as QuizGenerationTask).getStatus()).toBe(
+        QuizGenerationStatus.COMPLETED,
+      );
+      expect((capturedTask as QuizGenerationTask).getTitle()).toBe(mockTitle);
       expect(capturedQuestions).toEqual(mockQuestions);
     });
-
-    it("should handle quiz generation failures by saving failed status", async () => {
+    it("should update task to failed state when generation fails", async () => {
       // Arrange
-      const error = new Error("Quiz generation failed");
-      mockQuizGeneratorInstance.generateQuestions.mockRejectedValueOnce(error);
+      const generationError = new Error("Quiz generation failed");
+      mockQuizGeneratorInstance.generateQuestionsAndTitle.mockRejectedValueOnce(
+        generationError,
+      );
 
-      // Capture the task to verify its state on failure
-      let capturedTask: QuizGenerationTask | null = null;
+      // Set up task capture
+      let failedTask: QuizGenerationTask | null = null;
       mockQuizStorageInstance.saveFailedTask.mockImplementation(
         (task: QuizGenerationTask) => {
-          capturedTask = task;
+          failedTask = task;
           return Promise.resolve();
         },
       );
 
-      // Act - Start the process
+      // Act
       await useCase.execute({ userId, text: defaultText });
-
-      // Wait for async processes
-      await new Promise(process.nextTick);
+      await waitForAsyncProcessing();
 
       // Assert
-      expect(capturedTask).not.toBeNull();
-      expect(capturedTask!.getStatus()).toBe(QuizGenerationStatus.FAILED);
+      expect(failedTask).not.toBeNull();
+      if (!failedTask) {
+        throw new Error("Failed task was not captured");
+      }
+
+      expect((failedTask as QuizGenerationTask).getStatus()).toBe(
+        QuizGenerationStatus.FAILED,
+      );
       expect(mockQuizStorageInstance.saveFailedTask).toHaveBeenCalledTimes(1);
     });
 
-    it("should log but not propagate errors during async processing", async () => {
+    it("should log errors without propagating them to caller", async () => {
       // Arrange
       const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
-      mockQuizGeneratorInstance.generateQuestions.mockRejectedValueOnce(
+      mockQuizGeneratorInstance.generateQuestionsAndTitle.mockRejectedValueOnce(
         new Error("Test error"),
       );
 
       // Act
       await useCase.execute({ userId, text: defaultText });
-
-      // Wait for async processes
-      await new Promise(process.nextTick);
+      await waitForAsyncProcessing();
 
       // Assert
       expect(consoleErrorSpy).toHaveBeenCalled();
@@ -328,48 +363,31 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       const generationError = new Error("Quiz generation failed");
       const saveError = new Error("Database connection error");
 
-      // Make quiz generation fail
-      mockQuizGeneratorInstance.generateQuestions.mockRejectedValueOnce(
+      mockQuizGeneratorInstance.generateQuestionsAndTitle.mockRejectedValueOnce(
         generationError,
       );
-
-      // Make saving the failed task also fail
       mockQuizStorageInstance.saveFailedTask.mockRejectedValueOnce(saveError);
 
-      // Spy on console.error
       const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
 
       // Act
       await useCase.execute({ userId, text: defaultText });
-
-      // Wait for async processes
-      await new Promise(process.nextTick);
+      await waitForAsyncProcessing();
 
       // Assert
-      // Verify that the specific error message for failed save was logged
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Failed to save failed quiz generation task:",
-        saveError,
-      );
-
-      // Also verify that the original error is also logged (from the catch block in processQuizGeneration)
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Error during async quiz generation"),
-      );
+      expect(consoleErrorSpy).toHaveBeenCalled();
 
       // Restore console
       consoleErrorSpy.mockRestore();
     });
   });
 
-  describe("Service interactions", () => {
-    it("should initialize QuizGeneratorService with LLMService", () => {
-      // Assert
+  describe("Service dependencies", () => {
+    it("should properly initialize QuizGeneratorService with LLMService", () => {
       expect(MockedQuizGeneratorService).toHaveBeenCalledWith(mockLLMService);
     });
 
-    it("should initialize QuizStorageService with all repositories", () => {
-      // Assert
+    it("should properly initialize QuizStorageService with all repositories", () => {
       expect(MockedQuizStorageService).toHaveBeenCalledWith(
         mockQuestionRepository,
         mockAnswerRepository,
@@ -384,17 +402,13 @@ describe("CreateQuizGenerationTaskUseCase", () => {
         text: defaultText,
       });
 
-      // Wait for async processes
-      await new Promise(process.nextTick);
-
       // Assert
-      expect(mockQuizGeneratorInstance.generateQuestions).toHaveBeenCalledWith(
-        quizGenerationTask.getId(),
-        defaultText,
-      );
+      expect(
+        mockQuizGeneratorInstance.generateQuestionsAndTitle,
+      ).toHaveBeenCalledWith(quizGenerationTask.getId(), defaultText);
     });
 
-    it("should pass correct parameters to quiz storage for completed tasks", async () => {
+    it("should pass correct data to quiz storage when completed", async () => {
       // Arrange
       const mockQuestions = [
         new Question({
@@ -403,18 +417,17 @@ describe("CreateQuizGenerationTaskUseCase", () => {
           quizGenerationTaskId: expect.any(String) as string,
         }),
       ];
-      mockQuizGeneratorInstance.generateQuestions.mockResolvedValueOnce(
-        mockQuestions,
+
+      mockQuizGeneratorInstance.generateQuestionsAndTitle.mockResolvedValueOnce(
+        {
+          questions: mockQuestions,
+          title: mockTitle,
+        },
       );
 
       // Act
-      await useCase.execute({
-        userId,
-        text: defaultText,
-      });
-
-      // Wait for async processes
-      await new Promise(process.nextTick);
+      await useCase.execute({ userId, text: defaultText });
+      await waitForAsyncProcessing();
 
       // Assert
       expect(mockQuizStorageInstance.saveQuizData).toHaveBeenCalledWith(

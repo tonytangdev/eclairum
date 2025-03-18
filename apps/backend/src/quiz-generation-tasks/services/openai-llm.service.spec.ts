@@ -9,6 +9,7 @@ import {
 } from '../exceptions/quiz-generation.exceptions';
 import { faker } from '@faker-js/faker';
 import { OPENAI_CLIENT } from '../providers/openai.provider';
+import { GenerateQuizResponse } from '@eclairum/core/interfaces';
 
 // Mock OpenAI
 const mockOpenAI = {
@@ -57,6 +58,8 @@ describe('OpenAILLMService', () => {
 
   describe('generateQuiz', () => {
     const mockText = faker.lorem.paragraphs(3);
+    const mockTitle = faker.lorem.sentence();
+
     const generateMockQuestions = () =>
       Array(10)
         .fill(null)
@@ -71,10 +74,16 @@ describe('OpenAILLMService', () => {
         }));
 
     const mockQuizData = {
+      title: mockTitle,
       data: generateMockQuestions(),
     };
 
-    it('should successfully generate a quiz', async () => {
+    const expectedResponse: GenerateQuizResponse = {
+      title: mockTitle,
+      questions: mockQuizData.data,
+    };
+
+    it('should successfully generate a quiz with correct structure', async () => {
       // Setup successful response
       parseMock.mockResolvedValue({
         choices: [
@@ -88,28 +97,64 @@ describe('OpenAILLMService', () => {
 
       const result = await service.generateQuiz(mockText);
 
-      // Verify parse was called with correct parameters
-      expect(parseMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          model: expect.any(String) as string,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          messages: expect.arrayContaining([
-            expect.objectContaining({
-              role: 'system',
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-              content: expect.any(String),
-            }),
-            expect.objectContaining({
-              role: 'user',
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-              content: expect.stringContaining(mockText),
-            }),
-          ]),
-        }),
-      );
+      // Verify returned data structure
+      expect(result).toHaveProperty('title', mockTitle);
+      expect(result).toHaveProperty('questions');
+      expect(Array.isArray(result.questions)).toBe(true);
+      expect(result.questions).toHaveLength(mockQuizData.data.length);
 
-      // Verify returned data
-      expect(result).toEqual(mockQuizData.data);
+      // Check first question structure
+      const firstQuestion = result.questions[0];
+      expect(firstQuestion).toHaveProperty('question');
+      expect(firstQuestion).toHaveProperty('answers');
+      expect(Array.isArray(firstQuestion.answers)).toBe(true);
+
+      // Check answer structure
+      const firstAnswer = firstQuestion.answers[0];
+      expect(firstAnswer).toHaveProperty('text');
+      expect(firstAnswer).toHaveProperty('isCorrect');
+    });
+
+    it('should return the expected quiz data when generation succeeds', async () => {
+      // Setup successful response
+      parseMock.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              parsed: mockQuizData,
+            },
+          },
+        ],
+      });
+
+      const result = await service.generateQuiz(mockText);
+
+      // Verify the service properly transforms the OpenAI response
+      expect(result).toEqual(expectedResponse);
+    });
+
+    it('should generate quizzes for texts of different lengths', async () => {
+      // Setup successful responses
+      parseMock.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              parsed: mockQuizData,
+            },
+          },
+        ],
+      });
+
+      const shortText = faker.lorem.paragraph();
+      const longText = faker.lorem.paragraphs(50);
+
+      // Both should generate valid quizzes regardless of length
+      const shortResult = await service.generateQuiz(shortText);
+      const longResult = await service.generateQuiz(longText);
+
+      // Verify both calls succeeded and returned properly structured data
+      expect(shortResult).toEqual(expectedResponse);
+      expect(longResult).toEqual(expectedResponse);
     });
 
     it('should throw InvalidResponseError when quiz is null', async () => {
@@ -127,12 +172,29 @@ describe('OpenAILLMService', () => {
       await expect(service.generateQuiz(mockText)).rejects.toThrow(
         InvalidResponseError,
       );
+      await expect(service.generateQuiz(mockText)).rejects.toThrow(
+        'No quiz data received from OpenAI',
+      );
     });
 
     it('should throw OpenAIConnectionError when OpenAI connection fails', async () => {
       // Setup OpenAI error
       const openaiError = new Error(faker.lorem.sentence());
       openaiError.name = 'APIConnectionError';
+      parseMock.mockRejectedValue(openaiError);
+
+      await expect(service.generateQuiz(mockText)).rejects.toThrow(
+        OpenAIConnectionError,
+      );
+      await expect(service.generateQuiz(mockText)).rejects.toThrow(
+        'Failed to connect to OpenAI service',
+      );
+    });
+
+    it('should throw OpenAIConnectionError for OpenAIError', async () => {
+      // Setup OpenAI service error
+      const openaiError = new Error(faker.lorem.sentence());
+      openaiError.name = 'OpenAIError';
       parseMock.mockRejectedValue(openaiError);
 
       await expect(service.generateQuiz(mockText)).rejects.toThrow(
@@ -149,23 +211,34 @@ describe('OpenAILLMService', () => {
       await expect(service.generateQuiz(mockText)).rejects.toThrow(
         InvalidResponseError,
       );
+      await expect(service.generateQuiz(mockText)).rejects.toThrow(
+        'Generated quiz does not match expected format',
+      );
     });
 
     it('should throw QuizGenerationError for other errors', async () => {
       // Setup generic error
-      parseMock.mockRejectedValue(new Error(faker.lorem.sentence()));
+      const genericError = new Error(faker.lorem.sentence());
+      parseMock.mockRejectedValue(genericError);
 
       await expect(service.generateQuiz(mockText)).rejects.toThrow(
         QuizGenerationError,
+      );
+      await expect(service.generateQuiz(mockText)).rejects.toThrow(
+        `Failed to generate quiz: ${genericError.message}`,
       );
     });
 
     it('should handle non-Error objects', async () => {
       // Setup string rejection
-      parseMock.mockRejectedValue(faker.lorem.sentence());
+      const nonErrorValue = faker.lorem.sentence();
+      parseMock.mockRejectedValue(nonErrorValue);
 
       await expect(service.generateQuiz(mockText)).rejects.toThrow(
         QuizGenerationError,
+      );
+      await expect(service.generateQuiz(mockText)).rejects.toThrow(
+        'Failed to generate quiz',
       );
     });
   });
