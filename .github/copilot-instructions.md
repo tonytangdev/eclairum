@@ -59,7 +59,6 @@ Different parts of code should handle distinct responsibilities
 Continuously improve code structure
 Apply the "Boy Scout Rule" - leave code better than you found it
 
-- Always create tests using jest and @faker-js
 - The any type is forbidden
 - Always use the strict mode in TypeScript
 - The project uses pnpm as package manager
@@ -80,15 +79,6 @@ The project is a mono-repo with the following structure:
 
 The core package contains the business logic of the project. It should not have any dependencies on the other packages.
 
-### Testing
-
-When using expect.any() in tests, always use the type of the expected value as the argument.
-
-```ts
-expect.any(String) as string; // Good
-expect.any(String); // Bad
-```
-
 ## Backend
 
 The backend app is a NestJS application.
@@ -99,3 +89,12 @@ The web app is a NextJS application.
 
 - Use Shadcn components
 - Use TailwindCSS
+
+## Testing
+
+- Always create tests using jest and @faker-js
+- Use the AAA pattern (Arrange, Act, Assert)
+- Use the Given-When-Then pattern
+- Test the behavior, not the implementation
+- Use mocks and spies when needed
+- Use snapshot testing when needed
