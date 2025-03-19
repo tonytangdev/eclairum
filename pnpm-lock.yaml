@@ -27,15 +27,15 @@ importers:
 
   apps/backend:
     dependencies:
-      '@faker-js/faker':
-        specifier: ^9.5.1
-        version: 9.5.1
       '@eclairum/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@eclairum/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
+      '@faker-js/faker':
+        specifier: ^9.5.1
+        version: 9.5.1
       '@nestjs/common':
         specifier: ^11.0.1
         version: 11.0.11(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -76,15 +76,15 @@ importers:
         specifier: ^3.24.2
         version: 3.24.2
     devDependencies:
+      '@eclairum/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
       '@eslint/eslintrc':
         specifier: ^3.2.0
         version: 3.3.0
       '@eslint/js':
         specifier: ^9.18.0
         version: 9.21.0
-      '@eclairum/typescript-config':
-        specifier: workspace:*
-        version: link:../../packages/typescript-config
       '@nestjs/cli':
         specifier: ^11.0.0
         version: 11.0.5(@swc/cli@0.6.0(@swc/core@1.11.7(@swc/helpers@0.5.15))(chokidar@4.0.3))(@swc/core@1.11.7(@swc/helpers@0.5.15))(@types/node@22.13.9)
@@ -248,15 +248,15 @@ importers:
 
   packages/core:
     dependencies:
-      '@faker-js/faker':
-        specifier: ^9.5.1
-        version: 9.5.1
       '@eclairum/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
       '@eclairum/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      '@faker-js/faker':
+        specifier: ^9.5.1
+        version: 9.5.1
     devDependencies:
       '@types/jest':
         specifier: ^29.5.14
