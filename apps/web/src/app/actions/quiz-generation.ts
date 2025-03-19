@@ -52,18 +52,23 @@ export async function fetchQuizGenerationTasks(
       throw new Error("Authentication required");
     }
 
-    const { data } = await serverApi.get("quiz-generation-tasks", {
-      params: { userId, page, limit },
-    });
+    const { data } = await serverApi.get<PaginatedTasksResponse>(
+      "quiz-generation-tasks",
+      {
+        params: { userId, page, limit },
+      },
+    );
+
+    const tasks = data.data.map((task: TaskSummaryResponse) => ({
+      ...task,
+      createdAt: new Date(task.createdAt),
+      updatedAt: new Date(task.updatedAt),
+    }));
 
     // Convert string dates to Date objects
     return {
-      ...data,
-      data: data.data.map((task: TaskSummaryResponse) => ({
-        ...task,
-        createdAt: new Date(task.createdAt),
-        updatedAt: new Date(task.updatedAt),
-      })),
+      meta: data.meta,
+      data: tasks,
     };
   } catch (error) {
     console.error(

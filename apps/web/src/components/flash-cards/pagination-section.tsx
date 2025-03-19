@@ -19,9 +19,6 @@ export function PaginationSection({
   totalPages,
   basePath
 }: PaginationSectionProps) {
-
-  console.log('PaginationSectionProps:', { currentPage, totalPages, basePath });
-
   return (
     <Pagination className="mt-8">
       <PaginationContent>
