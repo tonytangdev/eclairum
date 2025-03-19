@@ -20,6 +20,7 @@ type QuizGenerationTaskConstructor = {
   generatedAt?: Date | null;
   userId: User["id"];
   title?: string | null;
+  category?: string | null;
 };
 
 export class QuizGenerationTask {
@@ -33,6 +34,7 @@ export class QuizGenerationTask {
   private generatedAt: Date | null;
   private userId: User["id"];
   private title: string | null;
+  private category: string | null;
 
   constructor({
     id = crypto.randomUUID(),
@@ -45,6 +47,7 @@ export class QuizGenerationTask {
     generatedAt = null,
     userId,
     title = null,
+    category = null,
   }: QuizGenerationTaskConstructor) {
     if (!textContent) {
       throw new RequiredTextContentError();
@@ -64,6 +67,7 @@ export class QuizGenerationTask {
     this.generatedAt = generatedAt;
     this.userId = userId;
     this.title = title;
+    this.category = category;
   }
 
   public getId(): string {
@@ -126,5 +130,13 @@ export class QuizGenerationTask {
 
   public getTitle(): string | null {
     return this.title;
+  }
+
+  public setCategory(category: string): void {
+    this.category = category;
+  }
+
+  public getCategory(): string | null {
+    return this.category;
   }
 }
