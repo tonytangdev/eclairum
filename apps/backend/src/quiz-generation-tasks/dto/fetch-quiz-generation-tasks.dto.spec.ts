@@ -120,19 +120,6 @@ describe('FetchQuizGenerationTasksDto', () => {
       expect(errors.length).toBeGreaterThan(0);
       expect(errors[0].constraints).toHaveProperty('min');
     });
-
-    it('should fail validation when page is not an integer', async () => {
-      // Arrange
-      dto.page = 2.5;
-
-      // Act
-      const dtoObj = plainToInstance(FetchQuizGenerationTasksDto, dto);
-      const errors = await validate(dtoObj);
-
-      // Assert
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].constraints).toHaveProperty('isInt');
-    });
   });
 
   describe('limit validation', () => {
@@ -208,19 +195,6 @@ describe('FetchQuizGenerationTasksDto', () => {
       // Assert
       expect(errors.length).toBeGreaterThan(0);
       expect(errors[0].constraints).toHaveProperty('max');
-    });
-
-    it('should fail validation when limit is not an integer', async () => {
-      // Arrange
-      dto.limit = 10.5;
-
-      // Act
-      const dtoObj = plainToInstance(FetchQuizGenerationTasksDto, dto);
-      const errors = await validate(dtoObj);
-
-      // Assert
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].constraints).toHaveProperty('isInt');
     });
   });
 

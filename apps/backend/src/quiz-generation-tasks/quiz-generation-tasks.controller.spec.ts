@@ -1,14 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { QuizGenerationTasksController } from './quiz-generation-tasks.controller';
-import {
-  PaginatedTasksResponse,
-  QuizGenerationTasksService,
-} from './services/quiz-generation-tasks.service';
+import { QuizGenerationTasksService } from './services/quiz-generation-tasks.service';
 import { CreateQuizGenerationTaskDto } from './dto/create-quiz-generation-task.dto';
 import { faker } from '@faker-js/faker';
 import { QuizGenerationStatus } from '@eclairum/core/entities';
 import { HttpStatus } from '@nestjs/common';
 import { FetchQuizGenerationTasksDto } from './dto/fetch-quiz-generation-tasks.dto';
+import { PaginatedTasksResponse } from '../dtos';
 
 describe('QuizGenerationTasksController', () => {
   let controller: QuizGenerationTasksController;
