@@ -4,7 +4,7 @@ import { UserRepository } from "../interfaces/user-repository.interface";
 import { UserAnswersRepository } from "../interfaces/user-answers-repository.interface";
 import { AnswerRepository } from "../interfaces/answer-repository.interface";
 import { Answer } from "../entities/answer";
-import { UserAnswer } from "../entities/user_answer";
+import { UserAnswer } from "../entities/user-answer";
 import { User } from "../entities/user";
 import { UserNotFoundError } from "../errors/quiz-errors";
 import {

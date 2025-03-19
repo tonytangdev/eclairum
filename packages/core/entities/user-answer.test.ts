@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { UserAnswer } from "./user_answer";
+import { UserAnswer } from "./user-answer";
 import { Answer } from "./answer";
 import { InvalidAnswerError } from "../errors/user-answer-errors";
 

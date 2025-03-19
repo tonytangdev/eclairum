@@ -1,4 +1,4 @@
-import { UserAnswer } from "../entities/user_answer";
+import { UserAnswer } from "../entities/user-answer";
 import { User } from "../entities/user";
 
 export interface UserAnswersRepository {

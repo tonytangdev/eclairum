@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { QuestionSelector } from "./question-selector.service";
 import { Question } from "../entities/question";
-import { UserAnswer } from "../entities/user_answer";
+import { UserAnswer } from "../entities/user-answer";
 
 describe("QuestionSelector", () => {
   let selector: QuestionSelector;

@@ -1,5 +1,5 @@
 import { Question } from "../entities/question";
-import { UserAnswer } from "../entities/user_answer";
+import { UserAnswer } from "../entities/user-answer";
 
 export class QuestionSelector {
   constructor() {}

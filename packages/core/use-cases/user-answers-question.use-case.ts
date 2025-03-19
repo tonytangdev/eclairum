@@ -1,4 +1,4 @@
-import { UserAnswer } from "../entities/user_answer";
+import { UserAnswer } from "../entities/user-answer";
 import { Answer } from "../entities/answer";
 import { UserRepository } from "../interfaces/user-repository.interface";
 import { UserAnswersRepository } from "../interfaces/user-answers-repository.interface";
