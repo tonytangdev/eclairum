@@ -1,10 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { CreateQuizGenerationTaskDto } from '../dto/create-quiz-generation-task.dto';
-import {
-  QuizGenerationTask,
-  QuizGenerationStatus,
-} from '@eclairum/core/entities';
+import { QuizGenerationTask } from '@eclairum/core/entities';
 import { QuestionRepositoryImpl } from '../../questions/infrastructure/relational/repositories/question.repository';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { QuizGenerationTaskRepositoryImpl } from '../infrastructure/relational/repositories/quiz-generation-task.repository';
@@ -17,30 +14,11 @@ import { LLMService } from '@eclairum/core/interfaces/llm-service.interface';
 import { LLM_SERVICE_PROVIDER_KEY } from './openai-llm.service';
 import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
 import { FetchQuizGenerationTasksDto } from '../dto/fetch-quiz-generation-tasks.dto';
-import { PaginationMeta } from '@eclairum/core/shared/pagination.interface';
-
-export interface TaskResponse {
-  taskId: string;
-  userId: string;
-  status: QuizGenerationStatus;
-  questionsCount: number;
-  message: string;
-  generatedAt: Date;
-}
-
-export interface TaskSummaryResponse {
-  id: string;
-  status: QuizGenerationStatus;
-  title: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  questionsCount: number;
-}
-
-export interface PaginatedTasksResponse {
-  data: TaskSummaryResponse[];
-  meta: PaginationMeta;
-}
+import {
+  PaginatedTasksResponse,
+  TaskResponse,
+  TaskSummaryResponse,
+} from '../dto/fetch-quiz-generation-tasks.response.dto';
 
 @Injectable()
 export class QuizGenerationTasksService {
@@ -124,8 +102,6 @@ export class QuizGenerationTasksService {
     try {
       const fetchQuizGenerationTasksForUserUseCase =
         this.createFetchTasksUseCase();
-
-      console.log('fetchQuizGenerationTasksDto', fetchQuizGenerationTasksDto);
 
       const { tasks, pagination } =
         await fetchQuizGenerationTasksForUserUseCase.execute({

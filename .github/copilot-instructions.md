@@ -85,7 +85,7 @@ The backend app is a NestJS application.
 
 ## Web
 
-The web app is a NextJS application.
+The web app is a NextJS 15 application.
 
 - Use Shadcn components
 - Use TailwindCSS

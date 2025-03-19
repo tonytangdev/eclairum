@@ -33,6 +33,11 @@
       "import": "./dist/constants/index.js",
       "require": "./dist/constants/index.js",
       "types": "./dist/constants/index.d.ts"
+    },
+    "./shared": {
+      "import": "./dist/shared/index.js",
+      "require": "./dist/shared/index.js",
+      "types": "./dist/shared/index.d.ts"
     }
   },
   "scripts": {
