@@ -14,7 +14,7 @@ interface TasksTableProps {
 export function TasksTable({ tasks }: TasksTableProps) {
   // Format date to a readable format
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", {
+    return date.toLocaleDateString("fr-FR", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -63,7 +63,7 @@ function TaskActions({ taskId }: TaskActionsProps) {
   return (
     <div className="flex items-center justify-end gap-2">
       <Button variant="ghost" size="icon" title="Study" asChild>
-        <Link href={`/flash-cards/${taskId}/study`}>
+        <Link href={`/flash-cards/${taskId}`}>
           <BookOpen className="h-4 w-4" />
           <span className="sr-only">Study</span>
         </Link>
