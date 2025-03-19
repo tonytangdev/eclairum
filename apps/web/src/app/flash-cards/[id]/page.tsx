@@ -31,6 +31,7 @@ import Link from "next/link"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
+import { formatDate } from "@/lib/dates"
 
 // Import the types (these would normally be imported from your domain models)
 enum QuizGenerationStatus {
@@ -221,16 +222,6 @@ export default function QuizDetailsPage() {
       default:
         return "bg-muted text-muted-foreground"
     }
-  }
-
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
   }
 
   // Pagination logic

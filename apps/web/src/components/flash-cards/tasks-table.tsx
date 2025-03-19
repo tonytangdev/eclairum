@@ -5,6 +5,7 @@ import Link from "next/link"
 import { BookOpen, Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { StatusBadge } from "./status-badge"
 import { TaskSummaryResponse } from "@eclairum/backend/dtos"
+import { formatDate } from "@/lib/dates"
 
 
 interface TasksTableProps {
@@ -12,15 +13,6 @@ interface TasksTableProps {
 }
 
 export function TasksTable({ tasks }: TasksTableProps) {
-  // Format date to a readable format
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("fr-FR", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    })
-  }
-
   return (
     <div className="rounded-md border">
       <Table>

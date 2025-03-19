@@ -32,9 +32,6 @@ export default async function MyFlashCards({
     return data;
   });
 
-  console.log('meta:', pagination);
-
-
   return (
     <div className="space-y-6">
       <PageHeader
