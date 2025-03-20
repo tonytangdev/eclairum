@@ -32,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { formatDate } from "@/lib/dates"
+import { ClientPagination } from "@/components/pagination"
 
 // Import the types (these would normally be imported from your domain models)
 enum QuizGenerationStatus {
@@ -499,42 +500,13 @@ export default function QuizDetailsPage() {
                 </Accordion>
 
                 {totalQuestions > questionsPerPage && (
-                  <div className="flex items-center justify-between mt-6 pt-4 border-t">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={prevPage}
-                      disabled={currentPage === 1}
-                      className="flex items-center gap-1"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
-                    </Button>
-
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: totalPages }).map((_, i) => (
-                        <Button
-                          key={i}
-                          variant={currentPage === i + 1 ? "default" : "outline"}
-                          size="sm"
-                          className="w-8 h-8 p-0"
-                          onClick={() => paginate(i + 1)}
-                        >
-                          {i + 1}
-                        </Button>
-                      ))}
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={nextPage}
-                      disabled={currentPage === totalPages}
-                      className="flex items-center gap-1"
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
+                  <div className="mt-6 pt-4 border-t">
+                    <ClientPagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                      className="mt-0"
+                    />
                   </div>
                 )}
               </TabsContent>
