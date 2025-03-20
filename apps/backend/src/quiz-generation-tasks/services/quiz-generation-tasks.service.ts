@@ -1,4 +1,10 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { CreateQuizGenerationTaskDto } from '../dto/create-quiz-generation-task.dto';
 import { QuizGenerationTask } from '@eclairum/core/entities';
@@ -19,6 +25,13 @@ import {
   TaskResponse,
   TaskSummaryResponse,
 } from '../dto/fetch-quiz-generation-tasks.response.dto';
+import { TaskDetailResponse } from '../dto/fetch-quiz-generation-task.response.dto';
+import { FetchQuizGenerationTaskForUserUseCase } from '@eclairum/core/use-cases';
+import {
+  TaskNotFoundError,
+  UnauthorizedTaskAccessError,
+  UserNotFoundError,
+} from '@eclairum/core/errors';
 
 @Injectable()
 export class QuizGenerationTasksService {
@@ -92,8 +105,67 @@ export class QuizGenerationTasksService {
     this.quizGenerationTaskRepository.setEntityManager(null);
   }
 
-  async getTaskById(taskId: string): Promise<QuizGenerationTask | null> {
-    return this.quizGenerationTaskRepository.findById(taskId);
+  async getTaskById(
+    taskId: string,
+    userId: string,
+  ): Promise<TaskDetailResponse> {
+    try {
+      const fetchTaskUseCase = this.createFetchTaskUseCase();
+
+      const { task } = await fetchTaskUseCase.execute({
+        userId,
+        taskId,
+      });
+
+      return this.mapTaskToDetailResponse(task);
+    } catch (error) {
+      if (error instanceof TaskNotFoundError) {
+        throw new NotFoundException(error.message);
+      }
+      if (error instanceof UnauthorizedTaskAccessError) {
+        throw new NotFoundException('Quiz generation task not found');
+      }
+      if (error instanceof UserNotFoundError) {
+        throw new BadRequestException(`User with ID '${userId}' not found`);
+      }
+
+      this.logError(
+        `Failed to get quiz generation task with id ${taskId}`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  private createFetchTaskUseCase(): FetchQuizGenerationTaskForUserUseCase {
+    return new FetchQuizGenerationTaskForUserUseCase(
+      this.userRepository,
+      this.quizGenerationTaskRepository,
+    );
+  }
+
+  private mapTaskToDetailResponse(
+    task: QuizGenerationTask,
+  ): TaskDetailResponse {
+    const questions = task.getQuestions().map((question) => ({
+      id: question.getId(),
+      text: question.getContent(),
+      answers: question.getAnswers().map((answer) => ({
+        id: answer.getId(),
+        text: answer.getContent(),
+        isCorrect: answer.getIsCorrect(),
+      })),
+    }));
+
+    return {
+      id: task.getId(),
+      status: task.getStatus(),
+      title: task.getTitle(),
+      createdAt: task.getCreatedAt(),
+      updatedAt: task.getUpdatedAt(),
+      generatedAt: task.getGeneratedAt(),
+      questions,
+    };
   }
 
   async fetchTasksByUserId(
@@ -121,6 +193,12 @@ export class QuizGenerationTasksService {
         meta: pagination!,
       };
     } catch (error) {
+      if (error instanceof UserNotFoundError) {
+        throw new BadRequestException(
+          `User with ID '${fetchQuizGenerationTasksDto.userId}' not found`,
+        );
+      }
+
       this.logError('Failed to fetch quiz generation tasks', error);
       throw error;
     }

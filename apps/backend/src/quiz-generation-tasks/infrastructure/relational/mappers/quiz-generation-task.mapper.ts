@@ -1,4 +1,4 @@
-import { QuizGenerationTask, Question } from '@eclairum/core/entities';
+import { QuizGenerationTask, Question, Answer } from '@eclairum/core/entities';
 import { QuizGenerationTaskEntity } from '../entities/quiz-generation-task.entity';
 import { QuestionMapper } from '../../../../questions/infrastructure/relational/mappers/question.mapper';
 
@@ -46,7 +46,16 @@ export class QuizGenerationTaskMapper {
           new Question({
             id: questionEntity.id,
             content: questionEntity.content,
-            answers: [], // We don't need answers for this mapping
+            answers:
+              questionEntity.answers?.map(
+                (answerEntity) =>
+                  new Answer({
+                    id: answerEntity.id,
+                    content: answerEntity.content,
+                    isCorrect: answerEntity.isCorrect,
+                    questionId: questionEntity.id,
+                  }),
+              ) || [],
             quizGenerationTaskId: entity.id,
           }),
       ),

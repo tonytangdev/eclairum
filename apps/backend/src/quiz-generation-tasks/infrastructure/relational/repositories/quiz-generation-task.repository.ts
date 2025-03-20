@@ -57,7 +57,7 @@ export class QuizGenerationTaskRepositoryImpl
     const repo = this.getRepository();
     const quizGenerationTaskEntity = await repo.findOne({
       where: { id },
-      relations: ['questions'],
+      relations: ['questions', 'questions.answers'],
     });
 
     if (!quizGenerationTaskEntity) {

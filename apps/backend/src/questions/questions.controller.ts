@@ -1,4 +1,11 @@
-import { Controller, Get, Query, ParseIntPipe, Optional } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  ParseIntPipe,
+  Optional,
+  Param,
+} from '@nestjs/common';
 import { QuestionsService } from './services/questions.service';
 
 @Controller('questions')
