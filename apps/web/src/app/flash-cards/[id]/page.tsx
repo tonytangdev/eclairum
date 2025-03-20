@@ -232,10 +232,6 @@ export default function QuizDetailsPage() {
   const indexOfFirstQuestion = indexOfLastQuestion - questionsPerPage
   const currentQuestions = quiz.questions.slice(indexOfFirstQuestion, indexOfLastQuestion)
 
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber)
-  const nextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-  const prevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1))
-
   // Question editing functions
   const startEditingQuestion = (question: Question) => {
     setEditingQuestionId(question.id)
