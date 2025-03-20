@@ -9,6 +9,8 @@ import {
   QuizGenerationStatus,
 } from '@eclairum/core/entities';
 import { faker } from '@faker-js/faker';
+import { QuestionEntity } from '../../../../questions/infrastructure/relational/entities/question.entity';
+import { AnswerEntity } from '../../../../answers/infrastructure/relational/entities/answer.entity';
 
 describe('QuizGenerationTaskRepositoryImpl', () => {
   let repository: QuizGenerationTaskRepositoryImpl;
@@ -39,52 +41,41 @@ describe('QuizGenerationTaskRepositoryImpl', () => {
     return entity;
   };
 
-  // Add a helper function to create mock entities with nested questions and answers
+  // Fixed helper function to create mock entities with proper structure
   const createMockEntityWithQuestionsAndAnswers = (
     task: QuizGenerationTask,
   ) => {
     const entity = createMockEntity(task);
 
-    entity.questions = [
-      {
-        id: faker.string.uuid(),
-        content: faker.lorem.sentence(),
-        quizGenerationTaskId: entity.id,
-        answers: [
-          {
-            id: faker.string.uuid(),
-            content: faker.lorem.sentence(),
-            isCorrect: true,
-            questionId: 'question-id-1',
-          },
-          {
-            id: faker.string.uuid(),
-            content: faker.lorem.sentence(),
-            isCorrect: false,
-            questionId: 'question-id-1',
-          },
-        ],
-      },
-      {
-        id: faker.string.uuid(),
-        content: faker.lorem.sentence(),
-        quizGenerationTaskId: entity.id,
-        answers: [
-          {
-            id: faker.string.uuid(),
-            content: faker.lorem.sentence(),
-            isCorrect: true,
-            questionId: 'question-id-2',
-          },
-          {
-            id: faker.string.uuid(),
-            content: faker.lorem.sentence(),
-            isCorrect: false,
-            questionId: 'question-id-2',
-          },
-        ],
-      },
-    ] as any;
+    entity.questions = Array(2)
+      .fill(null)
+      .map(() => {
+        const questionId = faker.string.uuid();
+
+        const questionEntity = new QuestionEntity();
+        questionEntity.id = questionId;
+        questionEntity.content = faker.lorem.sentence();
+        questionEntity.quizGenerationTaskId = entity.id;
+        questionEntity.createdAt = new Date();
+        questionEntity.updatedAt = new Date();
+        questionEntity.deletedAt = null;
+
+        questionEntity.answers = Array(2)
+          .fill(null)
+          .map((_, aIndex) => {
+            const answerEntity = new AnswerEntity();
+            answerEntity.id = faker.string.uuid();
+            answerEntity.content = faker.lorem.sentence();
+            answerEntity.isCorrect = aIndex === 0; // First answer is correct
+            answerEntity.questionId = questionId;
+            answerEntity.createdAt = new Date();
+            answerEntity.updatedAt = new Date();
+            answerEntity.deletedAt = null;
+            return answerEntity;
+          });
+
+        return questionEntity;
+      });
 
     return entity;
   };

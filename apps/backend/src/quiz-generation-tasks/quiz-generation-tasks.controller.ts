@@ -7,7 +7,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  BadRequestException,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { CreateQuizGenerationTaskDto } from './dto/create-quiz-generation-task.dto';
