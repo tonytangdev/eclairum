@@ -1,69 +1,84 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { HttpStatus } from '@nestjs/common';
 import { QuizGenerationTasksController } from './quiz-generation-tasks.controller';
 import { QuizGenerationTasksService } from './services/quiz-generation-tasks.service';
 import { CreateQuizGenerationTaskDto } from './dto/create-quiz-generation-task.dto';
-import { faker } from '@faker-js/faker';
-import { QuizGenerationStatus } from '@eclairum/core/entities';
-import { HttpStatus } from '@nestjs/common';
 import { FetchQuizGenerationTasksDto } from './dto/fetch-quiz-generation-tasks.dto';
-import { PaginatedTasksResponse } from '../dtos';
+import { QuizGenerationStatus } from '@eclairum/core/entities';
+import { faker } from '@faker-js/faker';
+import { TaskResponse } from './dto/fetch-quiz-generation-tasks.response.dto';
 
 describe('QuizGenerationTasksController', () => {
   let controller: QuizGenerationTasksController;
-  let service: QuizGenerationTasksService;
+
+  // Define a proper type for the service mock that includes all methods we use
+  let serviceMock: {
+    createTask: jest.Mock;
+    fetchTasksByUserId: jest.Mock;
+    getTaskById: jest.Mock;
+  };
+
+  // Test data generators
+  const generateUserId = () => faker.string.uuid();
+
+  const generateCreateTaskDto = (
+    userId = generateUserId(),
+  ): CreateQuizGenerationTaskDto => ({
+    text: faker.lorem.paragraphs(2),
+    userId,
+  });
+
+  const generateTaskResponse = (
+    userId: string,
+    questionsCount = 3,
+  ): TaskResponse => ({
+    taskId: faker.string.uuid(),
+    userId,
+    status: QuizGenerationStatus.COMPLETED,
+    questionsCount,
+    message: `Quiz generation task created with ${questionsCount} questions`,
+    generatedAt: new Date(),
+  });
+
+  const generatePaginatedResponse = (userId: string, itemsCount = 1) => ({
+    data: Array(itemsCount)
+      .fill(null)
+      .map(() => ({
+        id: faker.string.uuid(),
+        status: QuizGenerationStatus.COMPLETED,
+        title: faker.lorem.sentence(),
+        createdAt: faker.date.recent(),
+        updatedAt: faker.date.recent(),
+        questionsCount: faker.number.int({ min: 1, max: 10 }),
+      })),
+    meta: {
+      page: 1,
+      limit: 10,
+      totalItems: itemsCount,
+      totalPages: Math.ceil(itemsCount / 10),
+    },
+  });
 
   beforeEach(async () => {
+    // Create service mock with explicit implementation of all required methods
+    serviceMock = {
+      createTask: jest.fn(),
+      fetchTasksByUserId: jest.fn(),
+      getTaskById: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [QuizGenerationTasksController],
       providers: [
         {
           provide: QuizGenerationTasksService,
-          useValue: {
-            createTask: jest
-              .fn()
-              .mockImplementation(async (dto: CreateQuizGenerationTaskDto) => {
-                return Promise.resolve({
-                  taskId: faker.string.uuid(),
-                  userId: dto.userId,
-                  status: QuizGenerationStatus.COMPLETED,
-                  questionsCount: 3,
-                  message: 'Quiz generation task created with 3 questions',
-                  generatedAt: new Date(),
-                });
-              }),
-            fetchTasksByUserId: jest
-              .fn()
-              .mockImplementation(async (dto: FetchQuizGenerationTasksDto) => {
-                // Return a properly formatted paginated response
-                return Promise.resolve({
-                  data: [
-                    {
-                      taskId: faker.string.uuid(),
-                      userId: dto.userId,
-                      status: QuizGenerationStatus.COMPLETED,
-                      questionsCount: 3,
-                      message: 'Quiz generation task completed',
-                      generatedAt: new Date(),
-                    },
-                  ],
-                  meta: {
-                    page: 1,
-                    limit: 10,
-                    totalItems: 1,
-                    totalPages: 1,
-                  },
-                });
-              }),
-          },
+          useValue: serviceMock,
         },
       ],
     }).compile();
 
     controller = module.get<QuizGenerationTasksController>(
       QuizGenerationTasksController,
-    );
-    service = module.get<QuizGenerationTasksService>(
-      QuizGenerationTasksService,
     );
   });
 
@@ -72,148 +87,156 @@ describe('QuizGenerationTasksController', () => {
   });
 
   describe('createQuizGenerationTask', () => {
-    it('should call service.createTask with correct parameters', async () => {
-      // Arrange
-      const dto: CreateQuizGenerationTaskDto = {
-        text: faker.lorem.paragraphs(2),
-        userId: faker.string.uuid(),
-      };
+    it('should successfully create a quiz generation task', async () => {
+      // Given
+      const createDto = generateCreateTaskDto();
+      const expectedResponse = generateTaskResponse(createDto.userId);
+      serviceMock.createTask.mockResolvedValue(expectedResponse);
 
-      // Act
-      await controller.createQuizGenerationTask(dto);
+      // When
+      const result = await controller.createQuizGenerationTask(createDto);
 
-      // Assert
-      expect(service.createTask).toHaveBeenCalledWith(dto);
+      // Then
+      expect(serviceMock.createTask).toHaveBeenCalledWith(createDto);
+      expect(result).toEqual(expectedResponse);
     });
 
-    it('should return the result from the service', async () => {
-      // Arrange
-      const dto: CreateQuizGenerationTaskDto = {
-        text: faker.lorem.paragraphs(2),
-        userId: faker.string.uuid(),
-      };
+    it('should propagate errors from the service', async () => {
+      // Given
+      const createDto = generateCreateTaskDto();
+      const errorMessage = 'Failed to generate quiz';
+      serviceMock.createTask.mockRejectedValue(new Error(errorMessage));
 
-      const expectedResult = {
-        taskId: faker.string.uuid(),
-        userId: dto.userId,
-        status: QuizGenerationStatus.COMPLETED,
-        questionsCount: 3,
-        message: 'Quiz generation task created with 3 questions',
-        generatedAt: new Date(),
-      };
-
-      jest.spyOn(service, 'createTask').mockResolvedValue(expectedResult);
-
-      // Act
-      const result = await controller.createQuizGenerationTask(dto);
-
-      // Assert
-      expect(result).toEqual(expectedResult);
+      // When/Then
+      await expect(
+        controller.createQuizGenerationTask(createDto),
+      ).rejects.toThrow(errorMessage);
     });
 
-    it('should handle errors correctly', async () => {
-      // Arrange
-      const dto: CreateQuizGenerationTaskDto = {
-        text: faker.lorem.paragraphs(2),
-        userId: faker.string.uuid(),
-      };
-
-      const errorMessage = `Failed to generate quiz: ${faker.lorem.sentence()}`;
-      jest
-        .spyOn(service, 'createTask')
-        .mockRejectedValue(new Error(errorMessage));
-
-      // Act & Assert
-      await expect(controller.createQuizGenerationTask(dto)).rejects.toThrow(
-        errorMessage,
-      );
-    });
-
-    it('should use HttpCode(202) decorator for Accepted status', () => {
-      // Get metadata to verify the HTTP status code decorator
-      const metadata = Reflect.getMetadata(
+    it('should use HTTP 202 Accepted status code', () => {
+      // Given/When
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const httpCodeMetadata = Reflect.getMetadata(
         '__httpCode__',
         controller.createQuizGenerationTask,
-      ) as number;
+      );
 
-      expect(metadata).toBe(HttpStatus.ACCEPTED);
+      // Then
+      expect(httpCodeMetadata).toBe(HttpStatus.ACCEPTED);
     });
   });
 
   describe('fetchQuizGenerationTasks', () => {
-    it('should call service.fetchTasksByUserId with correct parameters', async () => {
-      // Arrange
-      const userId = faker.string.uuid();
+    it('should return paginated quiz generation tasks', async () => {
+      // Given
+      const userId = generateUserId();
       const queryParams: FetchQuizGenerationTasksDto = { userId };
+      const expectedResponse = generatePaginatedResponse(userId, 3);
+      serviceMock.fetchTasksByUserId.mockResolvedValue(expectedResponse);
 
-      // Act
-      await controller.fetchQuizGenerationTasks(queryParams);
+      // When
+      const result = await controller.fetchQuizGenerationTasks(queryParams);
 
-      // Assert
-      expect(service.fetchTasksByUserId).toHaveBeenCalledWith({ userId });
+      // Then
+      expect(serviceMock.fetchTasksByUserId).toHaveBeenCalledWith(queryParams);
+      expect(result).toEqual(expectedResponse);
     });
 
-    it('should return the result from the service', async () => {
-      // Arrange
-      const dto: FetchQuizGenerationTasksDto = {
-        userId: faker.string.uuid(),
+    it('should handle pagination parameters', async () => {
+      // Given
+      const userId = generateUserId();
+      const queryParams: FetchQuizGenerationTasksDto = {
+        userId,
+        page: 2,
+        limit: 5,
       };
+      const expectedResponse = generatePaginatedResponse(userId, 8);
+      expectedResponse.meta.page = 2;
+      expectedResponse.meta.limit = 5;
+      serviceMock.fetchTasksByUserId.mockResolvedValue(expectedResponse);
 
-      const expectedResult: PaginatedTasksResponse = {
-        data: [
-          {
-            id: faker.string.uuid(),
-            status: QuizGenerationStatus.COMPLETED,
-            title: 'Sample Quiz',
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            questionsCount: 3,
-          },
-        ],
-        meta: {
-          page: 1,
-          limit: 10,
-          totalItems: 1,
-          totalPages: 1,
-        },
-      };
+      // When
+      const result = await controller.fetchQuizGenerationTasks(queryParams);
 
-      jest
-        .spyOn(service, 'fetchTasksByUserId')
-        .mockResolvedValue(expectedResult);
-
-      // Act
-      const result = await controller.fetchQuizGenerationTasks(dto);
-
-      // Assert
-      expect(result).toEqual(expectedResult);
+      // Then
+      expect(serviceMock.fetchTasksByUserId).toHaveBeenCalledWith(queryParams);
+      expect(result.meta.page).toBe(2);
+      expect(result.meta.limit).toBe(5);
     });
 
-    it('should handle errors correctly', async () => {
-      // Arrange
-      const dto: FetchQuizGenerationTasksDto = {
-        userId: faker.string.uuid(),
-      };
+    it('should propagate errors from the service', async () => {
+      // Given
+      const userId = generateUserId();
+      const errorMessage = 'Failed to fetch tasks';
+      serviceMock.fetchTasksByUserId.mockRejectedValue(new Error(errorMessage));
 
-      const errorMessage = `Failed to fetch quiz generation tasks: ${faker.lorem.sentence()}`;
-      jest
-        .spyOn(service, 'fetchTasksByUserId')
-        .mockRejectedValue(new Error(errorMessage));
-
-      // Act & Assert
-      await expect(controller.fetchQuizGenerationTasks(dto)).rejects.toThrow(
-        errorMessage,
-      );
+      // When/Then
+      await expect(
+        controller.fetchQuizGenerationTasks({ userId }),
+      ).rejects.toThrow(errorMessage);
     });
 
-    it('should use HttpCode(200) decorator for OK status', () => {
-      // Get metadata to verify the HTTP status code decorator
-      const metadata = Reflect.getMetadata(
+    it('should use HTTP 200 OK status code', () => {
+      // Given/When
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const httpCodeMetadata = Reflect.getMetadata(
         '__httpCode__',
         controller.fetchQuizGenerationTasks,
-      ) as number;
+      );
 
-      expect(metadata).toBe(HttpStatus.OK);
+      // Then
+      expect(httpCodeMetadata).toBe(HttpStatus.OK);
+    });
+  });
+
+  describe('getQuizGenerationTask', () => {
+    it('should fetch a single quiz generation task by ID', async () => {
+      // Given
+      const taskId = faker.string.uuid();
+      const userId = generateUserId();
+      const expectedResponse = {
+        id: taskId,
+        status: QuizGenerationStatus.COMPLETED,
+        title: faker.lorem.sentence(),
+        createdAt: faker.date.recent(),
+        updatedAt: faker.date.recent(),
+        generatedAt: faker.date.recent(),
+        questions: Array(3)
+          .fill(null)
+          .map(() => ({
+            id: faker.string.uuid(),
+            text: faker.lorem.sentence(),
+            answers: Array(4)
+              .fill(null)
+              .map((_, idx) => ({
+                id: faker.string.uuid(),
+                text: faker.lorem.sentence(),
+                isCorrect: idx === 0,
+              })),
+          })),
+      };
+
+      serviceMock.getTaskById.mockResolvedValue(expectedResponse);
+
+      // When
+      const result = await controller.getQuizGenerationTask(taskId, { userId });
+
+      // Then
+      expect(serviceMock.getTaskById).toHaveBeenCalledWith(taskId, userId);
+      expect(result).toEqual(expectedResponse);
+    });
+
+    it('should propagate errors when fetching a specific task', async () => {
+      // Given
+      const taskId = faker.string.uuid();
+      const userId = generateUserId();
+      const errorMessage = 'Task not found';
+      serviceMock.getTaskById.mockRejectedValue(new Error(errorMessage));
+
+      // When/Then
+      await expect(
+        controller.getQuizGenerationTask(taskId, { userId }),
+      ).rejects.toThrow(errorMessage);
     });
   });
 });

@@ -7,15 +7,10 @@ import {
 } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { CreateQuizGenerationTaskDto } from '../dto/create-quiz-generation-task.dto';
-import { QuizGenerationTask } from '@eclairum/core/entities';
 import { QuestionRepositoryImpl } from '../../questions/infrastructure/relational/repositories/question.repository';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { QuizGenerationTaskRepositoryImpl } from '../infrastructure/relational/repositories/quiz-generation-task.repository';
 import { TransactionHelper } from '../../shared/helpers/transaction.helper';
-import {
-  CreateQuizGenerationTaskUseCase,
-  FetchQuizGenerationTasksForUserUseCase,
-} from '@eclairum/core/use-cases';
 import { LLMService } from '@eclairum/core/interfaces/llm-service.interface';
 import { LLM_SERVICE_PROVIDER_KEY } from './openai-llm.service';
 import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
@@ -23,19 +18,21 @@ import { FetchQuizGenerationTasksDto } from '../dto/fetch-quiz-generation-tasks.
 import {
   PaginatedTasksResponse,
   TaskResponse,
-  TaskSummaryResponse,
 } from '../dto/fetch-quiz-generation-tasks.response.dto';
 import { TaskDetailResponse } from '../dto/fetch-quiz-generation-task.response.dto';
-import { FetchQuizGenerationTaskForUserUseCase } from '@eclairum/core/use-cases';
 import {
   TaskNotFoundError,
   UnauthorizedTaskAccessError,
   UserNotFoundError,
 } from '@eclairum/core/errors';
+import { QuizGenerationTaskMapper } from '../mappers/quiz-generation-task.mapper';
+import { QuizGenerationTaskUseCaseFactory } from '../factories/quiz-generation-task-use-case.factory';
 
 @Injectable()
 export class QuizGenerationTasksService {
   private readonly logger = new Logger(QuizGenerationTasksService.name);
+  private readonly mapper: QuizGenerationTaskMapper;
+  private readonly useCaseFactory: QuizGenerationTaskUseCaseFactory;
 
   constructor(
     private readonly questionRepository: QuestionRepositoryImpl,
@@ -45,7 +42,16 @@ export class QuizGenerationTasksService {
     @Inject(LLM_SERVICE_PROVIDER_KEY)
     private readonly llmService: LLMService,
     private readonly userRepository: UserRepositoryImpl,
-  ) {}
+  ) {
+    this.mapper = new QuizGenerationTaskMapper();
+    this.useCaseFactory = new QuizGenerationTaskUseCaseFactory(
+      this.llmService,
+      this.questionRepository,
+      this.answerRepository,
+      this.quizGenerationTaskRepository,
+      this.userRepository,
+    );
+  }
 
   async createTask(
     createQuizGenerationTaskDto: CreateQuizGenerationTaskDto,
@@ -55,13 +61,11 @@ export class QuizGenerationTasksService {
     try {
       return await this.transactionHelper.executeInTransaction(
         async (entityManager) => {
-          // Configure repositories to use the transaction context
           this.configureRepositoriesForTransaction(entityManager);
 
-          // Create the use case instance with the configured repositories
-          const createQuizGenerationTaskUseCase = this.createUseCase();
+          const createQuizGenerationTaskUseCase =
+            this.useCaseFactory.createCreateTaskUseCase();
 
-          // Execute the use case
           const { quizGenerationTask } =
             await createQuizGenerationTaskUseCase.execute({
               userId,
@@ -70,7 +74,7 @@ export class QuizGenerationTasksService {
 
           this.freeRepositoriesFromTransaction();
 
-          return this.createTaskResponse(quizGenerationTask, userId);
+          return this.mapper.toTaskResponse(quizGenerationTask, userId);
         },
       );
     } catch (error) {
@@ -79,93 +83,23 @@ export class QuizGenerationTasksService {
     }
   }
 
-  private createUseCase(): CreateQuizGenerationTaskUseCase {
-    return new CreateQuizGenerationTaskUseCase(
-      this.llmService,
-      this.questionRepository,
-      this.answerRepository,
-      this.quizGenerationTaskRepository,
-      this.userRepository,
-    );
-  }
-
-  // Configure repositories to use the current transaction context
-  private configureRepositoriesForTransaction(
-    entityManager: EntityManager,
-  ): void {
-    this.questionRepository.setEntityManager(entityManager);
-    this.answerRepository.setEntityManager(entityManager);
-    this.quizGenerationTaskRepository.setEntityManager(entityManager);
-    // Add any other repositories that need transaction context
-  }
-
-  private freeRepositoriesFromTransaction(): void {
-    this.questionRepository.setEntityManager(null);
-    this.answerRepository.setEntityManager(null);
-    this.quizGenerationTaskRepository.setEntityManager(null);
-  }
-
   async getTaskById(
     taskId: string,
     userId: string,
   ): Promise<TaskDetailResponse> {
     try {
-      const fetchTaskUseCase = this.createFetchTaskUseCase();
+      const fetchTaskUseCase = this.useCaseFactory.createFetchTaskUseCase();
 
       const { task } = await fetchTaskUseCase.execute({
         userId,
         taskId,
       });
 
-      return this.mapTaskToDetailResponse(task);
+      return this.mapper.toTaskDetailResponse(task);
     } catch (error) {
-      if (error instanceof TaskNotFoundError) {
-        throw new NotFoundException(error.message);
-      }
-      if (error instanceof UnauthorizedTaskAccessError) {
-        throw new NotFoundException('Quiz generation task not found');
-      }
-      if (error instanceof UserNotFoundError) {
-        throw new BadRequestException(`User with ID '${userId}' not found`);
-      }
-
-      this.logError(
-        `Failed to get quiz generation task with id ${taskId}`,
-        error,
-      );
+      this.handleGetTaskError(error, userId, taskId);
       throw error;
     }
-  }
-
-  private createFetchTaskUseCase(): FetchQuizGenerationTaskForUserUseCase {
-    return new FetchQuizGenerationTaskForUserUseCase(
-      this.userRepository,
-      this.quizGenerationTaskRepository,
-    );
-  }
-
-  private mapTaskToDetailResponse(
-    task: QuizGenerationTask,
-  ): TaskDetailResponse {
-    const questions = task.getQuestions().map((question) => ({
-      id: question.getId(),
-      text: question.getContent(),
-      answers: question.getAnswers().map((answer) => ({
-        id: answer.getId(),
-        text: answer.getContent(),
-        isCorrect: answer.getIsCorrect(),
-      })),
-    }));
-
-    return {
-      id: task.getId(),
-      status: task.getStatus(),
-      title: task.getTitle(),
-      createdAt: task.getCreatedAt(),
-      updatedAt: task.getUpdatedAt(),
-      generatedAt: task.getGeneratedAt(),
-      questions,
-    };
   }
 
   async fetchTasksByUserId(
@@ -173,7 +107,7 @@ export class QuizGenerationTasksService {
   ): Promise<PaginatedTasksResponse> {
     try {
       const fetchQuizGenerationTasksForUserUseCase =
-        this.createFetchTasksUseCase();
+        this.useCaseFactory.createFetchTasksUseCase();
 
       const { tasks, pagination } =
         await fetchQuizGenerationTasksForUserUseCase.execute({
@@ -184,66 +118,64 @@ export class QuizGenerationTasksService {
           },
         });
 
-      const taskSummaries = tasks.map((task) =>
-        this.mapTaskToSummaryResponse(task),
-      );
-
       return {
-        data: taskSummaries,
+        data: tasks.map((task) => this.mapper.toTaskSummaryResponse(task)),
         meta: pagination!,
       };
     } catch (error) {
-      if (error instanceof UserNotFoundError) {
-        throw new BadRequestException(
-          `User with ID '${fetchQuizGenerationTasksDto.userId}' not found`,
-        );
-      }
-
-      this.logError('Failed to fetch quiz generation tasks', error);
+      this.handleFetchTasksError(error, fetchQuizGenerationTasksDto.userId);
       throw error;
     }
   }
 
-  private createFetchTasksUseCase(): FetchQuizGenerationTasksForUserUseCase {
-    return new FetchQuizGenerationTasksForUserUseCase(
-      this.userRepository,
-      this.quizGenerationTaskRepository,
+  private configureRepositoriesForTransaction(
+    entityManager: EntityManager,
+  ): void {
+    this.questionRepository.setEntityManager(entityManager);
+    this.answerRepository.setEntityManager(entityManager);
+    this.quizGenerationTaskRepository.setEntityManager(entityManager);
+  }
+
+  private freeRepositoriesFromTransaction(): void {
+    this.questionRepository.setEntityManager(null);
+    this.answerRepository.setEntityManager(null);
+    this.quizGenerationTaskRepository.setEntityManager(null);
+  }
+
+  private handleGetTaskError(
+    error: unknown,
+    userId: string,
+    taskId: string,
+  ): void {
+    if (error instanceof TaskNotFoundError) {
+      throw new NotFoundException(error.message);
+    }
+    if (error instanceof UnauthorizedTaskAccessError) {
+      throw new NotFoundException('Quiz generation task not found');
+    }
+    if (error instanceof UserNotFoundError) {
+      throw new BadRequestException(`User with ID '${userId}' not found`);
+    }
+
+    this.logError(
+      `Failed to get quiz generation task with id ${taskId}`,
+      error,
     );
   }
 
-  private mapTaskToSummaryResponse(
-    task: QuizGenerationTask,
-  ): TaskSummaryResponse {
-    return {
-      id: task.getId(),
-      status: task.getStatus(),
-      title: task.getTitle(),
-      createdAt: task.getCreatedAt(),
-      updatedAt: task.getUpdatedAt(),
-      questionsCount: task.getQuestions().length,
-    };
-  }
+  private handleFetchTasksError(error: unknown, userId: string): void {
+    if (error instanceof UserNotFoundError) {
+      throw new BadRequestException(`User with ID '${userId}' not found`);
+    }
 
-  private createTaskResponse(
-    task: QuizGenerationTask,
-    userId: string,
-  ): TaskResponse {
-    const taskId = task.getId();
-    const questionsCount = task.getQuestions().length;
-
-    return {
-      taskId,
-      userId,
-      status: task.getStatus(),
-      questionsCount,
-      message: `Quiz generation task created with ${questionsCount} questions`,
-      generatedAt: task.getGeneratedAt()!,
-    };
+    this.logError('Failed to fetch quiz generation tasks', error);
   }
 
   private logError(message: string, error: unknown): void {
     if (error instanceof Error) {
       this.logger.error(`${message}: ${error.message}`, error.stack);
+    } else {
+      this.logger.error(`${message}: Unknown error type`, String(error));
     }
   }
 }
