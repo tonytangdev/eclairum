@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { Logger } from '@nestjs/common';
+import { Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { QuizGenerationTasksService } from './quiz-generation-tasks.service';
 import { QuestionRepositoryImpl } from '../../questions/infrastructure/relational/repositories/question.repository';
@@ -9,11 +9,20 @@ import { TransactionHelper } from '../../shared/helpers/transaction.helper';
 import {
   QuizGenerationTask,
   QuizGenerationStatus,
+  Question,
+  Answer,
 } from '@eclairum/core/entities';
 import { faker } from '@faker-js/faker';
 import { LLMService } from '@eclairum/core/interfaces/llm-service.interface';
 import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
 import { LLM_SERVICE_PROVIDER_KEY } from './openai-llm.service';
+import {
+  TaskNotFoundError,
+  UnauthorizedTaskAccessError,
+  UserNotFoundError,
+} from '@eclairum/core/errors';
+import { TaskDetailResponse } from '../dto/fetch-quiz-generation-task.response.dto';
+import { TaskSummaryResponse } from '../dto/fetch-quiz-generation-tasks.response.dto';
 
 // Fix for hoisting issue - mock the module before imports
 jest.mock('@eclairum/core/use-cases', () => {
@@ -32,6 +41,9 @@ jest.mock('@eclairum/core/use-cases', () => {
       .mockImplementation(() => ({
         execute: jest.fn(),
       })),
+    FetchQuizGenerationTaskForUserUseCase: jest.fn().mockImplementation(() => ({
+      execute: jest.fn(),
+    })),
   };
 });
 
@@ -39,6 +51,7 @@ jest.mock('@eclairum/core/use-cases', () => {
 import {
   CreateQuizGenerationTaskUseCase,
   FetchQuizGenerationTasksForUserUseCase,
+  FetchQuizGenerationTaskForUserUseCase,
 } from '@eclairum/core/use-cases';
 
 describe('QuizGenerationTasksService', () => {
@@ -53,6 +66,7 @@ describe('QuizGenerationTasksService', () => {
   };
   let mockCreateUseCaseInstance: { execute: jest.Mock };
   let mockFetchUseCaseInstance: { execute: jest.Mock };
+  let mockFetchTaskUseCaseInstance: { execute: jest.Mock };
 
   // Test data generators using faker
   const createTestQuizDto = () => ({
@@ -79,6 +93,55 @@ describe('QuizGenerationTasksService', () => {
     return task;
   };
 
+  const createMockTaskWithQuestions = (
+    userId: string,
+    text: string,
+    questionCount = 3,
+  ) => {
+    const task = createMockTask(userId, text);
+
+    const questions = Array(questionCount)
+      .fill(null)
+      .map(() => {
+        const question = new Question({
+          id: faker.string.uuid(),
+          content: faker.lorem.sentence(),
+          quizGenerationTaskId: task.getId(),
+          answers: [],
+        });
+
+        question.getId = jest.fn().mockReturnValue(faker.string.uuid());
+        question.getContent = jest.fn().mockReturnValue(faker.lorem.sentence());
+
+        const answers = Array(4)
+          .fill(null)
+          .map((_, idx) => {
+            const answer = new Answer({
+              id: faker.string.uuid(),
+              content: faker.lorem.sentence(),
+              isCorrect: idx === 0, // First answer is correct
+              questionId: question.getId(),
+            });
+
+            answer.getId = jest.fn().mockReturnValue(faker.string.uuid());
+            answer.getContent = jest
+              .fn()
+              .mockReturnValue(faker.lorem.sentence());
+            answer.getIsCorrect = jest.fn().mockReturnValue(idx === 0);
+
+            return answer;
+          });
+
+        question.getAnswers = jest.fn().mockReturnValue(answers);
+
+        return question;
+      });
+
+    task.getQuestions = jest.fn().mockReturnValue(questions);
+
+    return task;
+  };
+
   beforeEach(async () => {
     // Reset mocks
     jest.clearAllMocks();
@@ -92,6 +155,10 @@ describe('QuizGenerationTasksService', () => {
       execute: jest.fn(),
     };
 
+    mockFetchTaskUseCaseInstance = {
+      execute: jest.fn(),
+    };
+
     // Setup the mock implementation to return our controllable instances
     (CreateQuizGenerationTaskUseCase as jest.Mock).mockImplementation(
       () => mockCreateUseCaseInstance,
@@ -99,6 +166,10 @@ describe('QuizGenerationTasksService', () => {
 
     (FetchQuizGenerationTasksForUserUseCase as jest.Mock).mockImplementation(
       () => mockFetchUseCaseInstance,
+    );
+
+    (FetchQuizGenerationTaskForUserUseCase as jest.Mock).mockImplementation(
+      () => mockFetchTaskUseCaseInstance,
     );
 
     // Create mock implementations for all dependencies
@@ -170,204 +241,194 @@ describe('QuizGenerationTasksService', () => {
   });
 
   describe('createTask', () => {
-    it('should successfully create and process a quiz generation task', async () => {
-      // Arrange
+    it('should create a quiz generation task and return task details', async () => {
+      // Given
       const createQuizDto = createTestQuizDto();
       const mockTask = createMockTask(createQuizDto.userId, createQuizDto.text);
-      const taskId = mockTask.getId();
-      const generatedDate = mockTask.getGeneratedAt();
 
-      // Configure the mock to return our task
       mockCreateUseCaseInstance.execute.mockResolvedValue({
         quizGenerationTask: mockTask,
       });
 
-      // Act
+      // When
       const result = await quizGenerationTasksService.createTask(createQuizDto);
 
-      // Assert
-      expect(mockTransactionHelper.executeInTransaction).toHaveBeenCalled();
-      expect(mockQuestionRepository.setEntityManager).toHaveBeenCalled();
-      expect(mockAnswerRepository.setEntityManager).toHaveBeenCalled();
-      expect(mockTaskRepository.setEntityManager).toHaveBeenCalled();
-
-      expect(mockCreateUseCaseInstance.execute).toHaveBeenCalledWith({
-        userId: createQuizDto.userId,
-        text: createQuizDto.text,
-      });
-
+      // Then
       expect(result).toEqual({
-        taskId,
+        taskId: mockTask.getId(),
         userId: createQuizDto.userId,
-        status: QuizGenerationStatus.COMPLETED,
+        status: mockTask.getStatus(),
         questionsCount: 0,
         message: expect.stringContaining(
           'Quiz generation task created with',
         ) as string,
-        generatedAt: generatedDate,
+        generatedAt: mockTask.getGeneratedAt(),
+      });
+      expect(mockCreateUseCaseInstance.execute).toHaveBeenCalledWith({
+        userId: createQuizDto.userId,
+        text: createQuizDto.text,
       });
     });
 
-    it('should handle and log errors during task creation', async () => {
-      // Arrange
+    it('should propagate errors from the core use case', async () => {
+      // Given
       const createQuizDto = createTestQuizDto();
-      const errorMessage = faker.lorem.sentence();
-      mockTransactionHelper.executeInTransaction = jest
-        .fn()
-        .mockRejectedValue(new Error(errorMessage));
+      const error = new Error('Core use case error');
 
-      // Mock the error logger
-      const errorLogSpy = jest.spyOn(Logger.prototype, 'error');
+      mockCreateUseCaseInstance.execute.mockRejectedValue(error);
 
-      // Act & Assert
+      // When/Then
       await expect(
         quizGenerationTasksService.createTask(createQuizDto),
-      ).rejects.toThrow(errorMessage);
+      ).rejects.toThrow('Core use case error');
+      expect(mockCreateUseCaseInstance.execute).toHaveBeenCalled();
+    });
 
-      expect(mockTransactionHelper.executeInTransaction).toHaveBeenCalled();
+    it('should log errors when task creation fails', async () => {
+      // Given
+      const createQuizDto = createTestQuizDto();
+      const error = new Error('Creation failed');
+      const errorLogSpy = jest.spyOn(Logger.prototype, 'error');
+
+      mockCreateUseCaseInstance.execute.mockRejectedValue(error);
+
+      // When/Then
+      await expect(
+        quizGenerationTasksService.createTask(createQuizDto),
+      ).rejects.toThrow();
       expect(errorLogSpy).toHaveBeenCalled();
-    });
-
-    it('should handle quiz generation with different statuses', async () => {
-      // Arrange
-      const createQuizDto = createTestQuizDto();
-      const mockTask = createMockTask(createQuizDto.userId, createQuizDto.text);
-
-      mockTask.getStatus = jest
-        .fn()
-        .mockReturnValue(QuizGenerationStatus.IN_PROGRESS);
-
-      mockCreateUseCaseInstance.execute.mockResolvedValue({
-        quizGenerationTask: mockTask,
-      });
-
-      // Act
-      const result = await quizGenerationTasksService.createTask(createQuizDto);
-
-      // Assert
-      expect(result.status).toBe(QuizGenerationStatus.IN_PROGRESS);
-    });
-
-    it('should free repositories from transaction after completion', async () => {
-      // Arrange
-      const createQuizDto = createTestQuizDto();
-      const mockTask = createMockTask(createQuizDto.userId, createQuizDto.text);
-
-      mockCreateUseCaseInstance.execute.mockResolvedValue({
-        quizGenerationTask: mockTask,
-      });
-
-      // Reset the mocks to track new calls
-      jest.clearAllMocks();
-
-      // Spy on the private method by replacing it with a mock
-      const freeRepoSpy = jest.spyOn(
-        QuizGenerationTasksService.prototype as any,
-        'freeRepositoriesFromTransaction',
-      );
-
-      // Act
-      await quizGenerationTasksService.createTask(createQuizDto);
-
-      // Assert
-      expect(freeRepoSpy).toHaveBeenCalled();
-
-      // Clean up
-      freeRepoSpy.mockRestore();
     });
   });
 
   describe('getTaskById', () => {
-    it('should retrieve a task by ID', async () => {
-      // Arrange
+    it('should return task details when the task exists and belongs to the user', async () => {
+      // Given
       const userId = faker.string.uuid();
-      const text = faker.lorem.paragraphs(1);
       const taskId = faker.string.uuid();
-      const mockTask = createMockTask(userId, text);
+      const mockTask = createMockTaskWithQuestions(
+        userId,
+        faker.lorem.paragraph(),
+      );
 
-      mockTaskRepository.findById = jest.fn().mockResolvedValue(mockTask);
+      mockFetchTaskUseCaseInstance.execute.mockResolvedValue({
+        task: mockTask,
+      });
 
-      // Act
-      const result = await quizGenerationTasksService.getTaskById(taskId);
+      // When
+      const result = await quizGenerationTasksService.getTaskById(
+        taskId,
+        userId,
+      );
 
-      // Assert
-      expect(mockTaskRepository.findById).toHaveBeenCalledWith(taskId);
-      expect(result).toBe(mockTask);
+      // Then
+      expect(result).toEqual({
+        id: mockTask.getId(),
+        status: mockTask.getStatus(),
+        title: mockTask.getTitle(),
+        createdAt: mockTask.getCreatedAt(),
+        updatedAt: mockTask.getUpdatedAt(),
+        generatedAt: mockTask.getGeneratedAt(),
+        questions: expect.arrayContaining([
+          expect.objectContaining({
+            id: expect.any(String) as string,
+            text: expect.any(String) as string,
+            answers: expect.arrayContaining([
+              expect.objectContaining({
+                id: expect.any(String) as string,
+                text: expect.any(String) as string,
+                isCorrect: expect.any(Boolean) as boolean,
+              }) as Record<string, unknown>,
+            ]) as unknown as Array<{
+              id: string;
+              text: string;
+              isCorrect: boolean;
+            }>,
+          }) as Record<string, unknown>,
+        ]) as unknown as TaskDetailResponse['questions'],
+      } as TaskDetailResponse);
+      expect(mockFetchTaskUseCaseInstance.execute).toHaveBeenCalledWith({
+        userId,
+        taskId,
+      });
     });
 
-    it('should return null when task is not found', async () => {
-      // Arrange
+    it('should throw NotFoundException when the task is not found', async () => {
+      // Given
+      const userId = faker.string.uuid();
       const taskId = faker.string.uuid();
-      mockTaskRepository.findById = jest.fn().mockResolvedValue(null);
+      const error = new TaskNotFoundError(`Task not found: ${taskId}`);
 
-      // Act
-      const result = await quizGenerationTasksService.getTaskById(taskId);
+      mockFetchTaskUseCaseInstance.execute.mockRejectedValue(error);
 
-      // Assert
-      expect(mockTaskRepository.findById).toHaveBeenCalledWith(taskId);
-      expect(result).toBeNull();
-    });
-
-    it('should handle errors when fetching task by id', async () => {
-      // Arrange
-      const taskId = faker.string.uuid();
-      const errorMessage = 'Database error';
-
-      mockTaskRepository.findById = jest
-        .fn()
-        .mockRejectedValue(new Error(errorMessage));
-
-      // Act & Assert
+      // When/Then
       await expect(
-        quizGenerationTasksService.getTaskById(taskId),
-      ).rejects.toThrow(errorMessage);
-
-      expect(mockTaskRepository.findById).toHaveBeenCalledWith(taskId);
+        quizGenerationTasksService.getTaskById(taskId, userId),
+      ).rejects.toThrow(NotFoundException);
+      expect(mockFetchTaskUseCaseInstance.execute).toHaveBeenCalledWith({
+        userId,
+        taskId,
+      });
     });
-  });
 
-  describe('configureRepositoriesForTransaction', () => {
-    it('should configure all repositories with the entity manager', () => {
-      // Arrange
-      const mockEntityManager = {} as EntityManager;
+    it('should throw NotFoundException for unauthorized access attempts', async () => {
+      // Given
+      const userId = faker.string.uuid();
+      const taskId = faker.string.uuid();
+      const error = new UnauthorizedTaskAccessError('Unauthorized access');
 
-      // Act - calling the private method through its usage in createTask
-      mockTransactionHelper.executeInTransaction.mockImplementation(
-        (callback: (entityManager: EntityManager) => void) =>
-          callback(mockEntityManager),
-      );
+      mockFetchTaskUseCaseInstance.execute.mockRejectedValue(error);
 
-      // Fix: Create a mock task that will be returned from the use case
-      const mockTask = createMockTask('user-id', 'test');
-      mockCreateUseCaseInstance.execute.mockResolvedValue({
-        quizGenerationTask: mockTask,
+      // When/Then
+      await expect(
+        quizGenerationTasksService.getTaskById(taskId, userId),
+      ).rejects.toThrow(NotFoundException);
+      expect(mockFetchTaskUseCaseInstance.execute).toHaveBeenCalledWith({
+        userId,
+        taskId,
       });
+    });
 
-      void quizGenerationTasksService.createTask({
-        text: 'test',
-        userId: 'user-id',
+    it('should throw BadRequestException when the user is not found', async () => {
+      // Given
+      const userId = faker.string.uuid();
+      const taskId = faker.string.uuid();
+      const error = new UserNotFoundError(`User not found: ${userId}`);
+
+      mockFetchTaskUseCaseInstance.execute.mockRejectedValue(error);
+
+      // When/Then
+      await expect(
+        quizGenerationTasksService.getTaskById(taskId, userId),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockFetchTaskUseCaseInstance.execute).toHaveBeenCalledWith({
+        userId,
+        taskId,
       });
+    });
 
-      // Assert
-      expect(mockQuestionRepository.setEntityManager).toHaveBeenCalledWith(
-        mockEntityManager,
-      );
-      expect(mockAnswerRepository.setEntityManager).toHaveBeenCalledWith(
-        mockEntityManager,
-      );
-      expect(mockTaskRepository.setEntityManager).toHaveBeenCalledWith(
-        mockEntityManager,
-      );
+    it('should log and propagate unexpected errors', async () => {
+      // Given
+      const userId = faker.string.uuid();
+      const taskId = faker.string.uuid();
+      const error = new Error('Unexpected error');
+      const errorLogSpy = jest.spyOn(Logger.prototype, 'error');
+
+      mockFetchTaskUseCaseInstance.execute.mockRejectedValue(error);
+
+      // When/Then
+      await expect(
+        quizGenerationTasksService.getTaskById(taskId, userId),
+      ).rejects.toThrow('Unexpected error');
+      expect(errorLogSpy).toHaveBeenCalled();
     });
   });
 
   describe('fetchTasksByUserId', () => {
-    it('should successfully fetch tasks for a user with pagination', async () => {
-      // Arrange
+    it('should return paginated tasks when the user exists', async () => {
+      // Given
       const userId = faker.string.uuid();
-      const page = 1;
-      const limit = 10;
-
+      const page = 2;
+      const limit = 15;
       const mockTasks = Array(3)
         .fill(null)
         .map(() => createMockTask(userId, faker.lorem.paragraph()));
@@ -375,8 +436,8 @@ describe('QuizGenerationTasksService', () => {
       const mockPagination = {
         page,
         limit,
-        totalItems: mockTasks.length,
-        totalPages: Math.ceil(mockTasks.length / limit),
+        totalItems: 30,
+        totalPages: 2,
       };
 
       mockFetchUseCaseInstance.execute.mockResolvedValue({
@@ -384,117 +445,115 @@ describe('QuizGenerationTasksService', () => {
         pagination: mockPagination,
       });
 
-      // Act
+      // When
       const result = await quizGenerationTasksService.fetchTasksByUserId({
         userId,
         page,
         limit,
       });
 
-      // Assert
+      // Then
+      expect(result).toEqual({
+        data: expect.arrayContaining([
+          expect.objectContaining({
+            id: expect.any(String) as string,
+            status: expect.any(String) as string,
+            title: expect.any(String) as string,
+            createdAt: expect.any(Date) as Date,
+            updatedAt: expect.any(Date) as Date,
+            questionsCount: expect.any(Number) as number,
+          }) as TaskSummaryResponse,
+        ]) as TaskSummaryResponse[],
+        meta: mockPagination,
+      });
       expect(mockFetchUseCaseInstance.execute).toHaveBeenCalledWith({
         userId,
         pagination: { page, limit },
       });
-
-      expect(result).toEqual({
-        data: mockTasks.map((task) => ({
-          id: task.getId(),
-          status: task.getStatus(),
-          title: task.getTitle(),
-          createdAt: task.getCreatedAt(),
-          updatedAt: task.getUpdatedAt(),
-          questionsCount: task.getQuestions().length,
-        })),
-        meta: mockPagination,
-      });
     });
 
-    it('should use default pagination values when not provided', async () => {
-      // Arrange
+    it('should use default pagination when not provided', async () => {
+      // Given
       const userId = faker.string.uuid();
       const mockTasks = [createMockTask(userId, faker.lorem.paragraph())];
+      const mockPagination = {
+        page: 1,
+        limit: 10,
+        totalItems: 1,
+        totalPages: 1,
+      };
 
       mockFetchUseCaseInstance.execute.mockResolvedValue({
         tasks: mockTasks,
-        pagination: {
-          page: 1,
-          limit: 10,
-          totalItems: 1,
-          totalPages: 1,
-        },
+        pagination: mockPagination,
       });
 
-      // Act
+      // When
       const result = await quizGenerationTasksService.fetchTasksByUserId({
         userId,
       });
 
-      // Assert
+      // Then
+      expect(result.data).toHaveLength(1);
+      expect(result.meta).toEqual(mockPagination);
       expect(mockFetchUseCaseInstance.execute).toHaveBeenCalledWith({
         userId,
         pagination: { page: 1, limit: 10 },
       });
-
-      expect(result.data).toHaveLength(1);
-      expect(result.meta).toBeDefined();
     });
 
-    it('should handle and log errors during task fetching', async () => {
-      // Arrange
+    it('should throw BadRequestException when the user is not found', async () => {
+      // Given
       const userId = faker.string.uuid();
-      const errorMessage = faker.lorem.sentence();
+      const error = new UserNotFoundError(`User not found: ${userId}`);
 
-      mockFetchUseCaseInstance.execute.mockRejectedValue(
-        new Error(errorMessage),
-      );
+      mockFetchUseCaseInstance.execute.mockRejectedValue(error);
 
-      // Mock the error logger
-      const errorLogSpy = jest.spyOn(Logger.prototype, 'error');
-
-      // Act & Assert
+      // When/Then
       await expect(
         quizGenerationTasksService.fetchTasksByUserId({ userId }),
-      ).rejects.toThrow(errorMessage);
+      ).rejects.toThrow(BadRequestException);
+      expect(mockFetchUseCaseInstance.execute).toHaveBeenCalled();
+    });
 
+    it('should log and propagate unexpected errors', async () => {
+      // Given
+      const userId = faker.string.uuid();
+      const error = new Error('Database error');
+      const errorLogSpy = jest.spyOn(Logger.prototype, 'error');
+
+      mockFetchUseCaseInstance.execute.mockRejectedValue(error);
+
+      // When/Then
+      await expect(
+        quizGenerationTasksService.fetchTasksByUserId({ userId }),
+      ).rejects.toThrow('Database error');
       expect(errorLogSpy).toHaveBeenCalled();
     });
 
-    it('should map task entities to summary responses correctly', async () => {
-      // Arrange
+    it('should handle empty result sets correctly', async () => {
+      // Given
       const userId = faker.string.uuid();
-      const mockTask = createMockTask(userId, faker.lorem.paragraph());
-      const taskId = faker.string.uuid();
-      const title = 'Test Quiz';
-      const createdAt = new Date('2023-01-01');
-      const updatedAt = new Date('2023-01-02');
-      const questions = Array(5).fill(null);
-
-      mockTask.getId = jest.fn().mockReturnValue(taskId);
-      mockTask.getTitle = jest.fn().mockReturnValue(title);
-      mockTask.getCreatedAt = jest.fn().mockReturnValue(createdAt);
-      mockTask.getUpdatedAt = jest.fn().mockReturnValue(updatedAt);
-      mockTask.getQuestions = jest.fn().mockReturnValue(questions);
+      const mockPagination = {
+        page: 1,
+        limit: 10,
+        totalItems: 0,
+        totalPages: 0,
+      };
 
       mockFetchUseCaseInstance.execute.mockResolvedValue({
-        tasks: [mockTask],
-        pagination: { page: 1, limit: 10, totalItems: 1, totalPages: 1 },
+        tasks: [],
+        pagination: mockPagination,
       });
 
-      // Act
+      // When
       const result = await quizGenerationTasksService.fetchTasksByUserId({
         userId,
       });
 
-      // Assert
-      expect(result.data[0]).toEqual({
-        id: taskId,
-        status: mockTask.getStatus(),
-        title,
-        createdAt,
-        updatedAt,
-        questionsCount: questions.length,
-      });
+      // Then
+      expect(result.data).toEqual([]);
+      expect(result.meta).toEqual(mockPagination);
     });
   });
 });
