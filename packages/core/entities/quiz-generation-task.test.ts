@@ -189,4 +189,69 @@ describe("QuizGenerationTask", () => {
     expect(task.getStatus()).toBe(QuizGenerationStatus.FAILED);
     expect(task.isGenerationComplete()).toBe(false);
   });
+
+  it("should set and get title correctly", () => {
+    // Arrange
+    const task = new QuizGenerationTask({
+      textContent: faker.lorem.paragraph(),
+      questions: [],
+      userId: mockUserId,
+    });
+    const title = faker.lorem.sentence();
+
+    // Act
+    task.setTitle(title);
+
+    // Assert
+    expect(task.getTitle()).toBe(title);
+  });
+
+  it("should set and get category correctly", () => {
+    // Arrange
+    const task = new QuizGenerationTask({
+      textContent: faker.lorem.paragraph(),
+      questions: [],
+      userId: mockUserId,
+    });
+    const category = faker.word.noun();
+
+    // Act
+    task.setCategory(category);
+
+    // Assert
+    expect(task.getCategory()).toBe(category);
+  });
+
+  it("should create a task with initial title and category values", () => {
+    // Arrange
+    const textContent = faker.lorem.paragraph();
+    const title = faker.lorem.sentence();
+    const category = faker.word.noun();
+
+    // Act
+    const task = new QuizGenerationTask({
+      textContent,
+      questions: [],
+      userId: mockUserId,
+      title,
+      category,
+    });
+
+    // Assert
+    expect(task.getTitle()).toBe(title);
+    expect(task.getCategory()).toBe(category);
+  });
+
+  it("should have null as default value for title and category", () => {
+    // Arrange & Act
+    const task = new QuizGenerationTask({
+      textContent: faker.lorem.paragraph(),
+      questions: [],
+      userId: mockUserId,
+    });
+
+    // Assert
+    expect(task.getTitle()).toBeNull();
+    expect(task.getCategory()).toBeNull();
+  });
 });
