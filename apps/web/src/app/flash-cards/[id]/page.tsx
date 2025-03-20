@@ -19,8 +19,6 @@ import {
   PenLine,
   Share2,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
   Save,
   X,
   Edit,

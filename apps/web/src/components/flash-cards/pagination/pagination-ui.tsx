@@ -73,7 +73,7 @@ export function PaginationUI({
 function PreviousPageButton({
   currentPage,
   onPageClick,
-  getHref,
+  getHref = () => "#",
 }: Pick<PaginationUIProps, "currentPage" | "onPageClick" | "getHref">) {
   const isDisabled = currentPage <= 1;
   const prevPage = currentPage - 1;
@@ -105,7 +105,7 @@ function NextPageButton({
   currentPage,
   totalPages,
   onPageClick,
-  getHref,
+  getHref = () => "#",
 }: Pick<PaginationUIProps, "currentPage" | "totalPages" | "onPageClick" | "getHref">) {
   const isDisabled = currentPage >= totalPages;
   const nextPage = currentPage + 1;
@@ -137,8 +137,8 @@ function SimplePagination({
   currentPage,
   totalPages,
   onPageClick,
-  isLinkActive,
-  getHref,
+  isLinkActive = (page: number) => page === currentPage,
+  getHref = () => "#",
 }: PaginationUIProps) {
   return (
     <>
@@ -159,8 +159,8 @@ function ComplexPagination({
   currentPage,
   totalPages,
   onPageClick,
-  isLinkActive,
-  getHref,
+  isLinkActive = (page: number) => page === currentPage,
+  getHref = () => "#",
 }: PaginationUIProps) {
   // Calculate which page numbers to show
   const pages = calculateVisiblePages(currentPage, totalPages);
