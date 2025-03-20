@@ -40,3 +40,17 @@ export class TextTooLongError extends Error {
     this.name = "TextTooLongError";
   }
 }
+
+export class TaskNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TaskNotFoundError";
+  }
+}
+
+export class UnauthorizedTaskAccessError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UnauthorizedTaskAccessError";
+  }
+}
