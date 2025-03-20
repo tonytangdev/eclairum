@@ -2,7 +2,7 @@ import { fetchQuizGenerationTasks } from "@/app/actions/quiz-generation"
 import { PageHeader } from "../../components/flash-cards/page-header"
 import { TasksTable } from "../../components/flash-cards/tasks-table"
 import { EmptyState } from "../../components/flash-cards/empty-state"
-import { PaginationSection } from "../../components/flash-cards/pagination-section"
+import { ServerPagination } from "../../components/pagination"
 import { PaginatedTasksResponse } from "@eclairum/backend/dtos"
 
 export default async function MyFlashCards({
@@ -47,7 +47,7 @@ export default async function MyFlashCards({
         <>
           <TasksTable tasks={tasks} />
 
-          <PaginationSection
+          <ServerPagination
             currentPage={pagination.page}
             totalPages={pagination.totalPages}
             basePath="/flash-cards"

@@ -11,34 +11,80 @@ import {
 interface PaginationSectionProps {
   currentPage: number;
   totalPages: number;
-  basePath: string;
+  onChangePage: (page: number) => void;
+  basePath?: string;
+  mode?: 'client' | 'server';
 }
 
 export function PaginationSection({
   currentPage,
   totalPages,
-  basePath
+  onChangePage,
+  basePath = '',
+  mode = 'client'
 }: PaginationSectionProps) {
   return (
     <Pagination className="mt-8">
       <PaginationContent>
-        <PreviousButton currentPage={currentPage} basePath={basePath} />
+        <PreviousButton
+          currentPage={currentPage}
+          onChangePage={onChangePage}
+          basePath={basePath}
+          mode={mode}
+        />
         {totalPages < 5 ? (
-          <Under6PagesButtons currentPage={currentPage} totalPages={totalPages} basePath={basePath} />
+          <Under6PagesButtons
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onChangePage={onChangePage}
+            basePath={basePath}
+            mode={mode}
+          />
         ) : (
-          <Over5PagesButtons currentPage={currentPage} totalPages={totalPages} basePath={basePath} />
+          <Over5PagesButtons
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onChangePage={onChangePage}
+            basePath={basePath}
+            mode={mode}
+          />
         )}
-        <NextButton currentPage={currentPage} totalPages={totalPages} basePath={basePath} />
+        <NextButton
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onChangePage={onChangePage}
+          basePath={basePath}
+          mode={mode}
+        />
       </PaginationContent>
     </Pagination>
   );
 }
 
-function PreviousButton({ currentPage, basePath }: { currentPage: number; basePath: string }) {
+interface ButtonProps {
+  currentPage: number;
+  onChangePage: (page: number) => void;
+  basePath: string;
+  mode: 'client' | 'server';
+}
+
+function PreviousButton({ currentPage, onChangePage, basePath, mode }: ButtonProps) {
+  const prevPage = currentPage - 1;
+  const isDisabled = currentPage <= 1;
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isDisabled || mode === 'server') return;
+    e.preventDefault();
+    onChangePage(prevPage);
+  };
+
   return (
     <PaginationItem key="prev">
-      {currentPage > 1 ? (
-        <PaginationPrevious href={`${basePath}?page=${currentPage - 1}`} />
+      {!isDisabled ? (
+        <PaginationPrevious
+          href={mode === 'server' ? `${basePath}?page=${prevPage}` : "#"}
+          onClick={handleClick}
+        />
       ) : (
         <PaginationPrevious href="#" aria-disabled="true" className="pointer-events-none opacity-50" />
       )}
@@ -46,11 +92,27 @@ function PreviousButton({ currentPage, basePath }: { currentPage: number; basePa
   );
 }
 
-function NextButton({ currentPage, totalPages, basePath }: { currentPage: number; totalPages: number; basePath: string }) {
+interface NextButtonProps extends ButtonProps {
+  totalPages: number;
+}
+
+function NextButton({ currentPage, totalPages, onChangePage, basePath, mode }: NextButtonProps) {
+  const nextPage = currentPage + 1;
+  const isDisabled = currentPage >= totalPages;
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isDisabled || mode === 'server') return;
+    e.preventDefault();
+    onChangePage(nextPage);
+  };
+
   return (
     <PaginationItem key="next">
-      {currentPage < totalPages ? (
-        <PaginationNext href={`${basePath}?page=${currentPage + 1}`} />
+      {!isDisabled ? (
+        <PaginationNext
+          href={mode === 'server' ? `${basePath}?page=${nextPage}` : "#"}
+          onClick={handleClick}
+        />
       ) : (
         <PaginationNext href="#" aria-disabled="true" className="pointer-events-none opacity-50" />
       )}
@@ -58,79 +120,138 @@ function NextButton({ currentPage, totalPages, basePath }: { currentPage: number
   );
 }
 
-function PageButton({ page, currentPage, basePath }: { page: number; currentPage: number; basePath: string }) {
+interface PageButtonProps extends ButtonProps {
+  page: number;
+}
+
+function PageButton({ page, currentPage, onChangePage, basePath, mode }: PageButtonProps) {
+  const handleClick = (e: React.MouseEvent) => {
+    if (mode === 'server') return;
+    e.preventDefault();
+    onChangePage(page);
+  };
+
   return (
     <PaginationItem key={page}>
       <PaginationLink
-        href={`${basePath}?page=${page}`}
+        href={mode === 'server' ? `${basePath}?page=${page}` : "#"}
         isActive={currentPage === page}
-      >
-        {page}
-      </PaginationLink>
-    </PaginationItem>
+        onClick={handleClick}
+      ></PaginationLink>
+      {page}
+    </PaginationLink>
+    </PaginationItem >
   );
 }
 
-function Under6PagesButtons({ currentPage, totalPages, basePath }: { currentPage: number; totalPages: number; basePath: string }) {
+interface PagesButtonsProps extends ButtonProps {
+  totalPages: number;
+}
+
+function Under6PagesButtons({ currentPage, totalPages, onChangePage, basePath, mode }: PagesButtonsProps) {
   return (
-    <>
-      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-        <PageButton key={page} page={page} currentPage={currentPage} basePath={basePath} />
-      ))}
+    <></>
+      {
+    Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+      <PageButton
+        key={page}
+        page={page}
+        currentPage={currentPage}
+        onChangePage={onChangePage}
+        basePath={basePath}
+        mode={mode}
+      />
+    ))
+  }
     </>
   );
 }
 
-function Over5PagesButtons({ currentPage, totalPages, basePath }: { currentPage: number; totalPages: number; basePath: string }) {
-  // Always show first page
+function Over5PagesButtons({ currentPage, totalPages, onChangePage, basePath, mode }: PagesButtonsProps) {
   const pages = [1];
 
-  // Determine visible page range
   let rangeStart = Math.max(2, currentPage - 1);
   let rangeEnd = Math.min(totalPages - 1, currentPage + 1);
 
-  // Adjust range for edge cases
   if (currentPage <= 3) {
-    // Near the beginning, show more pages at start
     rangeStart = 2;
     rangeEnd = Math.min(5, totalPages - 1);
   } else if (currentPage >= totalPages - 2) {
-    // Near the end, show more pages at end
     rangeStart = Math.max(2, totalPages - 4);
     rangeEnd = totalPages - 1;
   }
 
-  // Add left ellipsis if needed
   if (rangeStart > 2) {
-    pages.push(-1); // Use -1 to represent ellipsis
+    pages.push(-1);
   }
 
-  // Add middle pages
   for (let i = rangeStart; i <= rangeEnd; i++) {
     pages.push(i);
   }
 
-  // Add right ellipsis if needed
   if (rangeEnd < totalPages - 1) {
-    pages.push(-2); // Use -2 to represent ellipsis
+    pages.push(-2);
   }
 
-  // Always add last page if there's more than one page
   if (totalPages > 1) {
     pages.push(totalPages);
   }
 
   return (
-    <>
-      {pages.map(page =>
-        page < 0 ? (
-          <PaginationItem key={`ellipsis-${page}`}>
+    <></>
+      {
+    pages.map(page =>
+      page < 0 ? (
+          <PaginationItem key={`ellipsis-${page}`}></PaginationItem>
             <PaginationEllipsis />
-          </PaginationItem>
+          </PaginationItem >
         ) : (
-          <PageButton key={page} page={page} currentPage={currentPage} basePath={basePath} />
-        )
-      )}
+      <PageButton
+        key={page}
+        page={page}
+        currentPage={currentPage}
+        onChangePage={onChangePage}
+        basePath={basePath}
+        mode={mode}
+      />
+    )
+      )
+  }
     </>
+  );
+}
+
+// Server-side pagination wrapper
+export function ServerPaginationSection({
+  currentPage,
+  totalPages,
+  basePath,
+}: Omit<PaginationSectionProps, 'onChangePage' | 'mode'> & { basePath: string }) {
+  const onChangePage = () => { };
+
+  return (
+    <PaginationSection
+      currentPage={currentPage}
+      totalPages={totalPages}
+      onChangePage={onChangePage}
+      basePath={basePath}
+      mode="server"
+    />
+  );
+}
+
+// Client-side pagination wrapper
+export function ClientPaginationSection({
+  currentPage,
+  totalPages,
+  onChangePage,
+}: Omit<PaginationSectionProps, 'basePath' | 'mode'>) {
+  return (
+    <PaginationSection
+      currentPage={currentPage}
+      totalPages={totalPages}
+      onChangePage={onChangePage}
+      mode="client"
+    />
   );
 }
