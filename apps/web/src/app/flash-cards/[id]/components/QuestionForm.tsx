@@ -6,6 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { MessageSquare, ListChecks, CheckCircle2, Save, X, PlusCircle, PenLine } from "lucide-react"
 import { Question } from "../types"
+import { cn } from "@/lib/utils"
 
 interface QuestionFormProps {
   mode: 'edit' | 'create';
@@ -34,10 +35,6 @@ export default function QuestionForm({
   onCancel
 }: QuestionFormProps) {
   const isCreate = mode === 'create';
-  const iconColor = isCreate ? 'green' : 'blue';
-  const icon = isCreate ? <PlusCircle className={`h-5 w-5 text-${iconColor}-500`} /> : <PenLine className={`h-5 w-5 text-${iconColor}-500`} />;
-  const title = isCreate ? 'Add New Question' : 'Edit Question';
-  const saveButtonText = isCreate ? 'Add Question' : 'Save Changes';
   const formId = isCreate ? 'new-question' : `question-${(question as Question).id || 'new'}`;
 
   const isValid = question.content.trim() !== '' &&
@@ -45,18 +42,37 @@ export default function QuestionForm({
     question.answers.some(a => a.isCorrect);
 
   return (
-    <div className={`space-y-6 pt-4 bg-${iconColor}-50/50 dark:bg-${iconColor}-950/10 p-6 rounded-lg border border-${iconColor}-100 dark:border-${iconColor}-900 transition-all duration-200 animate-in fade-in-50`}>
-      <div className={`flex items-center gap-2 pb-2 border-b border-${iconColor}-100 dark:border-${iconColor}-900`}>
-        {icon}
-        <h3 className={`text-lg font-medium text-${iconColor}-700 dark:text-${iconColor}-300`}>{title}</h3>
+    <div className={cn(
+      "space-y-6 p-6 rounded-lg border bg-card shadow-sm",
+      isCreate ? "bg-green-50/50 border-green-100 dark:bg-green-950/10 dark:border-green-900" :
+        "bg-blue-50/50 border-blue-100 dark:bg-blue-950/10 dark:border-blue-900"
+    )}>
+      <div className={cn(
+        "flex items-center gap-2 pb-2 border-b",
+        isCreate ? "border-green-100 dark:border-green-900" : "border-blue-100 dark:border-blue-900"
+      )}>
+        {isCreate ? (
+          <PlusCircle className="h-5 w-5 text-green-500" />
+        ) : (
+          <PenLine className="h-5 w-5 text-blue-500" />
+        )}
+        <h3 className={cn(
+          "text-lg font-medium",
+          isCreate ? "text-green-700 dark:text-green-300" : "text-blue-700 dark:text-blue-300"
+        )}>
+          {isCreate ? 'Add New Question' : 'Edit Question'}
+        </h3>
       </div>
 
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <MessageSquare className={`h-4 w-4 text-${iconColor}-500`} />
+          <MessageSquare className={cn("h-4 w-4", isCreate ? "text-green-500" : "text-blue-500")} />
           <Label
             htmlFor={formId}
-            className={`font-medium text-${iconColor}-700 dark:text-${iconColor}-300`}
+            className={cn(
+              "font-medium",
+              isCreate ? "text-green-700 dark:text-green-300" : "text-blue-700 dark:text-blue-300"
+            )}
           >
             Question Text
           </Label>
@@ -66,7 +82,11 @@ export default function QuestionForm({
             id={formId}
             value={question.content}
             onChange={(e) => onUpdateContent(e.target.value)}
-            className={`w-full border-${iconColor}-200 dark:border-${iconColor}-800 focus:border-${iconColor}-400 focus:ring-${iconColor}-400 transition-all duration-200`}
+            className={cn(
+              "w-full transition-all duration-200",
+              isCreate ? "border-green-200 focus:border-green-400 focus:ring-green-400 dark:border-green-800" :
+                "border-blue-200 focus:border-blue-400 focus:ring-blue-400 dark:border-blue-800"
+            )}
             rows={3}
             placeholder="Enter your question here..."
           />
@@ -75,8 +95,8 @@ export default function QuestionForm({
 
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <ListChecks className={`h-4 w-4 text-${iconColor}-500`} />
-          <Label className={`font-medium text-${iconColor}-700 dark:text-${iconColor}-300`}>Answer Options</Label>
+          <ListChecks className={`h-4 w-4 text-${isCreate ? "green" : "blue"}-500`} />
+          <Label className={`font-medium text-${isCreate ? "green" : "blue"}-700 dark:text-${isCreate ? "green" : "blue"}-300`}>Answer Options</Label>
         </div>
 
         <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -145,14 +165,20 @@ export default function QuestionForm({
           Cancel
         </Button>
         <Button
-          variant="default"
+          variant={isCreate ? "default" : "default"}
           size="sm"
           onClick={onSave}
           disabled={!isValid}
-          className={`bg-${iconColor}-600 hover:bg-${iconColor}-700 text-white transition-colors duration-200 disabled:bg-${iconColor}-300 disabled:cursor-not-allowed`}
+          className={cn(
+            "text-white transition-colors duration-200",
+            isCreate ?
+              "bg-green-600 hover:bg-green-700 disabled:bg-green-300" :
+              "bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300",
+            "disabled:cursor-not-allowed"
+          )}
         >
           <Save className="mr-2 h-4 w-4" />
-          {saveButtonText}
+          {isCreate ? 'Add Question' : 'Save Changes'}
         </Button>
       </div>
     </div>
