@@ -467,7 +467,7 @@ describe('QuizGenerationTasksService', () => {
       // When
       const result = await service.fetchTasksByUserId({
         userId,
-        page,  // Pass the page parameter to the service
+        page, // Pass the page parameter to the service
         limit, // Pass the limit parameter to the service
       });
 

@@ -15,8 +15,8 @@ import {
   Calendar,
   Tag,
   PlayCircle,
-  PenLine,
-  Share2,
+  // PenLine,
+  // Share2,
   Trash2,
 } from "lucide-react"
 import Link from "next/link"
