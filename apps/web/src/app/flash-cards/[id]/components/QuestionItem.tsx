@@ -10,8 +10,6 @@ import { Question } from "../types"
 
 interface QuestionItemProps {
   question: Question
-  index: number
-  indexOffset: number
   isEditing: boolean
   editedQuestion: Question | null
   onStartEditing: (question: Question) => void
@@ -24,8 +22,6 @@ interface QuestionItemProps {
 
 export default function QuestionItem({
   question,
-  index,
-  indexOffset,
   isEditing,
   editedQuestion,
   onStartEditing,
@@ -40,7 +36,7 @@ export default function QuestionItem({
       <AccordionTrigger className="text-left">
         <div className="flex items-center justify-between w-full pr-4">
           <span className="font-medium">
-            Question {indexOffset + index + 1}: {question.content}
+            {question.content}
           </span>
           {!isEditing && (
             <Button

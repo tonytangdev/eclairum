@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button"
 import { fetchQuizGenerationTaskServer } from "./server-actions"
 import QuizDetailsClient from "./components/QuizDetailsClient"
 
-export default async function QuizDetailsPage({ params }: { params: { id: string } }) {
-  const { id } = params
+export default async function QuizDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const response = await fetchQuizGenerationTaskServer(id)
 
   if (!response.success || !response.data) {

@@ -177,12 +177,10 @@ export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProp
                   value={openAccordionItem}
                   onValueChange={setOpenAccordionItem}
                 >
-                  {currentQuestions.map((question, index) => (
+                  {currentQuestions.map((question) => (
                     <AccordionItem key={question.id} value={question.id}>
                       <QuestionItem
                         question={question}
-                        index={index}
-                        indexOffset={indexOfFirstQuestion}
                         isEditing={editingQuestionId === question.id}
                         editedQuestion={editedQuestion}
                         onStartEditing={startEditingQuestion}
