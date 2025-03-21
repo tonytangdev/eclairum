@@ -1,32 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { AnswerRepository } from '@eclairum/core/interfaces/answer-repository.interface';
 import { Answer } from '@eclairum/core/entities';
 import { AnswerEntity } from '../entities/answer.entity';
 import { AnswerMapper } from '../mappers/answer.mapper';
+import { UnitOfWorkService } from '../../../../unit-of-work/unit-of-work.service';
 
 @Injectable()
 export class AnswerRepositoryImpl implements AnswerRepository {
-  private currentEntityManager?: EntityManager | null;
+  constructor(private readonly uowService: UnitOfWorkService) {}
 
-  constructor(
-    @InjectRepository(AnswerEntity)
-    private answerRepository: Repository<AnswerEntity>,
-  ) {}
-
-  setEntityManager(entityManager: EntityManager | null): void {
-    this.currentEntityManager = entityManager;
-  }
-
-  async saveAnswers(
-    answers: Answer[],
-    entityManager?: EntityManager,
-  ): Promise<void> {
+  async saveAnswers(answers: Answer[]): Promise<void> {
     if (answers.length === 0) return;
 
     const answerEntities = this.mapAnswersToPersistence(answers);
-    const repository = this.getRepository(entityManager);
+    const repository = this.getRepository();
     await this.persistAnswers(repository, answerEntities);
   }
 
@@ -58,14 +46,8 @@ export class AnswerRepositoryImpl implements AnswerRepository {
     return answers.map((answer) => AnswerMapper.toPersistence(answer));
   }
 
-  private getRepository(
-    entityManager?: EntityManager,
-  ): Repository<AnswerEntity> {
-    return entityManager || this.currentEntityManager
-      ? (entityManager || this.currentEntityManager!).getRepository(
-          AnswerEntity,
-        )
-      : this.answerRepository;
+  private getRepository(): Repository<AnswerEntity> {
+    return this.uowService.getManager().getRepository(AnswerEntity);
   }
 
   private async persistAnswers(

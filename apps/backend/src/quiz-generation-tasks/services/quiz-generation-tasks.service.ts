@@ -5,12 +5,10 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { EntityManager } from 'typeorm';
 import { CreateQuizGenerationTaskDto } from '../dto/create-quiz-generation-task.dto';
 import { QuestionRepositoryImpl } from '../../questions/infrastructure/relational/repositories/question.repository';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { QuizGenerationTaskRepositoryImpl } from '../infrastructure/relational/repositories/quiz-generation-task.repository';
-import { TransactionHelper } from '../../shared/helpers/transaction.helper';
 import { LLMService } from '@eclairum/core/interfaces/llm-service.interface';
 import { LLM_SERVICE_PROVIDER_KEY } from './openai-llm.service';
 import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
@@ -27,6 +25,7 @@ import {
 } from '@eclairum/core/errors';
 import { QuizGenerationTaskMapper } from '../mappers/quiz-generation-task.mapper';
 import { QuizGenerationTaskUseCaseFactory } from '../factories/quiz-generation-task-use-case.factory';
+import { UnitOfWorkService } from '../../unit-of-work/unit-of-work.service';
 
 @Injectable()
 export class QuizGenerationTasksService {
@@ -38,10 +37,10 @@ export class QuizGenerationTasksService {
     private readonly questionRepository: QuestionRepositoryImpl,
     private readonly answerRepository: AnswerRepositoryImpl,
     private readonly quizGenerationTaskRepository: QuizGenerationTaskRepositoryImpl,
-    private readonly transactionHelper: TransactionHelper,
     @Inject(LLM_SERVICE_PROVIDER_KEY)
     private readonly llmService: LLMService,
     private readonly userRepository: UserRepositoryImpl,
+    private readonly uowService: UnitOfWorkService,
   ) {
     this.mapper = new QuizGenerationTaskMapper();
     this.useCaseFactory = new QuizGenerationTaskUseCaseFactory(
@@ -59,24 +58,18 @@ export class QuizGenerationTasksService {
     const { text, userId } = createQuizGenerationTaskDto;
 
     try {
-      return await this.transactionHelper.executeInTransaction(
-        async (entityManager) => {
-          this.configureRepositoriesForTransaction(entityManager);
+      return await this.uowService.doTransactional(async () => {
+        const createQuizGenerationTaskUseCase =
+          this.useCaseFactory.createCreateTaskUseCase();
 
-          const createQuizGenerationTaskUseCase =
-            this.useCaseFactory.createCreateTaskUseCase();
+        const { quizGenerationTask } =
+          await createQuizGenerationTaskUseCase.execute({
+            userId,
+            text,
+          });
 
-          const { quizGenerationTask } =
-            await createQuizGenerationTaskUseCase.execute({
-              userId,
-              text,
-            });
-
-          this.freeRepositoriesFromTransaction();
-
-          return this.mapper.toTaskResponse(quizGenerationTask, userId);
-        },
-      );
+        return this.mapper.toTaskResponse(quizGenerationTask, userId);
+      });
     } catch (error) {
       this.logError('Failed to create quiz generation task', error);
       throw error;
@@ -126,16 +119,6 @@ export class QuizGenerationTasksService {
       this.handleFetchTasksError(error, fetchQuizGenerationTasksDto.userId);
       throw error;
     }
-  }
-
-  private configureRepositoriesForTransaction(
-    entityManager: EntityManager,
-  ): void {
-    this.answerRepository.setEntityManager(entityManager);
-  }
-
-  private freeRepositoriesFromTransaction(): void {
-    this.answerRepository.setEntityManager(null);
   }
 
   private handleGetTaskError(
