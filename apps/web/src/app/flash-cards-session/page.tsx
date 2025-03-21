@@ -1,5 +1,5 @@
 import Quiz from "@/components/quiz";
-import { getUserQuestions } from "../actions/questions";
+import { getUserQuestions } from "./_actions/getUserQuestions";
 
 export default async function Page() {
   const result = await getUserQuestions(10);
