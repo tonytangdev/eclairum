@@ -8,7 +8,7 @@ import { ArrowLeft, AlertTriangle } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
 import { Question, Quiz } from "../types"
-import { StatusBadge } from "@/components/flash-cards/status-badge"
+import { StatusBadge } from "@/app/flash-cards/_components/status-badge"
 
 // Import our extracted components
 import { MetadataCard } from "./MetadataCard"
