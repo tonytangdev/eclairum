@@ -7,10 +7,10 @@ export class QuestionsController {
 
   @Get()
   async getQuestions(
-    @Query('limit', new ParseIntPipe({ optional: true }))
     @Query('userId')
     userId: string,
     @Optional()
+    @Query('limit', new ParseIntPipe({ optional: true }))
     limit?: number,
   ) {
     return this.questionsService.getQuestions(userId, limit);
