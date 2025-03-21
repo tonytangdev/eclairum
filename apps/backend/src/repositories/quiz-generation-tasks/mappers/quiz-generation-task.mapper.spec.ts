@@ -6,10 +6,10 @@ import {
   Answer,
 } from '@eclairum/core/entities';
 import { faker } from '@faker-js/faker';
-import { QuestionMapper } from '../../../../questions/infrastructure/relational/mappers/question.mapper';
-import { QuestionEntity } from '../../../../common/entities/question.entity';
-import { AnswerEntity } from '../../../../common/entities/answer.entity';
-import { QuizGenerationTaskEntity } from '../../../../common/entities/quiz-generation-task.entity';
+import { QuestionEntity } from '../../../common/entities/question.entity';
+import { AnswerEntity } from '../../../common/entities/answer.entity';
+import { QuizGenerationTaskEntity } from '../../../common/entities/quiz-generation-task.entity';
+import { QuestionMapper } from '../../questions/mappers/question.mapper';
 
 // Mock QuestionMapper to isolate tests
 jest.mock(

@@ -1,16 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Repository } from 'typeorm';
 import { QuizGenerationTaskRepositoryImpl } from './quiz-generation-task.repository';
-import { QuizGenerationTaskMapper } from '../mappers/quiz-generation-task.mapper';
+import { QuizGenerationTaskMapper } from './mappers/quiz-generation-task.mapper';
 import {
   QuizGenerationTask,
   QuizGenerationStatus,
 } from '@eclairum/core/entities';
 import { faker } from '@faker-js/faker';
-import { UnitOfWorkService } from '../../../../unit-of-work/unit-of-work.service';
-import { QuizGenerationTaskEntity } from '../../../../common/entities/quiz-generation-task.entity';
-import { QuestionEntity } from '../../../../common/entities/question.entity';
-import { AnswerEntity } from '../../../../common/entities/answer.entity';
+import { UnitOfWorkService } from '../../unit-of-work/unit-of-work.service';
+import { QuizGenerationTaskEntity } from '../../common/entities/quiz-generation-task.entity';
+import { QuestionEntity } from '../../common/entities/question.entity';
+import { AnswerEntity } from '../../common/entities/answer.entity';
 
 describe('QuizGenerationTaskRepositoryImpl', () => {
   let repository: QuizGenerationTaskRepositoryImpl;

@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { QuizGenerationTasksModule } from '../quiz-generation-tasks/quiz-generation-tasks.module';
-import { UserAnswersModule } from '../user-answers/user-answers.module';
 import { UnitOfWorkModule } from '../unit-of-work/unit-of-work.module';
 import { AnswerRepositoryImpl } from './answers/answer.repository';
 import { AnswerEntity } from '../common/entities/answer.entity';
@@ -11,6 +9,8 @@ import { UserEntity } from '../common/entities/user.entity';
 import { UserRepositoryImpl } from './users/user.repository';
 import { UserAnswerEntity } from '../common/entities/user-answer.entity';
 import { UserAnswerRepositoryImpl } from './user-answers/user-answer.repository';
+import { QuizGenerationTaskEntity } from '../common/entities/quiz-generation-task.entity';
+import { QuizGenerationTaskRepositoryImpl } from './quiz-generation-tasks/quiz-generation-task.repository';
 
 @Module({
   imports: [
@@ -19,8 +19,8 @@ import { UserAnswerRepositoryImpl } from './user-answers/user-answer.repository'
       QuestionEntity,
       UserEntity,
       UserAnswerEntity,
+      QuizGenerationTaskEntity,
     ]),
-    QuizGenerationTasksModule,
     UnitOfWorkModule,
   ],
   providers: [
@@ -28,14 +28,14 @@ import { UserAnswerRepositoryImpl } from './user-answers/user-answer.repository'
     QuestionRepositoryImpl,
     UserRepositoryImpl,
     UserAnswerRepositoryImpl,
+    QuizGenerationTaskRepositoryImpl,
   ],
   exports: [
     AnswerRepositoryImpl,
     QuestionRepositoryImpl,
     UserRepositoryImpl,
     UserAnswerRepositoryImpl,
-    QuizGenerationTasksModule,
-    UserAnswersModule,
+    QuizGenerationTaskRepositoryImpl,
     UnitOfWorkModule,
   ],
 })

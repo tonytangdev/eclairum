@@ -10,7 +10,7 @@ import {
 } from './services/openai-llm.service';
 import { OpenAIProvider } from './providers/openai.provider';
 import { QuizGenerationTaskEntity } from './infrastructure/relational/entities/quiz-generation-task.entity';
-import { QuizGenerationTaskRepositoryImpl } from './infrastructure/relational/repositories/quiz-generation-task.repository';
+import { QuizGenerationTaskRepositoryImpl } from '../repositories/quiz-generation-tasks/quiz-generation-task.repository';
 import { QuestionEntity } from '../questions/infrastructure/relational/entities/question.entity';
 import { AnswerEntity } from '../answers/infrastructure/relational/entities/answer.entity';
 import { UsersModule } from '../users/users.module';

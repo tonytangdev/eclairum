@@ -2,13 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { QuizGenerationTask } from '@eclairum/core/entities';
 import { QuizGenerationTaskRepository } from '@eclairum/core/interfaces';
-import { QuizGenerationTaskMapper } from '../mappers/quiz-generation-task.mapper';
+import { QuizGenerationTaskMapper } from './mappers/quiz-generation-task.mapper';
 import {
   PaginationParams,
   PaginatedResult,
 } from '@eclairum/core/shared/pagination.interface';
-import { UnitOfWorkService } from '../../../../unit-of-work/unit-of-work.service';
-import { QuizGenerationTaskEntity } from '../../../../common/entities/quiz-generation-task.entity';
+import { UnitOfWorkService } from '../../unit-of-work/unit-of-work.service';
+import { QuizGenerationTaskEntity } from '../../common/entities/quiz-generation-task.entity';
 
 @Injectable()
 export class QuizGenerationTaskRepositoryImpl

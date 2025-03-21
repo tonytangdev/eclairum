@@ -8,7 +8,7 @@ import { Injectable } from '@nestjs/common';
 import { LLMService } from '@eclairum/core/interfaces/llm-service.interface';
 import { QuestionRepositoryImpl } from '../../repositories/questions/question.repository';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
-import { QuizGenerationTaskRepositoryImpl } from '../infrastructure/relational/repositories/quiz-generation-task.repository';
+import { QuizGenerationTaskRepositoryImpl } from '../../repositories/quiz-generation-tasks/quiz-generation-task.repository';
 import { UserRepositoryImpl } from '../../repositories/users/user.repository';
 
 @Injectable()
