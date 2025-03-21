@@ -48,6 +48,12 @@ export class AnswerRepositoryImpl implements AnswerRepository {
     return AnswerMapper.toDomain(entity);
   }
 
+  async softDeleteByQuestionId(questionId: string): Promise<void> {
+    const repository = this.getRepository();
+
+    await repository.update({ questionId }, { deletedAt: new Date() });
+  }
+
   private mapAnswersToPersistence(answers: Answer[]): AnswerEntity[] {
     return answers.map((answer) => AnswerMapper.toPersistence(answer));
   }

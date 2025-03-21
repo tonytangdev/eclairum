@@ -386,4 +386,82 @@ describe('AnswerRepositoryImpl', () => {
       });
     });
   });
+
+  describe('softDeleteByQuestionId', () => {
+    it('should soft delete all answers for a question', async () => {
+      // Arrange
+      const questionId = faker.string.uuid();
+      typeOrmRepository.update = jest.fn().mockResolvedValue({ affected: 3 });
+
+      // Act
+      await answerRepository.softDeleteByQuestionId(questionId);
+
+      // Assert
+      expect(typeOrmRepository.update).toHaveBeenCalledWith(
+        { questionId },
+        { deletedAt: expect.any(Date) as Date },
+      );
+    });
+
+    it('should use the stored entity manager when available', async () => {
+      // Arrange
+      const questionId = faker.string.uuid();
+      const mockTransactionRepo = {
+        update: jest.fn().mockResolvedValue({ affected: 2 }),
+      };
+
+      const mockEntityManager = {
+        getRepository: jest.fn().mockReturnValue(mockTransactionRepo),
+      } as unknown as EntityManager;
+
+      // Set entity manager for transaction
+      answerRepository.setEntityManager(mockEntityManager);
+
+      // Act
+      await answerRepository.softDeleteByQuestionId(questionId);
+
+      // Assert
+      expect(mockEntityManager.getRepository).toHaveBeenCalledWith(
+        AnswerEntity,
+      );
+      expect(mockTransactionRepo.update).toHaveBeenCalledWith(
+        { questionId },
+        { deletedAt: expect.any(Date) as Date },
+      );
+      // Verify default repository was not used
+      expect(typeOrmRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('should handle database errors during soft delete', async () => {
+      // Arrange
+      const questionId = faker.string.uuid();
+      const dbError = new Error('Database error during update');
+      typeOrmRepository.update = jest.fn().mockRejectedValue(dbError);
+
+      // Act & Assert
+      await expect(
+        answerRepository.softDeleteByQuestionId(questionId),
+      ).rejects.toThrow(dbError);
+      expect(typeOrmRepository.update).toHaveBeenCalledWith(
+        { questionId },
+        { deletedAt: expect.any(Date) as Date },
+      );
+    });
+
+    it('should handle empty result (no answers found)', async () => {
+      // Arrange
+      const questionId = faker.string.uuid();
+      typeOrmRepository.update = jest.fn().mockResolvedValue({ affected: 0 });
+
+      // Act
+      await answerRepository.softDeleteByQuestionId(questionId);
+
+      // Assert
+      expect(typeOrmRepository.update).toHaveBeenCalledWith(
+        { questionId },
+        { deletedAt: expect.any(Date) as Date },
+      );
+      // No exception should be thrown
+    });
+  });
 });
