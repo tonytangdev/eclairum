@@ -54,3 +54,11 @@ export class UnauthorizedTaskAccessError extends Error {
     this.name = "UnauthorizedTaskAccessError";
   }
 }
+
+export class InvalidQuestionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvalidQuestionError";
+    Object.setPrototypeOf(this, InvalidQuestionError.prototype);
+  }
+}
