@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { AnswerRepository } from '@eclairum/core/interfaces/answer-repository.interface';
 import { Answer } from '@eclairum/core/entities';
-import { AnswerEntity } from '../entities/answer.entity';
 import { AnswerMapper } from '../mappers/answer.mapper';
 import { UnitOfWorkService } from '../../../../unit-of-work/unit-of-work.service';
+import { AnswerEntity } from '../../../../common/entities/answer.entity';
 
 @Injectable()
 export class AnswerRepositoryImpl implements AnswerRepository {

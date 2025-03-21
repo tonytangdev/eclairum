@@ -7,16 +7,16 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { UserEntity } from '../../../../users/infrastructure/relational/entities/user.entity';
-import { QuestionEntity } from '../../../../questions/infrastructure/relational/entities/question.entity';
-import { AnswerEntity } from '../../../../answers/infrastructure/relational/entities/answer.entity';
+import { UserEntity } from './user.entity';
+import { QuestionEntity } from './question.entity';
+import { AnswerEntity } from './answer.entity';
 
 @Entity('user_answers')
 export class UserAnswerEntity {
   @PrimaryColumn('uuid')
   id: string;
 
-  @Column() // Changed from 'uuid' to default string type
+  @Column()
   userId: string;
 
   @ManyToOne(() => UserEntity)

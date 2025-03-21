@@ -1,5 +1,5 @@
 import { Answer } from '@eclairum/core/entities';
-import { AnswerEntity } from '../entities/answer.entity';
+import { AnswerEntity } from '../../../../common/entities/answer.entity';
 
 export class AnswerMapper {
   /**

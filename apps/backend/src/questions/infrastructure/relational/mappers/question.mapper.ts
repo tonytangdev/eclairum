@@ -1,6 +1,6 @@
 import { Answer, Question } from '@eclairum/core/entities';
-import { QuestionEntity } from '../entities/question.entity';
 import { AnswerMapper } from '../../../../answers/infrastructure/relational/mappers/answer.mapper';
+import { QuestionEntity } from '../../../../common/entities/question.entity';
 
 export class QuestionMapper {
   /**

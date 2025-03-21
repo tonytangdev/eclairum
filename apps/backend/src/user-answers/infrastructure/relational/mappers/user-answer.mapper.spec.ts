@@ -1,9 +1,9 @@
 import { UserAnswerMapper } from './user-answer.mapper';
-import { UserAnswerEntity } from '../entities/user-answer.entity';
 import { UserAnswer } from '@eclairum/core/entities';
 import { Answer } from '@eclairum/core/entities';
 import { faker } from '@faker-js/faker';
-import { AnswerEntity } from '../../../../answers/infrastructure/relational/entities/answer.entity';
+import { AnswerEntity } from '../../../../common/entities/answer.entity';
+import { UserAnswerEntity } from '../../../../common/entities/user-answer.entity';
 
 describe('UserAnswerMapper', () => {
   // Common test data

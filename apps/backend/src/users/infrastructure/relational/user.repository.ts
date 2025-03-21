@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserRepository } from '@eclairum/core/interfaces/user-repository.interface';
-import { UserEntity } from './entities/user.entity';
 import { UserMapper } from './mappers/user.mapper';
 import { User } from '@eclairum/core/entities';
+import { UserEntity } from '../../../common/entities/user.entity';
 
 @Injectable()
 export class UserRepositoryImpl implements UserRepository {

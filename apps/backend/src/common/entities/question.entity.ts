@@ -8,8 +8,8 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { AnswerEntity } from '../../../../answers/infrastructure/relational/entities/answer.entity';
-import { QuizGenerationTaskEntity } from '../../../../quiz-generation-tasks/infrastructure/relational/entities/quiz-generation-task.entity';
+import { AnswerEntity } from './answer.entity';
+import { QuizGenerationTaskEntity } from './quiz-generation-task.entity';
 
 @Entity('questions')
 export class QuestionEntity {

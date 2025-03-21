@@ -1,6 +1,6 @@
 import { QuizGenerationTask, Question, Answer } from '@eclairum/core/entities';
-import { QuizGenerationTaskEntity } from '../entities/quiz-generation-task.entity';
 import { QuestionMapper } from '../../../../questions/infrastructure/relational/mappers/question.mapper';
+import { QuizGenerationTaskEntity } from '../../../../common/entities/quiz-generation-task.entity';
 
 export class QuizGenerationTaskMapper {
   /**

@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Repository } from 'typeorm';
 import { Answer } from '@eclairum/core/entities';
-import { AnswerEntity } from '../entities/answer.entity';
 import { AnswerRepositoryImpl } from './answer.repository';
 import { AnswerMapper } from '../mappers/answer.mapper';
 import { faker } from '@faker-js/faker';
 import { UnitOfWorkService } from '../../../../unit-of-work/unit-of-work.service';
+import { AnswerEntity } from '../../../../common/entities/answer.entity';
 
 describe('AnswerRepositoryImpl', () => {
   let answerRepository: AnswerRepositoryImpl;

@@ -7,7 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { QuestionEntity } from '../../../../questions/infrastructure/relational/entities/question.entity';
+import { QuestionEntity } from './question.entity';
 
 @Entity('answers')
 export class AnswerEntity {

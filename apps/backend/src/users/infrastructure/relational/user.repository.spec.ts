@@ -2,10 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserRepositoryImpl } from './user.repository';
-import { UserEntity } from './entities/user.entity';
 import { UserMapper } from './mappers/user.mapper';
 import { User } from '@eclairum/core/entities';
 import { faker } from '@faker-js/faker';
+import { UserEntity } from '../../../common/entities/user.entity';
 
 // Mock the UserMapper
 jest.mock('./mappers/user.mapper', () => ({

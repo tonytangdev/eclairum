@@ -3,13 +3,13 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { faker } from '@faker-js/faker';
 import { UserAnswerRepositoryImpl } from './user-answer.repository';
-import { UserAnswerEntity } from '../entities/user-answer.entity';
 import { UserAnswerMapper } from '../mappers/user-answer.mapper';
 import { UserAnswer } from '@eclairum/core/entities';
-import { UserEntity } from '../../../../users/infrastructure/relational/entities/user.entity';
-import { QuestionEntity } from '../../../../questions/infrastructure/relational/entities/question.entity';
-import { AnswerEntity } from '../../../../answers/infrastructure/relational/entities/answer.entity';
 import { Answer } from '@eclairum/core/entities';
+import { UserAnswerEntity } from '../../../../common/entities/user-answer.entity';
+import { AnswerEntity } from '../../../../common/entities/answer.entity';
+import { QuestionEntity } from '../../../../common/entities/question.entity';
+import { UserEntity } from '../../../../common/entities/user.entity';
 
 // Define a type for the mock query builder
 interface MockQueryBuilder {

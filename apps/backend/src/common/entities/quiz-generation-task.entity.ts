@@ -10,8 +10,8 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { QuizGenerationStatus } from '@eclairum/core/entities';
-import { QuestionEntity } from '../../../../questions/infrastructure/relational/entities/question.entity';
-import { UserEntity } from '../../../../users/infrastructure/relational/entities/user.entity';
+import { QuestionEntity } from './question.entity';
+import { UserEntity } from './user.entity';
 
 @Entity('quiz_generation_tasks')
 export class QuizGenerationTaskEntity {

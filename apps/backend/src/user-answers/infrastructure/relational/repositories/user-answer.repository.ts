@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserAnswerEntity } from '../entities/user-answer.entity';
 import { UserAnswersRepository } from '@eclairum/core/interfaces/user-answers-repository.interface';
 import { UserAnswer } from '@eclairum/core/entities';
 import { UserAnswerMapper } from '../mappers/user-answer.mapper';
+import { UserAnswerEntity } from '../../../../common/entities/user-answer.entity';
 
 @Injectable()
 export class UserAnswerRepositoryImpl implements UserAnswersRepository {
