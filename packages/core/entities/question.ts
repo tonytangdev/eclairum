@@ -75,4 +75,9 @@ export class Question {
   public getQuizGenerationTaskId(): QuizGenerationTask["id"] {
     return this.quizGenerationTaskId;
   }
+
+  public setContent(content: string): void {
+    this.content = content;
+    this.updatedAt = new Date();
+  }
 }
