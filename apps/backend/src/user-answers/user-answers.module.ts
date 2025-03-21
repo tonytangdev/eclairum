@@ -1,20 +1,11 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { UserAnswerEntity } from './infrastructure/relational/entities/user-answer.entity';
-import { UserAnswerRepositoryImpl } from '../repositories/user-answers/user-answer.repository';
 import { UserAnswersController } from './user-answers.controller';
 import { UserAnswersService } from './services/user-answers.service';
-import { AnswersModule } from '../answers/answers.module';
-import { UsersModule } from '../users/users.module';
+import { RepositoriesModule } from '../repositories/repositories.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([UserAnswerEntity]),
-    AnswersModule,
-    UsersModule,
-  ],
+  imports: [RepositoriesModule],
   controllers: [UserAnswersController],
-  providers: [UserAnswerRepositoryImpl, UserAnswersService],
-  exports: [UserAnswerRepositoryImpl],
+  providers: [UserAnswersService],
 })
 export class UserAnswersModule {}
