@@ -1,9 +1,9 @@
-import { fetchQuizGenerationTasks } from "@/app/actions/quiz-generation"
 import { PageHeader } from "../../components/flash-cards/page-header"
 import { TasksTable } from "../../components/flash-cards/tasks-table"
 import { EmptyState } from "../../components/flash-cards/empty-state"
 import { ServerPagination } from "../../components/pagination"
 import { PaginatedTasksResponse } from "@eclairum/backend/dtos"
+import { fetchQuizGenerationTasks } from "../_actions/fetch-quiz-generation-tasks"
 
 export default async function MyFlashCards({
   searchParams,
