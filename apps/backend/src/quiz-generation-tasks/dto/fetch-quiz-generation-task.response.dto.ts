@@ -8,6 +8,7 @@ export interface TaskDetailResponse {
   createdAt: Date;
   updatedAt: Date;
   generatedAt: Date | null;
+  textContent: string;
   questions: Array<{
     id: string;
     text: string;

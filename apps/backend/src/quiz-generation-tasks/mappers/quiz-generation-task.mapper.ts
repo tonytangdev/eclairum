@@ -45,6 +45,7 @@ export class QuizGenerationTaskMapper {
       updatedAt: task.getUpdatedAt(),
       generatedAt: task.getGeneratedAt(),
       questions,
+      textContent: task.getTextContent(),
     };
   }
 

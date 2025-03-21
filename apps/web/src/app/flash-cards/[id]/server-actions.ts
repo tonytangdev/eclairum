@@ -21,12 +21,14 @@ export async function fetchQuizGenerationTaskServer(taskId: string) {
       },
     );
 
+    console.log("Fetched quiz generation task:", data);
+
     // Format the data to match the interface expected by the page component
     return {
       success: true,
       data: {
         id: data.id,
-        textContent: data.title || "", // Note: Assuming the API doesn't directly provide textContent
+        textContent: data.textContent,
         questions: data.questions.map((question) => ({
           id: question.id,
           content: question.text,
