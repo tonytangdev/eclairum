@@ -10,6 +10,7 @@ import { AnswersModule } from './answers/answers.module';
 import { UserAnswersModule } from './user-answers/user-answers.module';
 import { APP_GUARD } from '@nestjs/core';
 import { ApiKeyGuard } from './common/guards/api-key.guard';
+import { UnitOfWorkModule } from './unit-of-work/unit-of-work.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { ApiKeyGuard } from './common/guards/api-key.guard';
     QuestionsModule,
     AnswersModule,
     UserAnswersModule,
+    UnitOfWorkModule,
   ],
   controllers: [AppController],
   providers: [
