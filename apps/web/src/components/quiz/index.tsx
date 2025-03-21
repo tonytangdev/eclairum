@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { QuizProgress } from "./quiz-progress";
 import { QuizQuestion } from "./quiz-question";
 import { QuizResults } from "./quiz-results";
-import { submitAnswer } from "@/app/actions/user-answers";
+import { submitAnswer } from "@/app/flash-cards-session/_actions/submit-answer";
 
 interface QuizProps {
   questions: {
