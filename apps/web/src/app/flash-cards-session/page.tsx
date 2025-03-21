@@ -1,4 +1,4 @@
-import Quiz from "@/components/quiz";
+import Quiz from "./_components/quiz";
 import { getUserQuestions } from "./_actions/getUserQuestions";
 
 export default async function Page() {
