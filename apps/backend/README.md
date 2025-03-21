@@ -22,54 +22,156 @@
   <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
   [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
-## Description
+# Eclairum Backend
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+The backend service for Eclairum, built with NestJS. This application handles all server-side logic, API endpoints, and database interactions.
 
-## Project setup
+## Technology Stack
 
-```bash
-$ pnpm install
+- [NestJS](https://nestjs.com/) - A progressive Node.js framework for building server-side applications
+- [TypeORM](https://typeorm.io/) - ORM for database interactions
+- [PostgreSQL](https://www.postgresql.org/) - Primary database
+- [Docker](https://www.docker.com/) - Containerization
+- [Jest](https://jestjs.io/) - Testing framework
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v20+)
+- pnpm (v8+)
+- Docker and Docker Compose (for development with database)
+
+### Environment Setup
+
+The application uses different environment configurations:
+
+- `.env.dev` - Development environment
+- `.env.ci` - CI/CD environment
+- `.env.production` - Production environment
+
+Create these files based on your requirements. Example `.env.dev`:
+
+```env
+# Database
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_USERNAME=postgres
+DATABASE_PASSWORD=postgres
+DATABASE_NAME=eclairum_dev
+
+# Application
+PORT=4000
 ```
 
-## Compile and run the project
+### Installation
 
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+# From root of monorepo
+pnpm install
 ```
 
-## Run tests
+### Running the Application
 
 ```bash
-# unit tests
-$ pnpm run test
+# Development mode
+pnpm --filter @eclairum/backend dev
 
-# e2e tests
-$ pnpm run test:e2e
+# Production mode
+pnpm --filter @eclairum/backend start:prod
+```
 
-# test coverage
-$ pnpm run test:cov
+### Docker Development Environment
+
+Start the development database:
+
+```bash
+pnpm --filter @eclairum/backend docker:up
+```
+
+Stop the development database:
+
+```bash
+pnpm --filter @eclairum/backend docker:down
+```
+
+## Testing
+
+### Running Unit Tests
+
+```bash
+pnpm --filter @eclairum/backend test
+```
+
+### Running E2E Tests
+
+```bash
+pnpm --filter @eclairum/backend test:e2e
+```
+
+### Test Coverage
+
+```bash
+pnpm --filter @eclairum/backend test:cov
 ```
 
 ## Deployment
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### Building for Production
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Run the build script:
 
 ```bash
-$ pnpm install -g mau
-$ mau deploy
+./build-prod.sh
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+This script will:
+1. Verify environment configuration
+2. Test database connectivity
+3. Build the Docker container
+4. Optionally start the container
+
+### Debugging Production Deployment
+
+Use the debug connection script:
+
+```bash
+./debug-connection.sh
+```
+
+This script helps troubleshoot container connectivity issues.
+
+## Docker Configuration
+
+The application is containerized using Docker for easy deployment. The `Dockerfile` sets up a multi-stage build process that:
+
+1. Installs dependencies
+2. Builds the core package and other dependencies
+3. Builds the backend application
+4. Creates a production-ready container
+
+Exposed port: 4000
+
+## API Documentation
+
+API documentation is available at `/api-docs` when the server is running in development mode.
+
+## Project Structure
+
+```
+src/
+├── common/         # Shared components, guards, filters
+├── config/         # Configuration modules
+├── dtos/           # Data Transfer Objects
+├── entities/       # Database entities
+├── modules/        # Feature modules
+├── app.module.ts   # Main application module
+└── main.ts         # Application entry point
+```
+
+## Dependencies
+
+This project depends on the `@eclairum/core` package for business logic and domain models.
 
 ## Resources
 
