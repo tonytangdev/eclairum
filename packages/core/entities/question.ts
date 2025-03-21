@@ -77,6 +77,9 @@ export class Question {
   }
 
   public setContent(content: string): void {
+    if (!content) {
+      throw new RequiredContentError("Question");
+    }
     this.content = content;
     this.updatedAt = new Date();
   }

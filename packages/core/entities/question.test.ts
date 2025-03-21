@@ -222,4 +222,70 @@ describe("Question", () => {
       expect(question.getAnswers().length).toBe(initialAnswersCount + 2);
     });
   });
+
+  describe("content editing", () => {
+    it("should update content correctly using setContent method", () => {
+      // Arrange
+      const originalContent = faker.lorem.sentence();
+      const newContent = faker.lorem.sentence();
+      const question = new Question({
+        content: originalContent,
+        answers: [],
+        quizGenerationTaskId: randomUUID(),
+      });
+
+      // Act
+      question.setContent(newContent);
+
+      // Assert
+      expect(question.getContent()).toBe(newContent);
+      expect(question.getContent()).not.toBe(originalContent);
+    });
+
+    it("should update the updatedAt timestamp when setting content", () => {
+      // Arrange
+      const question = new Question({
+        content: faker.lorem.sentence(),
+        answers: [],
+        quizGenerationTaskId: randomUUID(),
+      });
+      const originalUpdatedAt = question.getUpdatedAt();
+
+      // Mock Date.now to ensure a different timestamp
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date(originalUpdatedAt.getTime() + 1000));
+
+      // Act
+      question.setContent(faker.lorem.sentence());
+      const newUpdatedAt = question.getUpdatedAt();
+
+      // Assert
+      expect(newUpdatedAt.getTime()).toBeGreaterThan(
+        originalUpdatedAt.getTime(),
+      );
+
+      // Cleanup
+      jest.useRealTimers();
+    });
+
+    it("should not throw error when setting valid content", () => {
+      // Arrange
+      const question = new Question(createValidQuestionParams());
+
+      // Act & Assert
+      expect(() => {
+        question.setContent(faker.lorem.sentence());
+      }).not.toThrow();
+    });
+
+    it("should throw RequiredContentError when setting empty content", () => {
+      // Arrange
+      const question = new Question(createValidQuestionParams());
+
+      // Act & Assert
+      expect(() => {
+        question.setContent("");
+      }).toThrow(RequiredContentError);
+    });
+  });
 });
