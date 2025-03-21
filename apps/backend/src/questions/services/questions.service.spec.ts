@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { faker } from '@faker-js/faker';
 import { QuestionsService } from './questions.service';
-import { QuestionRepositoryImpl } from '../infrastructure/relational/repositories/question.repository';
+import { QuestionRepositoryImpl } from '../../repositories/questions/question.repository';
 import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
 import { UserAnswerRepositoryImpl } from '../../user-answers/infrastructure/relational/repositories/user-answer.repository';
 import { FetchQuestionsForUserUseCase } from '@eclairum/core/use-cases';

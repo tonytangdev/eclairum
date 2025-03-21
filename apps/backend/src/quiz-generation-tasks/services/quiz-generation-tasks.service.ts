@@ -6,7 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { CreateQuizGenerationTaskDto } from '../dto/create-quiz-generation-task.dto';
-import { QuestionRepositoryImpl } from '../../questions/infrastructure/relational/repositories/question.repository';
+import { QuestionRepositoryImpl } from '../../repositories/questions/question.repository';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { QuizGenerationTaskRepositoryImpl } from '../infrastructure/relational/repositories/quiz-generation-task.repository';
 import { LLMService } from '@eclairum/core/interfaces/llm-service.interface';

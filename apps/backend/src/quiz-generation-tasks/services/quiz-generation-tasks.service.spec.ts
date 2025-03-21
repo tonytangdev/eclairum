@@ -4,7 +4,7 @@
 import { Test } from '@nestjs/testing';
 import { Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { QuizGenerationTasksService } from './quiz-generation-tasks.service';
-import { QuestionRepositoryImpl } from '../../questions/infrastructure/relational/repositories/question.repository';
+import { QuestionRepositoryImpl } from '../../repositories/questions/question.repository';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { QuizGenerationTaskRepositoryImpl } from '../infrastructure/relational/repositories/quiz-generation-task.repository';
 import {

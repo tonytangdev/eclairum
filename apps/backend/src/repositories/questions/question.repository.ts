@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { QuestionRepository } from '@eclairum/core/interfaces/question-repository.interface';
 import { Question, User } from '@eclairum/core/entities';
-import { QuestionMapper } from '../mappers/question.mapper';
-import { UnitOfWorkService } from '../../../../unit-of-work/unit-of-work.service';
-import { QuestionEntity } from '../../../../common/entities/question.entity';
+import { UnitOfWorkService } from '../../unit-of-work/unit-of-work.service';
+import { QuestionEntity } from '../../common/entities/question.entity';
+import { QuestionMapper } from './mappers/question.mapper';
 
 @Injectable()
 export class QuestionRepositoryImpl implements QuestionRepository {
