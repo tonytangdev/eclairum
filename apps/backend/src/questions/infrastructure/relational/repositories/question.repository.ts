@@ -71,6 +71,15 @@ export class QuestionRepositoryImpl implements QuestionRepository {
     return QuestionMapper.toDomain(savedEntity);
   }
 
+  async softDeleteByTaskId(taskId: string): Promise<void> {
+    const repository = this.getRepository();
+
+    await repository.update(
+      { quizGenerationTaskId: taskId },
+      { deletedAt: new Date() },
+    );
+  }
+
   private mapQuestionsToEntities(questions: Question[]): QuestionEntity[] {
     return questions.map((question) => QuestionMapper.toPersistence(question));
   }
