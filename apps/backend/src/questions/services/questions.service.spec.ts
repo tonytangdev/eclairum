@@ -3,7 +3,7 @@ import { faker } from '@faker-js/faker';
 import { QuestionsService } from './questions.service';
 import { QuestionRepositoryImpl } from '../../repositories/questions/question.repository';
 import { UserRepositoryImpl } from '../../repositories/users/user.repository';
-import { UserAnswerRepositoryImpl } from '../../user-answers/infrastructure/relational/repositories/user-answer.repository';
+import { UserAnswerRepositoryImpl } from '../../repositories/user-answers/user-answer.repository';
 import { FetchQuestionsForUserUseCase } from '@eclairum/core/use-cases';
 
 // Mock the core use case

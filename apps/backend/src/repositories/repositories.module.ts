@@ -9,19 +9,31 @@ import { QuestionEntity } from '../common/entities/question.entity';
 import { QuestionRepositoryImpl } from './questions/question.repository';
 import { UserEntity } from '../common/entities/user.entity';
 import { UserRepositoryImpl } from './users/user.repository';
+import { UserAnswerEntity } from '../common/entities/user-answer.entity';
+import { UserAnswerRepositoryImpl } from './user-answers/user-answer.repository';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([AnswerEntity, QuestionEntity, UserEntity]),
+    TypeOrmModule.forFeature([
+      AnswerEntity,
+      QuestionEntity,
+      UserEntity,
+      UserAnswerEntity,
+    ]),
     QuizGenerationTasksModule,
-    UserAnswersModule,
     UnitOfWorkModule,
   ],
-  providers: [AnswerRepositoryImpl, QuestionRepositoryImpl, UserRepositoryImpl],
+  providers: [
+    AnswerRepositoryImpl,
+    QuestionRepositoryImpl,
+    UserRepositoryImpl,
+    UserAnswerRepositoryImpl,
+  ],
   exports: [
     AnswerRepositoryImpl,
     QuestionRepositoryImpl,
     UserRepositoryImpl,
+    UserAnswerRepositoryImpl,
     QuizGenerationTasksModule,
     UserAnswersModule,
     UnitOfWorkModule,
