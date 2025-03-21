@@ -52,7 +52,7 @@ describe("UserAnswersQuestionUseCase", () => {
       findById: jest.fn(),
       saveAnswers: jest.fn(),
       findByQuestionId: jest.fn(),
-    };
+    } as unknown as jest.Mocked<AnswerRepository>;
 
     useCase = new UserAnswersQuestionUseCase(
       userRepository,

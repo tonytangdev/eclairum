@@ -13,4 +13,10 @@ export interface QuizGenerationTaskRepository {
     userId: string,
     pagination: PaginationParams,
   ): Promise<PaginatedResult<QuizGenerationTask>>;
+
+  /**
+   * Soft deletes a quiz generation task by ID
+   * @param id The task ID
+   */
+  softDelete(id: QuizGenerationTask["id"]): Promise<void>;
 }

@@ -95,6 +95,7 @@ describe('QuizGenerationTasksService', () => {
     task.getTitle = jest.fn().mockReturnValue(faker.lorem.sentence());
     task.getCreatedAt = jest.fn().mockReturnValue(faker.date.past());
     task.getUpdatedAt = jest.fn().mockReturnValue(faker.date.recent());
+    task.getTextContent = jest.fn().mockReturnValue(text);
 
     return task;
   };
@@ -328,6 +329,7 @@ describe('QuizGenerationTasksService', () => {
         id: mockTask.getId(),
         status: mockTask.getStatus(),
         title: mockTask.getTitle(),
+        textContent: mockTask.getTextContent(), // Added this line to match the service response
         createdAt: mockTask.getCreatedAt(),
         updatedAt: mockTask.getUpdatedAt(),
         generatedAt: mockTask.getGeneratedAt(),
@@ -465,8 +467,8 @@ describe('QuizGenerationTasksService', () => {
       // When
       const result = await service.fetchTasksByUserId({
         userId,
-        page,
-        limit,
+        page,  // Pass the page parameter to the service
+        limit, // Pass the limit parameter to the service
       });
 
       // Then

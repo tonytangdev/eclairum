@@ -57,20 +57,20 @@ describe("QuizStorageService", () => {
       findByUserId: jest.fn(),
       findById: jest.fn(),
       save: jest.fn(),
-    };
+    } as unknown as jest.Mocked<QuestionRepository>;
 
     mockAnswerRepository = {
       saveAnswers: jest.fn(),
       findByQuestionId: jest.fn(),
       findById: jest.fn(),
-    };
+    } as unknown as jest.Mocked<AnswerRepository>;
 
     mockQuizGenerationTaskRepository = {
       saveTask: jest.fn(),
       findByUserId: jest.fn(),
       findById: jest.fn(),
       findByUserIdPaginated: jest.fn(),
-    };
+    } as unknown as jest.Mocked<QuizGenerationTaskRepository>;
 
     quizStorageService = new QuizStorageService(
       mockQuestionRepository,
