@@ -26,14 +26,14 @@ export class UnitOfWorkService {
   ): Promise<T> {
     if (this.isInTransaction) {
       // Already in a transaction, use current manager
-      return fn(this.manager);
+      return await fn(this.manager);
     }
 
     try {
       this.isInTransaction = true;
       return await this.dataSource.transaction(async (manager) => {
         this.manager = manager;
-        return fn(manager);
+        return await fn(manager);
       });
     } finally {
       // Reset back to the default manager when transaction is done
