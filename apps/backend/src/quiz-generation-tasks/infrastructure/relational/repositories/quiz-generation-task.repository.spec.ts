@@ -11,13 +11,15 @@ import {
 import { faker } from '@faker-js/faker';
 import { QuestionEntity } from '../../../../questions/infrastructure/relational/entities/question.entity';
 import { AnswerEntity } from '../../../../answers/infrastructure/relational/entities/answer.entity';
+import { UnitOfWorkService } from '../../../../unit-of-work/unit-of-work.service';
 
 describe('QuizGenerationTaskRepositoryImpl', () => {
   let repository: QuizGenerationTaskRepositoryImpl;
-  let typeOrmRepository: jest.Mocked<Repository<QuizGenerationTaskEntity>>;
+  let mockRepository: jest.Mocked<Repository<QuizGenerationTaskEntity>>;
+  let mockUnitOfWorkService: jest.Mocked<UnitOfWorkService>;
 
   // Helper functions to create test data
-  const createMockTask = (overrides = {}) =>
+  const createMockTask = (overrides = {}): QuizGenerationTask =>
     new QuizGenerationTask({
       id: faker.string.uuid(),
       textContent: faker.lorem.paragraphs(2),
@@ -29,7 +31,9 @@ describe('QuizGenerationTaskRepositoryImpl', () => {
       ...overrides,
     });
 
-  const createMockEntity = (task: QuizGenerationTask) => {
+  const createMockEntity = (
+    task: QuizGenerationTask,
+  ): QuizGenerationTaskEntity => {
     const entity = new QuizGenerationTaskEntity();
     entity.id = task.getId();
     entity.textContent = task.getTextContent();
@@ -41,10 +45,9 @@ describe('QuizGenerationTaskRepositoryImpl', () => {
     return entity;
   };
 
-  // Fixed helper function to create mock entities with proper structure
   const createMockEntityWithQuestionsAndAnswers = (
     task: QuizGenerationTask,
-  ) => {
+  ): QuizGenerationTaskEntity => {
     const entity = createMockEntity(task);
 
     entity.questions = Array(2)
@@ -81,29 +84,35 @@ describe('QuizGenerationTaskRepositoryImpl', () => {
   };
 
   beforeEach(async () => {
-    // Create a mock TypeORM repository
-    const mockTypeOrmRepository = {
-      save: jest.fn().mockReturnValue(Promise.resolve({})),
+    // Create mock repository
+    mockRepository = {
+      save: jest.fn().mockResolvedValue({}),
       findOne: jest.fn(),
       find: jest.fn(),
-      count: jest.fn(), // Add count method for pagination tests
-    };
+      count: jest.fn(),
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+    } as unknown as jest.Mocked<Repository<QuizGenerationTaskEntity>>;
+
+    // Create mock UnitOfWorkService
+    mockUnitOfWorkService = {
+      getManager: jest.fn().mockReturnValue({
+        getRepository: jest.fn().mockReturnValue(mockRepository),
+      }),
+      doTransactional: jest.fn(),
+    } as unknown as jest.Mocked<UnitOfWorkService>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         QuizGenerationTaskRepositoryImpl,
         {
-          provide: getRepositoryToken(QuizGenerationTaskEntity),
-          useValue: mockTypeOrmRepository,
+          provide: UnitOfWorkService,
+          useValue: mockUnitOfWorkService,
         },
       ],
     }).compile();
 
     repository = module.get<QuizGenerationTaskRepositoryImpl>(
       QuizGenerationTaskRepositoryImpl,
-    );
-    typeOrmRepository = module.get(
-      getRepositoryToken(QuizGenerationTaskEntity),
     );
 
     // Spy on QuizGenerationTaskMapper
@@ -117,163 +126,318 @@ describe('QuizGenerationTaskRepositoryImpl', () => {
   });
 
   describe('saveTask', () => {
-    it('should persist a task to the database', async () => {
-      // Given
+    it('should call save method with the task', async () => {
+      // Arrange
       const task = createMockTask();
       const entity = createMockEntity(task);
-
       QuizGenerationTaskMapper.toEntity = jest.fn().mockReturnValueOnce(entity);
-      typeOrmRepository.save.mockResolvedValueOnce(entity);
 
-      // When
+      // Mock the repository save method
+      mockRepository.save.mockResolvedValueOnce(entity);
+
+      // Act
       await repository.saveTask(task);
 
-      // Then
-      expect(typeOrmRepository.save).toHaveBeenCalled();
-      // Only verify behavior that matters to consumers of the repository
+      // Assert
+      expect(QuizGenerationTaskMapper.toEntity).toHaveBeenCalledWith(task);
+      expect(mockRepository.save).toHaveBeenCalledWith(entity);
     });
   });
 
   describe('save', () => {
-    it('should save a task using the repository when no entity manager is provided', async () => {
-      // Given
+    it('should persist the task and return it', async () => {
+      // Arrange
       const task = createMockTask();
       const entity = createMockEntity(task);
-
       QuizGenerationTaskMapper.toEntity = jest.fn().mockReturnValueOnce(entity);
 
-      // When
+      // Act
       const result = await repository.save(task);
 
-      // Then
+      // Assert
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
       expect(QuizGenerationTaskMapper.toEntity).toHaveBeenCalledWith(task);
-      expect(typeOrmRepository.save).toHaveBeenCalledWith(entity);
+      expect(mockRepository.save).toHaveBeenCalledWith(entity);
       expect(result).toBe(task);
     });
 
-    it('should handle save errors and propagate them', async () => {
-      // Given
-      const task = createMockTask();
-      const error = new Error('Database error');
-      const entity = createMockEntity(task);
-
-      QuizGenerationTaskMapper.toEntity = jest.fn().mockReturnValueOnce(entity);
-      typeOrmRepository.save.mockRejectedValueOnce(error);
-
-      // When & Then
-      await expect(repository.save(task)).rejects.toThrow(error);
-      expect(QuizGenerationTaskMapper.toEntity).toHaveBeenCalledWith(task);
-    });
-
-    it('should use provided entity manager when available', async () => {
-      // Given
+    it('should propagate errors from the database', async () => {
+      // Arrange
       const task = createMockTask();
       const entity = createMockEntity(task);
+      const dbError = new Error('Database error');
 
       QuizGenerationTaskMapper.toEntity = jest.fn().mockReturnValueOnce(entity);
+      mockRepository.save.mockRejectedValueOnce(dbError);
 
-      const mockTransactionRepo = {
-        save: jest.fn().mockReturnValue(Promise.resolve(entity)),
-      };
-
-      const mockEntityManager = {
-        getRepository: jest.fn().mockReturnValue(mockTransactionRepo),
-      } as unknown as EntityManager;
-
-      // When
-      const result = await repository.save(task, mockEntityManager);
-
-      // Then
+      // Act & Assert
+      await expect(repository.save(task)).rejects.toThrow(dbError);
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
       expect(QuizGenerationTaskMapper.toEntity).toHaveBeenCalledWith(task);
-      expect(mockEntityManager.getRepository).toHaveBeenCalledWith(
-        QuizGenerationTaskEntity,
-      );
-      expect(mockTransactionRepo.save).toHaveBeenCalledWith(entity);
-      expect(result).toBe(task);
-      expect(typeOrmRepository.save).not.toHaveBeenCalled();
+      expect(mockRepository.save).toHaveBeenCalledWith(entity);
     });
   });
 
   describe('findById', () => {
-    it('should retrieve a complete task with questions and answers', async () => {
-      // Given
+    it('should return the task when found with its questions and answers', async () => {
+      // Arrange
       const taskId = faker.string.uuid();
       const task = createMockTask({ id: taskId });
       const entity = createMockEntityWithQuestionsAndAnswers(task);
 
-      typeOrmRepository.findOne.mockResolvedValueOnce(entity);
+      mockRepository.findOne.mockResolvedValueOnce(entity);
       QuizGenerationTaskMapper.toDomain = jest.fn().mockReturnValueOnce(task);
 
-      // When
+      // Act
       const result = await repository.findById(taskId);
 
-      // Then
-      expect(result).toBe(task);
-      // Verify relations are specified correctly (important for behavior)
-      expect(typeOrmRepository.findOne).toHaveBeenCalledWith(
-        expect.objectContaining({
-          relations: ['questions', 'questions.answers'],
-        }),
-      );
-    });
-
-    it('should return null when the task does not exist', async () => {
-      // Given
-      const nonExistentTaskId = faker.string.uuid();
-      typeOrmRepository.findOne.mockResolvedValueOnce(null);
-
-      // When
-      const result = await repository.findById(nonExistentTaskId);
-
-      // Then
-      expect(result).toBeNull();
-    });
-
-    it('should use stored entity manager when available', async () => {
-      // Given
-      const taskId = faker.string.uuid();
-      const task = createMockTask({ id: taskId });
-      const entity = createMockEntityWithQuestionsAndAnswers(task);
-
-      const mockTransactionRepo = {
-        findOne: jest.fn().mockResolvedValueOnce(entity),
-      };
-
-      const mockEntityManager = {
-        getRepository: jest.fn().mockReturnValue(mockTransactionRepo),
-      } as unknown as EntityManager;
-
-      repository.setEntityManager(mockEntityManager);
-      QuizGenerationTaskMapper.toDomain = jest.fn().mockReturnValueOnce(task);
-
-      // When
-      const result = await repository.findById(taskId);
-
-      // Then
-      expect(mockEntityManager.getRepository).toHaveBeenCalledWith(
-        QuizGenerationTaskEntity,
-      );
-      expect(mockTransactionRepo.findOne).toHaveBeenCalledWith({
+      // Assert
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { id: taskId },
         relations: ['questions', 'questions.answers'],
       });
       expect(QuizGenerationTaskMapper.toDomain).toHaveBeenCalledWith(entity);
       expect(result).toBe(task);
-      expect(typeOrmRepository.findOne).not.toHaveBeenCalled();
     });
 
-    it('should handle database errors', async () => {
-      // Given
+    it('should return null when no task is found', async () => {
+      // Arrange
       const taskId = faker.string.uuid();
-      const dbError = new Error('Database error');
-      typeOrmRepository.findOne.mockRejectedValueOnce(dbError);
+      mockRepository.findOne.mockResolvedValueOnce(null);
 
-      // When & Then
-      await expect(repository.findById(taskId)).rejects.toThrow(dbError);
-      expect(typeOrmRepository.findOne).toHaveBeenCalledWith({
+      // Act
+      const result = await repository.findById(taskId);
+
+      // Assert
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { id: taskId },
         relations: ['questions', 'questions.answers'],
       });
+      expect(QuizGenerationTaskMapper.toDomain).not.toHaveBeenCalled();
+      expect(result).toBeNull();
+    });
+
+    it('should propagate database errors', async () => {
+      // Arrange
+      const taskId = faker.string.uuid();
+      const dbError = new Error('Database error during findOne');
+      mockRepository.findOne.mockRejectedValueOnce(dbError);
+
+      // Act & Assert
+      await expect(repository.findById(taskId)).rejects.toThrow(dbError);
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(mockRepository.findOne).toHaveBeenCalledWith({
+        where: { id: taskId },
+        relations: ['questions', 'questions.answers'],
+      });
+    });
+  });
+
+  describe('findByUserId', () => {
+    it('should return all tasks for the specified user', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const tasks = [createMockTask({ userId }), createMockTask({ userId })];
+      const entities = tasks.map((task) => createMockEntity(task));
+
+      mockRepository.find.mockResolvedValueOnce(entities);
+      QuizGenerationTaskMapper.toDomainList = jest
+        .fn()
+        .mockReturnValueOnce(tasks);
+
+      // Act
+      const result = await repository.findByUserId(userId);
+
+      // Assert
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        where: { userId },
+        relations: ['questions'],
+        order: { createdAt: 'DESC' },
+      });
+      expect(QuizGenerationTaskMapper.toDomainList).toHaveBeenCalledWith(
+        entities,
+      );
+      expect(result).toBe(tasks);
+    });
+
+    it('should return empty array when user has no tasks', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      mockRepository.find.mockResolvedValueOnce([]);
+      QuizGenerationTaskMapper.toDomainList = jest.fn().mockReturnValueOnce([]);
+
+      // Act
+      const result = await repository.findByUserId(userId);
+
+      // Assert
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        where: { userId },
+        relations: ['questions'],
+        order: { createdAt: 'DESC' },
+      });
+      expect(QuizGenerationTaskMapper.toDomainList).toHaveBeenCalledWith([]);
+      expect(result).toEqual([]);
+    });
+
+    it('should propagate database errors', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const dbError = new Error('Database error during find');
+      mockRepository.find.mockRejectedValueOnce(dbError);
+
+      // Act & Assert
+      await expect(repository.findByUserId(userId)).rejects.toThrow(dbError);
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        where: { userId },
+        relations: ['questions'],
+        order: { createdAt: 'DESC' },
+      });
+    });
+  });
+
+  describe('findByUserIdPaginated', () => {
+    it('should return paginated tasks with correct metadata', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const page = 2;
+      const limit = 10;
+      const totalItems = 25;
+      const expectedTotalPages = 3;
+
+      const tasks = Array(limit)
+        .fill(null)
+        .map(() => createMockTask({ userId }));
+      const entities = tasks.map((task) => createMockEntity(task));
+
+      mockRepository.count.mockResolvedValueOnce(totalItems);
+      mockRepository.find.mockResolvedValueOnce(entities);
+      QuizGenerationTaskMapper.toDomainList = jest
+        .fn()
+        .mockReturnValueOnce(tasks);
+
+      // Act
+      const result = await repository.findByUserIdPaginated(userId, {
+        page,
+        limit,
+      });
+
+      // Assert
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(mockRepository.count).toHaveBeenCalledWith({ where: { userId } });
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        where: { userId },
+        relations: ['questions'],
+        order: { createdAt: 'DESC' },
+        skip: 10, // (page - 1) * limit
+        take: limit,
+      });
+      expect(QuizGenerationTaskMapper.toDomainList).toHaveBeenCalledWith(
+        entities,
+      );
+      expect(result).toEqual({
+        data: tasks,
+        meta: {
+          page,
+          limit,
+          totalItems,
+          totalPages: expectedTotalPages,
+        },
+      });
+    });
+
+    it('should handle empty results correctly', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const page = 1;
+      const limit = 10;
+
+      mockRepository.count.mockResolvedValueOnce(0);
+      mockRepository.find.mockResolvedValueOnce([]);
+      QuizGenerationTaskMapper.toDomainList = jest.fn().mockReturnValueOnce([]);
+
+      // Act
+      const result = await repository.findByUserIdPaginated(userId, {
+        page,
+        limit,
+      });
+
+      // Assert
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(result).toEqual({
+        data: [],
+        meta: {
+          page,
+          limit,
+          totalItems: 0,
+          totalPages: 0,
+        },
+      });
+    });
+
+    it('should handle partial page correctly', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const page = 3;
+      const limit = 10;
+      const totalItems = 25;
+      const lastPageItemCount = 5; // 25 items: page 1 has 10, page 2 has 10, page 3 has 5
+
+      const tasks = Array(lastPageItemCount)
+        .fill(null)
+        .map(() => createMockTask({ userId }));
+      const entities = tasks.map((task) => createMockEntity(task));
+
+      mockRepository.count.mockResolvedValueOnce(totalItems);
+      mockRepository.find.mockResolvedValueOnce(entities);
+      QuizGenerationTaskMapper.toDomainList = jest
+        .fn()
+        .mockReturnValueOnce(tasks);
+
+      // Act
+      const result = await repository.findByUserIdPaginated(userId, {
+        page,
+        limit,
+      });
+
+      // Assert
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(result.data.length).toBe(lastPageItemCount);
+      expect(result.meta.totalPages).toBe(3);
+    });
+
+    it('should propagate database errors from count', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const dbError = new Error('Database error during count');
+      mockRepository.count.mockRejectedValueOnce(dbError);
+
+      // Act & Assert
+      await expect(
+        repository.findByUserIdPaginated(userId, { page: 1, limit: 10 }),
+      ).rejects.toThrow(dbError);
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(mockRepository.count).toHaveBeenCalledWith({ where: { userId } });
+    });
+
+    it('should propagate database errors from find', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const dbError = new Error('Database error during find');
+      mockRepository.count.mockResolvedValueOnce(25);
+      mockRepository.find.mockRejectedValueOnce(dbError);
+
+      // Act & Assert
+      await expect(
+        repository.findByUserIdPaginated(userId, { page: 1, limit: 10 }),
+      ).rejects.toThrow(dbError);
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(mockRepository.count).toHaveBeenCalledWith({ where: { userId } });
+      expect(mockRepository.find).toHaveBeenCalled();
     });
   });
 
@@ -283,7 +447,7 @@ describe('QuizGenerationTaskRepositoryImpl', () => {
       const tasks = [createMockTask(), createMockTask()];
       const entities = tasks.map((task) => createMockEntity(task));
 
-      typeOrmRepository.find.mockResolvedValueOnce(entities);
+      mockRepository.find.mockResolvedValueOnce(entities);
       QuizGenerationTaskMapper.toDomainList = jest
         .fn()
         .mockReturnValueOnce(tasks);
@@ -292,7 +456,8 @@ describe('QuizGenerationTaskRepositoryImpl', () => {
       const result = await repository.findAll();
 
       // Assert
-      expect(typeOrmRepository.find).toHaveBeenCalledWith({
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(mockRepository.find).toHaveBeenCalledWith({
         relations: ['questions'],
       });
       expect(QuizGenerationTaskMapper.toDomainList).toHaveBeenCalledWith(
@@ -301,353 +466,84 @@ describe('QuizGenerationTaskRepositoryImpl', () => {
       expect(result).toBe(tasks);
     });
 
-    it('should return empty array when no tasks are found', async () => {
+    it('should return empty array when no tasks exist', async () => {
       // Arrange
-      typeOrmRepository.find.mockResolvedValueOnce([]);
+      mockRepository.find.mockResolvedValueOnce([]);
       QuizGenerationTaskMapper.toDomainList = jest.fn().mockReturnValueOnce([]);
 
       // Act
       const result = await repository.findAll();
 
       // Assert
-      expect(result).toEqual([]);
-      expect(QuizGenerationTaskMapper.toDomainList).toHaveBeenCalledWith([]);
-    });
-
-    it('should use stored entity manager when available', async () => {
-      // Arrange
-      const tasks = [createMockTask(), createMockTask()];
-      const entities = tasks.map((task) => createMockEntity(task));
-
-      const mockTransactionRepo = {
-        find: jest.fn().mockResolvedValueOnce(entities),
-      };
-
-      const mockEntityManager = {
-        getRepository: jest.fn().mockReturnValue(mockTransactionRepo),
-      } as unknown as EntityManager;
-
-      repository.setEntityManager(mockEntityManager);
-      QuizGenerationTaskMapper.toDomainList = jest
-        .fn()
-        .mockReturnValueOnce(tasks);
-
-      // Act
-      const result = await repository.findAll();
-
-      // Assert
-      expect(mockEntityManager.getRepository).toHaveBeenCalledWith(
-        QuizGenerationTaskEntity,
-      );
-      expect(mockTransactionRepo.find).toHaveBeenCalledWith({
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(mockRepository.find).toHaveBeenCalledWith({
         relations: ['questions'],
       });
-      expect(QuizGenerationTaskMapper.toDomainList).toHaveBeenCalledWith(
-        entities,
-      );
-      expect(result).toBe(tasks);
-      expect(typeOrmRepository.find).not.toHaveBeenCalled();
+      expect(QuizGenerationTaskMapper.toDomainList).toHaveBeenCalledWith([]);
+      expect(result).toEqual([]);
     });
 
-    it('should handle database errors', async () => {
+    it('should propagate database errors', async () => {
       // Arrange
-      const dbError = new Error('Database error');
-      typeOrmRepository.find.mockRejectedValueOnce(dbError);
+      const dbError = new Error('Database error during find all');
+      mockRepository.find.mockRejectedValueOnce(dbError);
 
       // Act & Assert
       await expect(repository.findAll()).rejects.toThrow(dbError);
-      expect(typeOrmRepository.find).toHaveBeenCalledWith({
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(mockRepository.find).toHaveBeenCalledWith({
         relations: ['questions'],
       });
-    });
-  });
-
-  describe('findByUserId', () => {
-    it('should return tasks for a specific user', async () => {
-      // Arrange
-      const userId = faker.string.uuid();
-      const tasks = [createMockTask({ userId }), createMockTask({ userId })];
-      const entities = tasks.map((task) => createMockEntity(task));
-
-      typeOrmRepository.find.mockResolvedValueOnce(entities);
-      QuizGenerationTaskMapper.toDomainList = jest
-        .fn()
-        .mockReturnValueOnce(tasks);
-
-      // Act
-      const result = await repository.findByUserId(userId);
-
-      // Assert
-      expect(typeOrmRepository.find).toHaveBeenCalledWith({
-        where: { userId },
-        relations: ['questions'],
-        order: { createdAt: 'DESC' },
-      });
-      expect(QuizGenerationTaskMapper.toDomainList).toHaveBeenCalledWith(
-        entities,
-      );
-      expect(result).toBe(tasks);
-    });
-
-    it('should return empty array when no tasks are found for user', async () => {
-      // Arrange
-      const userId = faker.string.uuid();
-      typeOrmRepository.find.mockResolvedValueOnce([]);
-      QuizGenerationTaskMapper.toDomainList = jest.fn().mockReturnValueOnce([]);
-
-      // Act
-      const result = await repository.findByUserId(userId);
-
-      // Assert
-      expect(result).toEqual([]);
-      expect(typeOrmRepository.find).toHaveBeenCalledWith({
-        where: { userId },
-        relations: ['questions'],
-        order: { createdAt: 'DESC' },
-      });
-      expect(QuizGenerationTaskMapper.toDomainList).toHaveBeenCalledWith([]);
-    });
-
-    it('should use stored entity manager when available', async () => {
-      // Arrange
-      const userId = faker.string.uuid();
-      const tasks = [createMockTask({ userId }), createMockTask({ userId })];
-      const entities = tasks.map((task) => createMockEntity(task));
-
-      const mockTransactionRepo = {
-        find: jest.fn().mockResolvedValueOnce(entities),
-      };
-
-      const mockEntityManager = {
-        getRepository: jest.fn().mockReturnValue(mockTransactionRepo),
-      } as unknown as EntityManager;
-
-      repository.setEntityManager(mockEntityManager);
-      QuizGenerationTaskMapper.toDomainList = jest
-        .fn()
-        .mockReturnValueOnce(tasks);
-
-      // Act
-      const result = await repository.findByUserId(userId);
-
-      // Assert
-      expect(mockEntityManager.getRepository).toHaveBeenCalledWith(
-        QuizGenerationTaskEntity,
-      );
-      expect(mockTransactionRepo.find).toHaveBeenCalledWith({
-        where: { userId },
-        relations: ['questions'],
-        order: { createdAt: 'DESC' },
-      });
-      expect(QuizGenerationTaskMapper.toDomainList).toHaveBeenCalledWith(
-        entities,
-      );
-      expect(result).toBe(tasks);
-      expect(typeOrmRepository.find).not.toHaveBeenCalled();
-    });
-
-    it('should handle database errors', async () => {
-      // Arrange
-      const userId = faker.string.uuid();
-      const dbError = new Error('Database error');
-      typeOrmRepository.find.mockRejectedValueOnce(dbError);
-
-      // Act & Assert
-      await expect(repository.findByUserId(userId)).rejects.toThrow(dbError);
-      expect(typeOrmRepository.find).toHaveBeenCalledWith({
-        where: { userId },
-        relations: ['questions'],
-        order: { createdAt: 'DESC' },
-      });
-    });
-  });
-
-  describe('findByUserIdPaginated', () => {
-    it('should retrieve a page of tasks for a specific user', async () => {
-      // Given
-      const userId = faker.string.uuid();
-      const pageSize = 10;
-      const pageNumber = 2;
-      const totalItems = 25;
-
-      const tasks = Array(pageSize)
-        .fill(null)
-        .map(() => createMockTask({ userId }));
-      const entities = tasks.map((task) => createMockEntity(task));
-
-      typeOrmRepository.count.mockResolvedValueOnce(totalItems);
-      typeOrmRepository.find.mockResolvedValueOnce(entities);
-      QuizGenerationTaskMapper.toDomainList = jest
-        .fn()
-        .mockReturnValueOnce(tasks);
-
-      // When
-      const result = await repository.findByUserIdPaginated(userId, {
-        page: pageNumber,
-        limit: pageSize,
-      });
-
-      // Then
-      expect(result.data).toEqual(tasks);
-      expect(result.meta).toEqual({
-        page: pageNumber,
-        limit: pageSize,
-        totalItems,
-        totalPages: 3, // Calculated as Math.ceil(25/10)
-      });
-    });
-
-    it('should handle the case when a user has no tasks', async () => {
-      // Given
-      const userId = faker.string.uuid();
-      typeOrmRepository.count.mockResolvedValueOnce(0);
-      typeOrmRepository.find.mockResolvedValueOnce([]);
-      QuizGenerationTaskMapper.toDomainList = jest.fn().mockReturnValueOnce([]);
-
-      // When
-      const result = await repository.findByUserIdPaginated(userId, {
-        page: 1,
-        limit: 10,
-      });
-
-      // Then
-      expect(result.data).toEqual([]);
-      expect(result.meta.totalItems).toBe(0);
-      expect(result.meta.totalPages).toBe(0);
-    });
-
-    it('should return the correct items for the last page', async () => {
-      // Given
-      const userId = faker.string.uuid();
-      const totalItems = 22;
-      const pageSize = 10;
-      const lastPage = 3;
-      const lastPageItemCount = 2; // 22 items: page 1 has 10, page 2 has 10, page 3 has 2
-
-      const tasks = Array(lastPageItemCount)
-        .fill(null)
-        .map(() => createMockTask({ userId }));
-      const entities = tasks.map((task) => createMockEntity(task));
-
-      typeOrmRepository.count.mockResolvedValueOnce(totalItems);
-      typeOrmRepository.find.mockResolvedValueOnce(entities);
-      QuizGenerationTaskMapper.toDomainList = jest
-        .fn()
-        .mockReturnValueOnce(tasks);
-
-      // When
-      const result = await repository.findByUserIdPaginated(userId, {
-        page: lastPage,
-        limit: pageSize,
-      });
-
-      // Then
-      expect(result.data.length).toBe(lastPageItemCount);
-      expect(result.meta.totalPages).toBe(3);
-    });
-  });
-
-  describe('setEntityManager', () => {
-    it('should store the entity manager for future use', async () => {
-      // Arrange
-      const task = createMockTask();
-      const entity = createMockEntity(task);
-
-      QuizGenerationTaskMapper.toEntity = jest.fn().mockReturnValue(entity);
-
-      const mockTransactionRepo = {
-        save: jest.fn().mockReturnValue(Promise.resolve(entity)),
-      };
-
-      const mockEntityManager = {
-        getRepository: jest.fn().mockReturnValue(mockTransactionRepo),
-      } as unknown as EntityManager;
-
-      // Act
-      repository.setEntityManager(mockEntityManager);
-      await repository.save(task);
-
-      // Assert
-      expect(mockEntityManager.getRepository).toHaveBeenCalledWith(
-        QuizGenerationTaskEntity,
-      );
-      expect(mockTransactionRepo.save).toHaveBeenCalledWith(entity);
-      expect(typeOrmRepository.save).not.toHaveBeenCalled();
     });
   });
 
   describe('softDelete', () => {
-    it('should soft delete a task by setting deletedAt field', async () => {
-      // Given
+    it('should update the deletedAt field for the specified task', async () => {
+      // Arrange
       const taskId = faker.string.uuid();
-      typeOrmRepository.update = jest
-        .fn()
-        .mockResolvedValueOnce({ affected: 1 });
 
-      // When
+      // Act
       await repository.softDelete(taskId);
 
-      // Then
-      expect(typeOrmRepository.update).toHaveBeenCalledWith(
+      // Assert
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(mockRepository.update).toHaveBeenCalledWith(
         { id: taskId },
         { deletedAt: expect.any(Date) as Date },
       );
     });
 
-    it('should use stored entity manager when available', async () => {
-      // Given
+    it('should handle cases where the task does not exist', async () => {
+      // Arrange
       const taskId = faker.string.uuid();
+      mockRepository.update.mockResolvedValueOnce({
+        affected: 0,
+      } as unknown as ReturnType<
+        Repository<QuizGenerationTaskEntity>['update']
+      >);
 
-      const mockTransactionRepo = {
-        update: jest.fn().mockResolvedValueOnce({ affected: 1 }),
-      };
-
-      const mockEntityManager = {
-        getRepository: jest.fn().mockReturnValue(mockTransactionRepo),
-      } as unknown as EntityManager;
-
-      repository.setEntityManager(mockEntityManager);
-
-      // When
+      // Act
       await repository.softDelete(taskId);
 
-      // Then
-      expect(mockEntityManager.getRepository).toHaveBeenCalledWith(
-        QuizGenerationTaskEntity,
-      );
-      expect(mockTransactionRepo.update).toHaveBeenCalledWith(
+      // Assert
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(mockRepository.update).toHaveBeenCalledWith(
         { id: taskId },
         { deletedAt: expect.any(Date) as Date },
       );
-      expect(typeOrmRepository.update).not.toHaveBeenCalled();
+      // No error should be thrown
     });
 
-    it('should handle the case where the task does not exist', async () => {
-      // Given
-      const taskId = faker.string.uuid();
-      typeOrmRepository.update = jest
-        .fn()
-        .mockResolvedValueOnce({ affected: 0 });
-
-      // When
-      await repository.softDelete(taskId);
-
-      // Then - no exception should be thrown
-      expect(typeOrmRepository.update).toHaveBeenCalledWith(
-        { id: taskId },
-        { deletedAt: expect.any(Date) as Date },
-      );
-    });
-
-    it('should handle database errors during soft delete', async () => {
-      // Given
+    it('should propagate database errors', async () => {
+      // Arrange
       const taskId = faker.string.uuid();
       const dbError = new Error('Database error during update');
-      typeOrmRepository.update = jest.fn().mockRejectedValueOnce(dbError);
+      mockRepository.update.mockRejectedValueOnce(dbError);
 
-      // When & Then
+      // Act & Assert
       await expect(repository.softDelete(taskId)).rejects.toThrow(dbError);
-      expect(typeOrmRepository.update).toHaveBeenCalledWith(
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(mockRepository.update).toHaveBeenCalledWith(
         { id: taskId },
         { deletedAt: expect.any(Date) as Date },
       );

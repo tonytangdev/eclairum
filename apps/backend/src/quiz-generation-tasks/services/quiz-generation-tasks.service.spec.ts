@@ -174,7 +174,7 @@ describe('QuizGenerationTasksService', () => {
     // Create mock repositories and services
     mockQuestionRepository = { setEntityManager: jest.fn() };
     mockAnswerRepository = { setEntityManager: jest.fn() };
-    mockTaskRepository = { setEntityManager: jest.fn() };
+    mockTaskRepository = {};
     mockLlmService = { generateQuiz: jest.fn() };
     mockUserRepository = { findById: jest.fn() };
     mockTransactionHelper = {
@@ -259,16 +259,12 @@ describe('QuizGenerationTasksService', () => {
       expect(mockAnswerRepository.setEntityManager).toHaveBeenCalledWith(
         mockEntityManager,
       );
-      expect(mockTaskRepository.setEntityManager).toHaveBeenCalledWith(
-        mockEntityManager,
-      );
 
       // Verify repositories are freed after transaction
       expect(mockQuestionRepository.setEntityManager).toHaveBeenCalledWith(
         null,
       );
       expect(mockAnswerRepository.setEntityManager).toHaveBeenCalledWith(null);
-      expect(mockTaskRepository.setEntityManager).toHaveBeenCalledWith(null);
     });
 
     it('should log and propagate errors from the use case', async () => {
