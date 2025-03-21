@@ -135,6 +135,15 @@ export class QuizGenerationTaskRepositoryImpl
     return QuizGenerationTaskMapper.toDomainList(entities);
   }
 
+  /**
+   * Soft deletes a quiz generation task by ID
+   * @param id The task ID
+   */
+  async softDelete(id: string): Promise<void> {
+    const repo = this.getRepository();
+    await repo.update({ id }, { deletedAt: new Date() });
+  }
+
   private getRepository(
     entityManager?: EntityManager,
   ): Repository<QuizGenerationTaskEntity> {

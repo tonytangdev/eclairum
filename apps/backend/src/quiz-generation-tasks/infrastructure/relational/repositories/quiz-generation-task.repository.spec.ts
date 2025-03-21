@@ -575,4 +575,82 @@ describe('QuizGenerationTaskRepositoryImpl', () => {
       expect(typeOrmRepository.save).not.toHaveBeenCalled();
     });
   });
+
+  describe('softDelete', () => {
+    it('should soft delete a task by setting deletedAt field', async () => {
+      // Given
+      const taskId = faker.string.uuid();
+      typeOrmRepository.update = jest
+        .fn()
+        .mockResolvedValueOnce({ affected: 1 });
+
+      // When
+      await repository.softDelete(taskId);
+
+      // Then
+      expect(typeOrmRepository.update).toHaveBeenCalledWith(
+        { id: taskId },
+        { deletedAt: expect.any(Date) as Date },
+      );
+    });
+
+    it('should use stored entity manager when available', async () => {
+      // Given
+      const taskId = faker.string.uuid();
+
+      const mockTransactionRepo = {
+        update: jest.fn().mockResolvedValueOnce({ affected: 1 }),
+      };
+
+      const mockEntityManager = {
+        getRepository: jest.fn().mockReturnValue(mockTransactionRepo),
+      } as unknown as EntityManager;
+
+      repository.setEntityManager(mockEntityManager);
+
+      // When
+      await repository.softDelete(taskId);
+
+      // Then
+      expect(mockEntityManager.getRepository).toHaveBeenCalledWith(
+        QuizGenerationTaskEntity,
+      );
+      expect(mockTransactionRepo.update).toHaveBeenCalledWith(
+        { id: taskId },
+        { deletedAt: expect.any(Date) as Date },
+      );
+      expect(typeOrmRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('should handle the case where the task does not exist', async () => {
+      // Given
+      const taskId = faker.string.uuid();
+      typeOrmRepository.update = jest
+        .fn()
+        .mockResolvedValueOnce({ affected: 0 });
+
+      // When
+      await repository.softDelete(taskId);
+
+      // Then - no exception should be thrown
+      expect(typeOrmRepository.update).toHaveBeenCalledWith(
+        { id: taskId },
+        { deletedAt: expect.any(Date) as Date },
+      );
+    });
+
+    it('should handle database errors during soft delete', async () => {
+      // Given
+      const taskId = faker.string.uuid();
+      const dbError = new Error('Database error during update');
+      typeOrmRepository.update = jest.fn().mockRejectedValueOnce(dbError);
+
+      // When & Then
+      await expect(repository.softDelete(taskId)).rejects.toThrow(dbError);
+      expect(typeOrmRepository.update).toHaveBeenCalledWith(
+        { id: taskId },
+        { deletedAt: expect.any(Date) as Date },
+      );
+    });
+  });
 });
