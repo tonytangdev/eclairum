@@ -6,16 +6,12 @@ import { Accordion, AccordionItem } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  CheckCircle2,
   ArrowLeft,
   Calendar,
   Tag,
   PlayCircle,
   Trash2,
-  Save,
-  X,
-  MessageSquare,
-  ListChecks,
+  Loader2,
   PlusCircle,
 } from "lucide-react"
 import Link from "next/link"
@@ -24,12 +20,11 @@ import { formatDate } from "@/lib/dates"
 import { ClientPagination } from "@/components/pagination"
 import { Quiz, Question } from "../types"
 import QuestionItem from "./QuestionItem"
+import QuestionForm from "./QuestionForm"
 import { StatusBadge } from "@/components/flash-cards/status-badge"
 import { deleteQuizGenerationTaskServer } from "../server-actions"
 import { toast } from "sonner"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+
 interface QuizDetailsClientProps {
   initialQuiz: Quiz;
 }
@@ -125,14 +120,14 @@ export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProp
   const updateNewAnswerContent = (answerId: string, content: string) => {
     setNewQuestion((prev) => ({
       ...prev,
-      answers: prev.answers.map((a: any) => (a.id === answerId ? { ...a, content } : a)),
+      answers: prev.answers.map((a) => (a.id === answerId ? { ...a, content } : a)),
     }))
   }
 
   const updateNewCorrectAnswer = (answerId: string) => {
     setNewQuestion((prev) => ({
       ...prev,
-      answers: prev.answers.map((a: any) => ({ ...a, isCorrect: a.id === answerId })),
+      answers: prev.answers.map((a) => ({ ...a, isCorrect: a.id === answerId })),
     }))
   }
 
@@ -145,7 +140,7 @@ export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProp
         ...a,
         questionId: newQuestionId,
       })),
-      quizGenerationTaskId: id,
+      quizGenerationTaskId: quiz.id,
     }
 
     setQuiz((prev) => ({
@@ -161,14 +156,6 @@ export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProp
     }
   }
 
-  const isNewQuestionValid = () => {
-    return (
-      newQuestion.content.trim() !== "" &&
-      newQuestion.answers.every((a) => a.content.trim() !== "") &&
-      newQuestion.answers.some((a) => a.isCorrect)
-    )
-  }
-
   // Pagination logic
   const totalQuestions = quiz.questions.length
   const totalPages = Math.ceil(totalQuestions / questionsPerPage)
@@ -177,20 +164,24 @@ export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProp
   const currentQuestions = quiz.questions.slice(indexOfFirstQuestion, indexOfLastQuestion)
 
   const handleDeleteQuiz = async () => {
+    if (!window.confirm("Are you sure you want to delete this quiz?")) {
+      return
+    }
+
     setIsDeleting(true)
 
     try {
       const result = await deleteQuizGenerationTaskServer(quiz.id)
 
       if (result.success) {
-        toast("Quiz deleted")
+        toast("Quiz deleted successfully")
         router.push("/flash-cards")
       } else {
         toast("Failed to delete quiz")
       }
     } catch (error) {
       console.error("Failed to delete quiz:", error)
-      toast("Error")
+      toast("Error deleting quiz")
     } finally {
       setIsDeleting(false)
     }
@@ -207,7 +198,7 @@ export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProp
           <p className="text-muted-foreground">{quiz.category ? `Category: ${quiz.category}` : "No category"}</p>
         </div>
         <Button asChild variant="outline" className="self-start sm:self-center mt-2 sm:mt-0">
-          <Link href="/my-flash-cards">
+          <Link href="/flash-cards">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Link>
@@ -245,122 +236,15 @@ export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProp
                 </div>
 
                 {isAddingQuestion && (
-                  <div className="space-y-6 mb-6 bg-green-50/50 dark:bg-green-950/10 p-6 rounded-lg border border-green-100 dark:border-green-900 transition-all duration-200 animate-in fade-in-50 slide-in-from-top-5">
-                    <div className="flex items-center gap-2 pb-2 border-b border-green-100 dark:border-green-900">
-                      <PlusCircle className="h-5 w-5 text-green-500" />
-                      <h3 className="text-lg font-medium text-green-700 dark:text-green-300">Add New Question</h3>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4 text-green-500" />
-                        <Label htmlFor="new-question" className="font-medium text-green-700 dark:text-green-300">
-                          Question Text
-                        </Label>
-                      </div>
-                      <div className="relative">
-                        <Textarea
-                          id="new-question"
-                          value={newQuestion.content}
-                          onChange={(e) => updateNewQuestionContent(e.target.value)}
-                          className="w-full border-green-200 dark:border-green-800 focus:border-green-400 focus:ring-green-400 transition-all duration-200"
-                          rows={3}
-                          placeholder="Enter your question here..."
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <ListChecks className="h-4 w-4 text-green-500" />
-                        <Label className="font-medium text-green-700 dark:text-green-300">Answer Options</Label>
-                      </div>
-
-                      <div className="bg-white dark:bg-gray-900 rounded-lg border border-green-100 dark:border-green-900 overflow-hidden">
-                        <RadioGroup
-                          value={newQuestion.answers.find((a: {
-                            id: string;
-                            content: string;
-                            isCorrect: boolean;
-                          }) => a.isCorrect)?.id}
-                          onValueChange={updateNewCorrectAnswer}
-                          className="divide-y divide-green-100 dark:divide-green-900"
-                        >
-                          {newQuestion.answers.map((answer: {
-                            id: string;
-                            content: string;
-                            isCorrect: boolean;
-                          }, ansIndex: number) => (
-                            <div
-                              key={answer.id}
-                              className={`flex items-start p-4 transition-colors duration-200 ${answer.isCorrect
-                                ? "bg-green-50 dark:bg-green-950/20"
-                                : "hover:bg-gray-50 dark:hover:bg-gray-800"
-                                }`}
-                            >
-                              <div className="flex items-center h-5 mt-1">
-                                <RadioGroupItem
-                                  value={answer.id}
-                                  id={answer.id}
-                                  className="text-green-600 focus:ring-green-500"
-                                />
-                              </div>
-                              <div className="ml-3 flex-1 space-y-1">
-                                <Label
-                                  htmlFor={answer.id}
-                                  className={`font-medium ${answer.isCorrect
-                                    ? "text-green-700 dark:text-green-300"
-                                    : "text-gray-700 dark:text-gray-300"
-                                    }`}
-                                >
-                                  {answer.isCorrect ? (
-                                    <span className="flex items-center gap-1">
-                                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                      Correct Answer
-                                    </span>
-                                  ) : (
-                                    "Mark as correct"
-                                  )}
-                                </Label>
-                                <Textarea
-                                  value={answer.content}
-                                  onChange={(e) => updateNewAnswerContent(answer.id, e.target.value)}
-                                  className={`w-full text-sm ${answer.isCorrect
-                                    ? "border-green-200 dark:border-green-800 focus:border-green-400 focus:ring-green-400"
-                                    : "border-gray-200 dark:border-gray-700"
-                                    }`}
-                                  rows={2}
-                                  placeholder={`Answer option ${ansIndex + 1}`}
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </RadioGroup>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end space-x-3 pt-4 border-t border-green-100 dark:border-green-900">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={cancelAddingQuestion}
-                        className="border-gray-300 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-800 transition-colors duration-200"
-                      >
-                        <X className="mr-2 h-4 w-4" />
-                        Cancel
-                      </Button>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={saveNewQuestion}
-                        disabled={!isNewQuestionValid()}
-                        className="bg-green-600 hover:bg-green-700 text-white transition-colors duration-200 disabled:bg-green-300 disabled:cursor-not-allowed"
-                      >
-                        <Save className="mr-2 h-4 w-4" />
-                        Add Question
-                      </Button>
-                    </div>
-                  </div>
+                  <QuestionForm
+                    mode="create"
+                    question={newQuestion}
+                    onUpdateContent={updateNewQuestionContent}
+                    onUpdateAnswerContent={updateNewAnswerContent}
+                    onUpdateCorrectAnswer={updateNewCorrectAnswer}
+                    onSave={saveNewQuestion}
+                    onCancel={cancelAddingQuestion}
+                  />
                 )}
 
                 <Accordion
@@ -372,17 +256,22 @@ export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProp
                 >
                   {currentQuestions.map((question) => (
                     <AccordionItem key={question.id} value={question.id}>
-                      <QuestionItem
-                        question={question}
-                        isEditing={editingQuestionId === question.id}
-                        editedQuestion={editedQuestion}
-                        onStartEditing={startEditingQuestion}
-                        onCancelEditing={cancelEditingQuestion}
-                        onUpdateContent={updateEditedQuestionContent}
-                        onUpdateAnswerContent={updateEditedAnswerContent}
-                        onUpdateCorrectAnswer={updateCorrectAnswer}
-                        onSaveChanges={saveEditedQuestion}
-                      />
+                      {editingQuestionId === question.id && editedQuestion ? (
+                        <QuestionForm
+                          mode="edit"
+                          question={editedQuestion}
+                          onUpdateContent={updateEditedQuestionContent}
+                          onUpdateAnswerContent={updateEditedAnswerContent}
+                          onUpdateCorrectAnswer={updateCorrectAnswer}
+                          onSave={saveEditedQuestion}
+                          onCancel={cancelEditingQuestion}
+                        />
+                      ) : (
+                        <QuestionItem
+                          question={question}
+                          onStartEditing={startEditingQuestion}
+                        />
+                      )}
                     </AccordionItem>
                   ))}
                 </Accordion>
