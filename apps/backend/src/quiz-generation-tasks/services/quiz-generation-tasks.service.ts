@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import { CreateQuizGenerationTaskDto } from '../dto/create-quiz-generation-task.dto';
 import { QuestionRepositoryImpl } from '../../repositories/questions/question.repository';
-import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { QuizGenerationTaskRepositoryImpl } from '../../repositories/quiz-generation-tasks/quiz-generation-task.repository';
 import { LLMService } from '@eclairum/core/interfaces/llm-service.interface';
 import { LLM_SERVICE_PROVIDER_KEY } from './openai-llm.service';
@@ -26,6 +25,7 @@ import {
 import { QuizGenerationTaskMapper } from '../mappers/quiz-generation-task.mapper';
 import { QuizGenerationTaskUseCaseFactory } from '../factories/quiz-generation-task-use-case.factory';
 import { UnitOfWorkService } from '../../unit-of-work/unit-of-work.service';
+import { AnswerRepositoryImpl } from '../../repositories/answers/answer.repository';
 
 @Injectable()
 export class QuizGenerationTasksService {

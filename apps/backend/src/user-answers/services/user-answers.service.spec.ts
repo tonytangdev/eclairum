@@ -17,10 +17,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UserAnswersService } from './user-answers.service';
 import { UserRepositoryImpl } from '../../repositories/users/user.repository';
 import { UserAnswerRepositoryImpl } from '../../repositories/user-answers/user-answer.repository';
-import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { SubmitAnswerDto } from '../dtos/submit-answer.dto';
 import { faker } from '@faker-js/faker';
 import { UserAnswersQuestionUseCase } from '@eclairum/core/use-cases';
+import { AnswerRepositoryImpl } from '../../repositories/answers/answer.repository';
 
 describe('UserAnswersService', () => {
   let service: UserAnswersService;

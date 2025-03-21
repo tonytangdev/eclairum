@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { UserAnswersQuestionUseCase } from '@eclairum/core/use-cases';
 import { UserAnswerRepositoryImpl } from '../../repositories/user-answers/user-answer.repository';
 import { SubmitAnswerDto } from '../dtos/submit-answer.dto';
-import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { UserRepositoryImpl } from '../../repositories/users/user.repository';
+import { AnswerRepositoryImpl } from '../../repositories/answers/answer.repository';
 
 @Injectable()
 export class UserAnswersService {
