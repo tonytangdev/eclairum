@@ -265,7 +265,7 @@ export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProp
                 <PlayCircle className="mr-2 h-5 w-5" />
                 Start Quiz
               </Button>
-              <Button
+              {/* <Button
                 variant="outline"
                 className="w-full border-blue-200 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 py-5"
               >
@@ -278,7 +278,7 @@ export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProp
               >
                 <Share2 className="mr-2 h-5 w-5" />
                 Share Quiz
-              </Button>
+              </Button> */}
               <Button
                 variant="outline"
                 className="w-full bg-red-50 text-red-600 border-red-200 hover:bg-red-100 hover:text-red-700 transition-all duration-200 py-5"
