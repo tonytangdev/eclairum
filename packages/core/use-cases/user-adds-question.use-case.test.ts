@@ -12,7 +12,6 @@ import {
   UnauthorizedTaskAccessError,
   InvalidQuestionError,
 } from "../errors/quiz-errors";
-import { Answer } from "../entities";
 
 describe("UserAddsQuestionUseCase", () => {
   let useCase: UserAddsQuestionUseCase;
