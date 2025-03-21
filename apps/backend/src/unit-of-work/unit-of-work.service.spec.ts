@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Test, TestingModule } from '@nestjs/testing';
 import { UnitOfWorkService } from './unit-of-work.service';
 import { DataSource, EntityManager } from 'typeorm';
