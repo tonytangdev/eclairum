@@ -5,7 +5,7 @@ import { ClientPagination } from "@/components/pagination"
 import { Question } from "../types"
 import QuestionItem from "./QuestionItem"
 import QuestionForm from "./QuestionForm"
-import { useQuestionManagement, usePagination } from "../hooks"
+import { useQuestionManagement, usePagination } from "../_hooks"
 
 interface QuestionsTabProps {
   quizId: string;

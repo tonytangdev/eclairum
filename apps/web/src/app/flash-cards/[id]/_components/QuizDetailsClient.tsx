@@ -18,7 +18,7 @@ import { QuestionsTab } from "./QuestionsTab"
 import { ErrorBoundary } from "./ErrorBoundary"
 
 // Import our custom hooks
-import { useQuizDeletion } from "../hooks"
+import { useQuizDeletion } from "../_hooks"
 
 interface QuizDetailsClientProps {
   initialQuiz: Quiz;
