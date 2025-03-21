@@ -3,7 +3,7 @@ import { UserAnswersQuestionUseCase } from '@eclairum/core/use-cases';
 import { UserAnswerRepositoryImpl } from '../infrastructure/relational/repositories/user-answer.repository';
 import { SubmitAnswerDto } from '../dtos/submit-answer.dto';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
-import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
+import { UserRepositoryImpl } from '../../repositories/users/user.repository';
 
 @Injectable()
 export class UserAnswersService {

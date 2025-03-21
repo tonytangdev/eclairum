@@ -9,7 +9,7 @@ import { LLMService } from '@eclairum/core/interfaces/llm-service.interface';
 import { QuestionRepositoryImpl } from '../../repositories/questions/question.repository';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { QuizGenerationTaskRepositoryImpl } from '../infrastructure/relational/repositories/quiz-generation-task.repository';
-import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
+import { UserRepositoryImpl } from '../../repositories/users/user.repository';
 
 @Injectable()
 export class QuizGenerationTaskUseCaseFactory {

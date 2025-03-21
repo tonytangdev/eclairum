@@ -11,7 +11,7 @@ import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/re
 import { QuizGenerationTaskRepositoryImpl } from '../infrastructure/relational/repositories/quiz-generation-task.repository';
 import { LLMService } from '@eclairum/core/interfaces/llm-service.interface';
 import { LLM_SERVICE_PROVIDER_KEY } from './openai-llm.service';
-import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
+import { UserRepositoryImpl } from '../../repositories/users/user.repository';
 import { FetchQuizGenerationTasksDto } from '../dto/fetch-quiz-generation-tasks.dto';
 import {
   PaginatedTasksResponse,

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { FetchQuestionsForUserUseCase } from '@eclairum/core/use-cases';
 import { QuestionRepositoryImpl } from '../../repositories/questions/question.repository';
-import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
+import { UserRepositoryImpl } from '../../repositories/users/user.repository';
 import { UserAnswerRepositoryImpl } from '../../user-answers/infrastructure/relational/repositories/user-answer.repository';
 
 @Injectable()

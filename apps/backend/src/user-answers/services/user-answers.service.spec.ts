@@ -15,7 +15,7 @@ jest.mock('@eclairum/core/use-cases', () => {
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserAnswersService } from './user-answers.service';
-import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
+import { UserRepositoryImpl } from '../../repositories/users/user.repository';
 import { UserAnswerRepositoryImpl } from '../infrastructure/relational/repositories/user-answer.repository';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { SubmitAnswerDto } from '../dtos/submit-answer.dto';

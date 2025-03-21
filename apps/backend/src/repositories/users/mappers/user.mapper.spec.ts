@@ -1,7 +1,7 @@
 import { UserMapper } from './user.mapper';
 import { User } from '@eclairum/core/entities';
 import { faker } from '@faker-js/faker';
-import { UserEntity } from '../../../../common/entities/user.entity';
+import { UserEntity } from '../../../common/entities/user.entity';
 
 describe('UserMapper', () => {
   describe('toDomain', () => {

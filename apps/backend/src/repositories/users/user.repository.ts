@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { UserRepository } from '@eclairum/core/interfaces/user-repository.interface';
 import { UserMapper } from './mappers/user.mapper';
 import { User } from '@eclairum/core/entities';
-import { UserEntity } from '../../../common/entities/user.entity';
+import { UserEntity } from '../../common/entities/user.entity';
 
 @Injectable()
 export class UserRepositoryImpl implements UserRepository {

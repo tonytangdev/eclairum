@@ -5,7 +5,7 @@ import { UserRepositoryImpl } from './user.repository';
 import { UserMapper } from './mappers/user.mapper';
 import { User } from '@eclairum/core/entities';
 import { faker } from '@faker-js/faker';
-import { UserEntity } from '../../../common/entities/user.entity';
+import { UserEntity } from '../../common/entities/user.entity';
 
 // Mock the UserMapper
 jest.mock('./mappers/user.mapper', () => ({

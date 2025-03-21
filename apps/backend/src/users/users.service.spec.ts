@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
-import { UserRepositoryImpl } from './infrastructure/relational/user.repository';
+import { UserRepositoryImpl } from '../repositories/users/user.repository';
 import { CreateUserUseCase } from '@eclairum/core/use-cases';
 import { CreateUserDto } from './dto/create-user.dto';
 import { faker } from '@faker-js/faker';

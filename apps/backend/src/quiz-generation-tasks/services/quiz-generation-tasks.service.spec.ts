@@ -14,7 +14,7 @@ import {
   Answer,
 } from '@eclairum/core/entities';
 import { faker } from '@faker-js/faker';
-import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
+import { UserRepositoryImpl } from '../../repositories/users/user.repository';
 import { LLM_SERVICE_PROVIDER_KEY } from './openai-llm.service';
 import {
   TaskNotFoundError,
