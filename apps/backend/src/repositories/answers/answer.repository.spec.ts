@@ -2,10 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Repository } from 'typeorm';
 import { Answer } from '@eclairum/core/entities';
 import { AnswerRepositoryImpl } from './answer.repository';
-import { AnswerMapper } from '../mappers/answer.mapper';
 import { faker } from '@faker-js/faker';
-import { UnitOfWorkService } from '../../../../unit-of-work/unit-of-work.service';
-import { AnswerEntity } from '../../../../common/entities/answer.entity';
+import { AnswerEntity } from '../../common/entities/answer.entity';
+import { UnitOfWorkService } from '../../unit-of-work/unit-of-work.service';
+import { AnswerMapper } from './mappers/answer.mapper';
 
 describe('AnswerRepositoryImpl', () => {
   let answerRepository: AnswerRepositoryImpl;
