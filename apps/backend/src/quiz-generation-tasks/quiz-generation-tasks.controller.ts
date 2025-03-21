@@ -8,10 +8,12 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Delete,
 } from '@nestjs/common';
 import { CreateQuizGenerationTaskDto } from './dto/create-quiz-generation-task.dto';
 import { FetchQuizGenerationTasksDto } from './dto/fetch-quiz-generation-tasks.dto';
 import { FetchQuizGenerationTaskDto } from './dto/fetch-quiz-generation-task.dto';
+import { DeleteQuizGenerationTaskDto } from './dto/delete-quiz-generation-task.dto';
 import { QuizGenerationTasksService } from './services/quiz-generation-tasks.service';
 
 @Controller('quiz-generation-tasks')
@@ -56,6 +58,25 @@ export class QuizGenerationTasksController {
     return this.quizGenerationTaskService.getTaskById(
       id,
       fetchQuizGenerationTaskDto.userId,
+    );
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  async deleteQuizGenerationTask(
+    @Param(
+      'id',
+      new ParseUUIDPipe({
+        version: '4',
+        errorHttpStatusCode: HttpStatus.BAD_REQUEST,
+      }),
+    )
+    id: string,
+    @Query() deleteQuizGenerationTaskDto: DeleteQuizGenerationTaskDto,
+  ) {
+    return this.quizGenerationTaskService.deleteTask(
+      id,
+      deleteQuizGenerationTaskDto.userId,
     );
   }
 }

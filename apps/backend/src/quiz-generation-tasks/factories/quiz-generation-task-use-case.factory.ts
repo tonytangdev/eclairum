@@ -2,13 +2,16 @@ import {
   CreateQuizGenerationTaskUseCase,
   FetchQuizGenerationTaskForUserUseCase,
   FetchQuizGenerationTasksForUserUseCase,
+  SoftDeleteQuizGenerationTaskForUserUseCase,
 } from '@eclairum/core/use-cases';
+import { Injectable } from '@nestjs/common';
 import { LLMService } from '@eclairum/core/interfaces/llm-service.interface';
 import { QuestionRepositoryImpl } from '../../questions/infrastructure/relational/repositories/question.repository';
 import { AnswerRepositoryImpl } from '../../answers/infrastructure/relational/repositories/answer.repository';
 import { QuizGenerationTaskRepositoryImpl } from '../infrastructure/relational/repositories/quiz-generation-task.repository';
 import { UserRepositoryImpl } from '../../users/infrastructure/relational/user.repository';
 
+@Injectable()
 export class QuizGenerationTaskUseCaseFactory {
   constructor(
     private readonly llmService: LLMService,
@@ -48,6 +51,18 @@ export class QuizGenerationTaskUseCaseFactory {
     return new FetchQuizGenerationTasksForUserUseCase(
       this.userRepository,
       this.quizGenerationTaskRepository,
+    );
+  }
+
+  /**
+   * Creates a new instance of the SoftDeleteQuizGenerationTaskForUserUseCase
+   */
+  createDeleteTaskUseCase(): SoftDeleteQuizGenerationTaskForUserUseCase {
+    return new SoftDeleteQuizGenerationTaskForUserUseCase(
+      this.userRepository,
+      this.quizGenerationTaskRepository,
+      this.questionRepository,
+      this.answerRepository,
     );
   }
 }

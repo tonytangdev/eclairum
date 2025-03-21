@@ -121,6 +121,25 @@ export class QuizGenerationTasksService {
     }
   }
 
+  async deleteTask(
+    taskId: string,
+    userId: string,
+  ): Promise<{ success: boolean }> {
+    try {
+      return await this.uowService.doTransactional(async () => {
+        const deleteTaskUseCase = this.useCaseFactory.createDeleteTaskUseCase();
+
+        return await deleteTaskUseCase.execute({
+          userId,
+          taskId,
+        });
+      });
+    } catch (error) {
+      this.handleDeleteTaskError(error, userId, taskId);
+      throw error;
+    }
+  }
+
   private handleGetTaskError(
     error: unknown,
     userId: string,
@@ -148,6 +167,27 @@ export class QuizGenerationTasksService {
     }
 
     this.logError('Failed to fetch quiz generation tasks', error);
+  }
+
+  private handleDeleteTaskError(
+    error: unknown,
+    userId: string,
+    taskId: string,
+  ): void {
+    if (error instanceof TaskNotFoundError) {
+      throw new NotFoundException(error.message);
+    }
+    if (error instanceof UnauthorizedTaskAccessError) {
+      throw new NotFoundException('Quiz generation task not found');
+    }
+    if (error instanceof UserNotFoundError) {
+      throw new BadRequestException(`User with ID '${userId}' not found`);
+    }
+
+    this.logError(
+      `Failed to delete quiz generation task with id ${taskId}`,
+      error,
+    );
   }
 
   private logError(message: string, error: unknown): void {
