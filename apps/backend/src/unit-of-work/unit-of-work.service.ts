@@ -7,6 +7,7 @@ import { DataSource, EntityManager } from 'typeorm';
 })
 export class UnitOfWorkService {
   private manager: EntityManager;
+  private isInTransaction = false;
 
   constructor(
     @InjectDataSource()
@@ -23,9 +24,21 @@ export class UnitOfWorkService {
   async doTransactional<T>(
     fn: (manager: EntityManager) => Promise<T>,
   ): Promise<T> {
-    return await this.dataSource.transaction(async (manager) => {
-      this.manager = manager;
-      return fn(manager);
-    });
+    if (this.isInTransaction) {
+      // Already in a transaction, use current manager
+      return fn(this.manager);
+    }
+
+    try {
+      this.isInTransaction = true;
+      return await this.dataSource.transaction(async (manager) => {
+        this.manager = manager;
+        return fn(manager);
+      });
+    } finally {
+      // Reset back to the default manager when transaction is done
+      this.isInTransaction = false;
+      this.manager = this.dataSource.manager;
+    }
   }
 }

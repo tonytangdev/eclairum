@@ -5,8 +5,8 @@ import { AnswerRepositoryImpl } from './infrastructure/relational/repositories/a
 import { UnitOfWorkModule } from '../unit-of-work/unit-of-work.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AnswerEntity])],
-  providers: [AnswerRepositoryImpl, UnitOfWorkModule],
+  imports: [TypeOrmModule.forFeature([AnswerEntity]), UnitOfWorkModule],
+  providers: [AnswerRepositoryImpl],
   exports: [AnswerRepositoryImpl],
 })
 export class AnswersModule {}
