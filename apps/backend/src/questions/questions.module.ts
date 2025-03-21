@@ -6,6 +6,7 @@ import { QuestionsController } from './questions.controller';
 import { QuestionsService } from './services/questions.service';
 import { UsersModule } from '../users/users.module';
 import { UserAnswersModule } from '../user-answers/user-answers.module';
+import { UnitOfWorkModule } from '../unit-of-work/unit-of-work.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { UserAnswersModule } from '../user-answers/user-answers.module';
     UsersModule,
     QuestionsModule,
     UserAnswersModule,
+    UnitOfWorkModule,
   ],
   controllers: [QuestionsController],
   providers: [QuestionRepositoryImpl, QuestionsService],

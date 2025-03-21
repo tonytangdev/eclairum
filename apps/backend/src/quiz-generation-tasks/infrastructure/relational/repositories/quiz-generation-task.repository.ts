@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, EntityManager } from 'typeorm';
+import { Repository } from 'typeorm';
 import { QuizGenerationTask } from '@eclairum/core/entities';
 import { QuizGenerationTaskRepository } from '@eclairum/core/interfaces';
 import { QuizGenerationTaskEntity } from '../entities/quiz-generation-task.entity';

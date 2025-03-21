@@ -1,39 +1,24 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { QuestionRepository } from '@eclairum/core/interfaces/question-repository.interface';
 import { Question, User } from '@eclairum/core/entities';
 import { QuestionEntity } from '../entities/question.entity';
 import { QuestionMapper } from '../mappers/question.mapper';
+import { UnitOfWorkService } from '../../../../unit-of-work/unit-of-work.service';
 
 @Injectable()
 export class QuestionRepositoryImpl implements QuestionRepository {
-  private currentEntityManager?: EntityManager | null;
+  constructor(private readonly uowService: UnitOfWorkService) {}
 
-  constructor(
-    @InjectRepository(QuestionEntity)
-    private questionRepository: Repository<QuestionEntity>,
-  ) {}
-
-  setEntityManager(entityManager: EntityManager | null): void {
-    this.currentEntityManager = entityManager;
-  }
-
-  async saveQuestions(
-    questions: Question[],
-    entityManager?: EntityManager,
-  ): Promise<void> {
+  async saveQuestions(questions: Question[]): Promise<void> {
     if (questions.length === 0) return;
     const questionEntities = this.mapQuestionsToEntities(questions);
-    const repository = this.getRepository(entityManager);
+    const repository = this.getRepository();
     await this.persistQuestions(repository, questionEntities);
   }
 
-  async findById(
-    id: string,
-    entityManager?: EntityManager,
-  ): Promise<Question | null> {
-    const repository = this.getRepository(entityManager);
+  async findById(id: string): Promise<Question | null> {
+    const repository = this.getRepository();
     const questionEntity = await repository.findOne({
       where: { id },
       relations: ['answers'],
@@ -46,11 +31,8 @@ export class QuestionRepositoryImpl implements QuestionRepository {
     return QuestionMapper.toDomain(questionEntity);
   }
 
-  async findByUserId(
-    userId: User['id'],
-    entityManager?: EntityManager,
-  ): Promise<Question[]> {
-    const repository = this.getRepository(entityManager);
+  async findByUserId(userId: User['id']): Promise<Question[]> {
+    const repository = this.getRepository();
     const questionEntities = await repository.find({
       where: { quizGenerationTask: { user: { id: userId } } },
       relations: ['answers'],
@@ -59,12 +41,9 @@ export class QuestionRepositoryImpl implements QuestionRepository {
     return questionEntities.map((entity) => QuestionMapper.toDomain(entity));
   }
 
-  async save(
-    question: Question,
-    entityManager?: EntityManager,
-  ): Promise<Question> {
+  async save(question: Question): Promise<Question> {
     const questionEntity = QuestionMapper.toPersistence(question);
-    const repository = this.getRepository(entityManager);
+    const repository = this.getRepository();
 
     const savedEntity = await repository.save(questionEntity);
 
@@ -84,14 +63,8 @@ export class QuestionRepositoryImpl implements QuestionRepository {
     return questions.map((question) => QuestionMapper.toPersistence(question));
   }
 
-  private getRepository(
-    entityManager?: EntityManager,
-  ): Repository<QuestionEntity> {
-    return entityManager || this.currentEntityManager
-      ? (entityManager || this.currentEntityManager!).getRepository(
-          QuestionEntity,
-        )
-      : this.questionRepository;
+  private getRepository(): Repository<QuestionEntity> {
+    return this.uowService.getManager().getRepository(QuestionEntity);
   }
 
   private async persistQuestions(

@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, EntityManager } from 'typeorm';
+import { Repository } from 'typeorm';
 import { QuizGenerationTaskRepositoryImpl } from './quiz-generation-task.repository';
 import { QuizGenerationTaskEntity } from '../entities/quiz-generation-task.entity';
 import { QuizGenerationTaskMapper } from '../mappers/quiz-generation-task.mapper';
@@ -132,8 +131,10 @@ describe('QuizGenerationTaskRepositoryImpl', () => {
       const entity = createMockEntity(task);
       QuizGenerationTaskMapper.toEntity = jest.fn().mockReturnValueOnce(entity);
 
-      // Mock the repository save method
-      mockRepository.save.mockResolvedValueOnce(entity);
+      // Mock the repository save method with proper typing
+      mockRepository.save.mockImplementation(() =>
+        Promise.resolve(entity as any),
+      );
 
       // Act
       await repository.saveTask(task);
@@ -150,6 +151,11 @@ describe('QuizGenerationTaskRepositoryImpl', () => {
       const task = createMockTask();
       const entity = createMockEntity(task);
       QuizGenerationTaskMapper.toEntity = jest.fn().mockReturnValueOnce(entity);
+
+      // Fix the type issue with mockResolvedValue
+      mockRepository.save.mockImplementation(() =>
+        Promise.resolve(entity as any),
+      );
 
       // Act
       const result = await repository.save(task);

@@ -131,12 +131,10 @@ export class QuizGenerationTasksService {
   private configureRepositoriesForTransaction(
     entityManager: EntityManager,
   ): void {
-    this.questionRepository.setEntityManager(entityManager);
     this.answerRepository.setEntityManager(entityManager);
   }
 
   private freeRepositoriesFromTransaction(): void {
-    this.questionRepository.setEntityManager(null);
     this.answerRepository.setEntityManager(null);
   }
 
