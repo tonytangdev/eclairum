@@ -52,7 +52,7 @@ export class OpenAILLMService implements LLMService {
           },
           {
             role: 'user',
-            content: `Generate ${count} quiz questions based on this text: "${text}"`,
+            content: `Generate ${count} quiz questions based on this text: ###${text}###`,
           },
         ],
         // temperature: 0.5,

@@ -219,16 +219,6 @@ export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProp
                   <dd>{formatDate(quiz.createdAt)}</dd>
                 </div>
 
-                {quiz.generatedAt && (
-                  <div className="flex items-start gap-2">
-                    <dt className="flex items-center gap-2 font-medium min-w-[120px]">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      Generated
-                    </dt>
-                    <dd>{formatDate(quiz.generatedAt)}</dd>
-                  </div>
-                )}
-
                 <div className="flex items-start gap-2">
                   <dt className="flex items-center gap-2 font-medium min-w-[120px]">
                     <Tag className="h-4 w-4 text-muted-foreground" />
