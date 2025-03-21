@@ -9,21 +9,13 @@ import {
   PaginationParams,
   PaginatedResult,
 } from '@eclairum/core/shared/pagination.interface';
+import { UnitOfWorkService } from '../../../../unit-of-work/unit-of-work.service';
 
 @Injectable()
 export class QuizGenerationTaskRepositoryImpl
   implements QuizGenerationTaskRepository
 {
-  private currentEntityManager?: EntityManager | null;
-
-  constructor(
-    @InjectRepository(QuizGenerationTaskEntity)
-    private readonly quizGenerationTaskRepository: Repository<QuizGenerationTaskEntity>,
-  ) {}
-
-  setEntityManager(entityManager: EntityManager | null): void {
-    this.currentEntityManager = entityManager;
-  }
+  constructor(private readonly uowService: UnitOfWorkService) {}
 
   /**
    * Implements the interface method to save a quiz generation task
@@ -42,9 +34,8 @@ export class QuizGenerationTaskRepositoryImpl
    */
   async save(
     quizGenerationTask: QuizGenerationTask,
-    entityManager?: EntityManager,
   ): Promise<QuizGenerationTask> {
-    const repo = this.getRepository(entityManager);
+    const repo = this.getRepository();
 
     const quizGenerationTaskEntity =
       QuizGenerationTaskMapper.toEntity(quizGenerationTask);
@@ -144,13 +135,7 @@ export class QuizGenerationTaskRepositoryImpl
     await repo.update({ id }, { deletedAt: new Date() });
   }
 
-  private getRepository(
-    entityManager?: EntityManager,
-  ): Repository<QuizGenerationTaskEntity> {
-    return entityManager || this.currentEntityManager
-      ? (entityManager || this.currentEntityManager!).getRepository(
-          QuizGenerationTaskEntity,
-        )
-      : this.quizGenerationTaskRepository;
+  private getRepository(): Repository<QuizGenerationTaskEntity> {
+    return this.uowService.getManager().getRepository(QuizGenerationTaskEntity);
   }
 }

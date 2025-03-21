@@ -133,13 +133,11 @@ export class QuizGenerationTasksService {
   ): void {
     this.questionRepository.setEntityManager(entityManager);
     this.answerRepository.setEntityManager(entityManager);
-    this.quizGenerationTaskRepository.setEntityManager(entityManager);
   }
 
   private freeRepositoriesFromTransaction(): void {
     this.questionRepository.setEntityManager(null);
     this.answerRepository.setEntityManager(null);
-    this.quizGenerationTaskRepository.setEntityManager(null);
   }
 
   private handleGetTaskError(

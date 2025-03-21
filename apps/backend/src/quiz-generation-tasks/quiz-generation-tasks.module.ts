@@ -15,6 +15,7 @@ import { TransactionHelper } from '../shared/helpers/transaction.helper';
 import { QuestionEntity } from '../questions/infrastructure/relational/entities/question.entity';
 import { AnswerEntity } from '../answers/infrastructure/relational/entities/answer.entity';
 import { UsersModule } from '../users/users.module';
+import { UnitOfWorkModule } from '../unit-of-work/unit-of-work.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { UsersModule } from '../users/users.module';
     QuestionsModule,
     AnswersModule,
     UsersModule,
+    UnitOfWorkModule,
   ],
   controllers: [QuizGenerationTasksController],
   providers: [

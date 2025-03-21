@@ -11,7 +11,10 @@ export class UnitOfWorkService {
   constructor(
     @InjectDataSource()
     private readonly dataSource: DataSource,
-  ) {}
+  ) {
+    // Initialize the manager in the constructor
+    this.manager = this.dataSource.manager;
+  }
 
   getManager(): EntityManager {
     return this.manager;
