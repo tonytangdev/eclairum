@@ -12,25 +12,30 @@ import {
   Tag,
   PlayCircle,
   Trash2,
+  Loader2,
 } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { formatDate } from "@/lib/dates"
 import { ClientPagination } from "@/components/pagination"
 import { Quiz, Question } from "../types"
 import QuestionItem from "./QuestionItem"
 import { StatusBadge } from "@/components/flash-cards/status-badge"
-
+import { deleteQuizGenerationTaskServer } from "../server-actions"
+import { toast } from "sonner"
 interface QuizDetailsClientProps {
   initialQuiz: Quiz;
 }
 
 export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProps) {
+  const router = useRouter()
   const [quiz, setQuiz] = useState<Quiz>(initialQuiz)
   const [currentPage, setCurrentPage] = useState(1)
   const questionsPerPage = 10
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null)
   const [editedQuestion, setEditedQuestion] = useState<Question | null>(null)
   const [openAccordionItem, setOpenAccordionItem] = useState<string>("")
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Question editing functions
   const startEditingQuestion = (question: Question) => {
@@ -83,6 +88,26 @@ export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProp
   const indexOfLastQuestion = currentPage * questionsPerPage
   const indexOfFirstQuestion = indexOfLastQuestion - questionsPerPage
   const currentQuestions = quiz.questions.slice(indexOfFirstQuestion, indexOfLastQuestion)
+
+  const handleDeleteQuiz = async () => {
+    setIsDeleting(true)
+
+    try {
+      const result = await deleteQuizGenerationTaskServer(quiz.id)
+
+      if (result.success) {
+        toast("Quiz deleted")
+        router.push("/flash-cards")
+      } else {
+        toast("Failed to delete quiz")
+      }
+    } catch (error) {
+      console.error("Failed to delete quiz:", error)
+      toast("Error")
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -224,26 +249,18 @@ export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProp
                 <PlayCircle className="mr-2 h-5 w-5" />
                 Start Quiz
               </Button>
-              {/* <Button
-                variant="outline"
-                className="w-full border-blue-200 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 py-5"
-              >
-                <PenLine className="mr-2 h-5 w-5" />
-                Edit Quiz
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full border-blue-200 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 py-5"
-              >
-                <Share2 className="mr-2 h-5 w-5" />
-                Share Quiz
-              </Button> */}
               <Button
                 variant="outline"
                 className="w-full bg-red-50 text-red-600 border-red-200 hover:bg-red-100 hover:text-red-700 transition-all duration-200 py-5"
+                disabled={isDeleting}
+                onClick={handleDeleteQuiz}
               >
-                <Trash2 className="mr-2 h-5 w-5" />
-                Delete Quiz
+                {isDeleting ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <Trash2 className="mr-2 h-5 w-5" />
+                )}
+                {isDeleting ? "Deleting..." : "Delete"}
               </Button>
             </CardContent>
           </Card>
