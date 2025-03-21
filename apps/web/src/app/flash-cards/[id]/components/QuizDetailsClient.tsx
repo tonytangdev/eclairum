@@ -3,27 +3,22 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionItem } from "@/components/ui/accordion"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  CheckCircle2,
   Clock,
-  HelpCircle,
-  AlertCircle,
   ArrowLeft,
   Calendar,
   Tag,
   PlayCircle,
-  // PenLine,
-  // Share2,
   Trash2,
 } from "lucide-react"
 import Link from "next/link"
 import { formatDate } from "@/lib/dates"
 import { ClientPagination } from "@/components/pagination"
-import { Quiz, Question, QuizGenerationStatus } from "../types"
+import { Quiz, Question } from "../types"
 import QuestionItem from "./QuestionItem"
+import { StatusBadge } from "@/components/flash-cards/status-badge"
 
 interface QuizDetailsClientProps {
   initialQuiz: Quiz;
@@ -36,37 +31,6 @@ export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProp
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null)
   const [editedQuestion, setEditedQuestion] = useState<Question | null>(null)
   const [openAccordionItem, setOpenAccordionItem] = useState<string>("")
-
-  // Status utilities
-  const getStatusIcon = (status: QuizGenerationStatus) => {
-    switch (status) {
-      case QuizGenerationStatus.COMPLETED:
-        return <CheckCircle2 className="h-4 w-4" />
-      case QuizGenerationStatus.IN_PROGRESS:
-        return <Clock className="h-4 w-4 animate-pulse" />
-      case QuizGenerationStatus.PENDING:
-        return <Clock className="h-4 w-4" />
-      case QuizGenerationStatus.FAILED:
-        return <AlertCircle className="h-4 w-4" />
-      default:
-        return <HelpCircle className="h-4 w-4" />
-    }
-  }
-
-  const getStatusColor = (status: QuizGenerationStatus) => {
-    switch (status) {
-      case QuizGenerationStatus.COMPLETED:
-        return "bg-green-500 text-white hover:bg-green-600"
-      case QuizGenerationStatus.IN_PROGRESS:
-        return "bg-amber-500 text-white hover:bg-amber-600"
-      case QuizGenerationStatus.PENDING:
-        return "bg-blue-500 text-white hover:bg-blue-600"
-      case QuizGenerationStatus.FAILED:
-        return "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-      default:
-        return "bg-muted text-muted-foreground"
-    }
-  }
 
   // Question editing functions
   const startEditingQuestion = (question: Question) => {
@@ -123,15 +87,10 @@ export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProp
   return (
     <div className="space-y-6">
       <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold tracking-tight">{quiz.title || "Untitled Quiz"}</h1>
-            <Badge className={getStatusColor(quiz.status)}>
-              <span className="flex items-center gap-1">
-                {getStatusIcon(quiz.status)}
-                {quiz.status}
-              </span>
-            </Badge>
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-3xl font-bold tracking-tight">{quiz.title || "Untitled"}</h1>
+            <StatusBadge status={quiz.status} />
           </div>
           <p className="text-muted-foreground">{quiz.category ? `Category: ${quiz.category}` : "No category"}</p>
         </div>
@@ -250,7 +209,7 @@ export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProp
                     <Tag className="h-4 w-4 text-muted-foreground" />
                     Category
                   </dt>
-                  <dd>{quiz.category || "Uncategorized"}</dd>
+                  <dd>{quiz.category || "No category"}</dd>
                 </div>
               </dl>
             </CardContent>
