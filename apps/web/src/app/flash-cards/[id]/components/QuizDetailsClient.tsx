@@ -146,7 +146,7 @@ export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProp
       <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
         <Card className="sm:col-span-1 md:col-span-2">
           <CardHeader>
-            <CardTitle>Quiz Details</CardTitle>
+            <CardTitle>Flash Card Details</CardTitle>
             <CardDescription>Review the generated quiz questions and answers</CardDescription>
           </CardHeader>
           <CardContent>
