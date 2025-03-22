@@ -24,28 +24,6 @@ jest.mock('../../questions/mappers/question.mapper', () => ({
 }));
 
 describe('QuizGenerationTaskMapper', () => {
-  /**
-   * Factory functions to create test data
-   */
-  const createTestAnswer = (
-    props: {
-      questionId?: string;
-      isCorrect?: boolean;
-    } = {},
-  ): Answer => {
-    const {
-      questionId = faker.string.uuid(),
-      isCorrect = faker.datatype.boolean(),
-    } = props;
-
-    return new Answer({
-      id: faker.string.uuid(),
-      content: faker.lorem.sentence(),
-      isCorrect,
-      questionId,
-    });
-  };
-
   const createTestQuestion = (
     props: {
       taskId?: string;
