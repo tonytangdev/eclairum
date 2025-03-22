@@ -52,7 +52,7 @@ export function useQuestionManagement(
 
   // Update an answer's content in the edited question
   const updateEditedAnswerContent = useCallback(
-    (answerId: string, content: string) => {
+    (answerId: string | number, content: string) => {
       setEditedQuestion((prev) => {
         if (!prev) return null;
         return {

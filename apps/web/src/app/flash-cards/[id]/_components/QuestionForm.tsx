@@ -29,7 +29,7 @@ interface QuestionFormProps {
     answers: Array<NewAnswer>;
   };
   onUpdateContent: (content: string) => void;
-  onUpdateAnswerContent: (answerId: string, content: string) => void;
+  onUpdateAnswerContent: (answerId: string | number, content: string) => void;
   onUpdateCorrectAnswer: (answerId: string) => void;
   onSave: () => void;
   onCancel: () => void;
