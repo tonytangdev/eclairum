@@ -1,6 +1,5 @@
 import { User } from "../entities";
 import { QuizGenerationTask } from "../entities/quiz-generation-task";
-import { Question } from "../entities/question";
 import {
   PaginationParams,
   PaginatedResult,
