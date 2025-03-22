@@ -16,6 +16,7 @@ describe('QuizGenerationTasksController', () => {
     createTask: jest.Mock;
     fetchTasksByUserId: jest.Mock;
     getTaskById: jest.Mock;
+    deleteTask: jest.Mock;
   };
 
   // Test data generators
@@ -65,6 +66,7 @@ describe('QuizGenerationTasksController', () => {
       createTask: jest.fn(),
       fetchTasksByUserId: jest.fn(),
       getTaskById: jest.fn(),
+      deleteTask: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -237,6 +239,50 @@ describe('QuizGenerationTasksController', () => {
       await expect(
         controller.getQuizGenerationTask(taskId, { userId }),
       ).rejects.toThrow(errorMessage);
+    });
+  });
+
+  describe('deleteQuizGenerationTask', () => {
+    it('should successfully delete a quiz generation task', async () => {
+      // Given
+      const taskId = faker.string.uuid();
+      const userId = generateUserId();
+      const expectedResponse = { success: true };
+      serviceMock.deleteTask.mockResolvedValue(expectedResponse);
+
+      // When
+      const result = await controller.deleteQuizGenerationTask(taskId, {
+        userId,
+      });
+
+      // Then
+      expect(serviceMock.deleteTask).toHaveBeenCalledWith(taskId, userId);
+      expect(result).toEqual(expectedResponse);
+    });
+
+    it('should propagate errors when deleting a task', async () => {
+      // Given
+      const taskId = faker.string.uuid();
+      const userId = generateUserId();
+      const errorMessage = 'Failed to delete task';
+      serviceMock.deleteTask.mockRejectedValue(new Error(errorMessage));
+
+      // When/Then
+      await expect(
+        controller.deleteQuizGenerationTask(taskId, { userId }),
+      ).rejects.toThrow(errorMessage);
+    });
+
+    it('should use HTTP 200 OK status code', () => {
+      // Given/When
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const httpCodeMetadata = Reflect.getMetadata(
+        '__httpCode__',
+        controller.deleteQuizGenerationTask,
+      );
+
+      // Then
+      expect(httpCodeMetadata).toBe(HttpStatus.OK);
     });
   });
 });
