@@ -29,8 +29,8 @@ interface QuestionFormProps {
     answers: Array<NewAnswer>;
   };
   onUpdateContent: (content: string) => void;
-  onUpdateAnswerContent: (identifierOrIndex: string | number, content: string) => void;
-  onUpdateCorrectAnswer: (identifierOrIndex: string | number) => void;
+  onUpdateAnswerContent: (answerId: string, content: string) => void;
+  onUpdateCorrectAnswer: (answerId: string) => void;
   onSave: () => void;
   onCancel: () => void;
   isSubmitting?: boolean;
