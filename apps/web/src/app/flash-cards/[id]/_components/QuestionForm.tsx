@@ -119,7 +119,7 @@ export default function QuestionForm({
                 (question.answers.find(a => a.isCorrect) as Answer).id : '')
             }
             onValueChange={onUpdateCorrectAnswer}
-            className="divide-y divide-gray-200 dark:divide-gray-700"
+            className="divide-y divide-gray-200 dark:divide-gray-700 gap-0"
           >
             {question.answers.map((answer, index) => {
               const answerId = hasId(answer) ? answer.id : `answer-${index}`;
