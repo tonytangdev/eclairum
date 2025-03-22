@@ -7,6 +7,7 @@ import {
   Body,
   ParseIntPipe,
   Optional,
+  Param,
 } from '@nestjs/common';
 import { QuestionsService } from './services/questions.service';
 import { EditQuestionDto } from './dto/edit-question.dto'; // Import the new DTO
@@ -38,9 +39,13 @@ export class QuestionsController {
     );
   }
 
-  @Put()
-  async editQuestion(@Body() editQuestionDto: EditQuestionDto) {
-    const { userId, questionId, questionContent } = editQuestionDto;
+  @Put(':questionId')
+  async editQuestion(
+    @Body() editQuestionDto: EditQuestionDto,
+    @Param('questionId') questionId: string,
+  ) {
+    const { userId, questionContent } = editQuestionDto;
+
     return this.questionsService.editQuestion(
       userId,
       questionId,

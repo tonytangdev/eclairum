@@ -9,7 +9,6 @@ import { Question, Answer } from "../types"
 import { cn } from "@/lib/utils"
 import { editQuestion } from "../_actions/edit-question"
 
-
 // Represents an answer in a new question that doesn't have an ID yet
 interface NewAnswer {
   content: string;
@@ -27,6 +26,7 @@ function hasId(answer: AnswerWithOptionalId): answer is Answer {
 interface QuestionFormProps {
   mode: 'edit' | 'create';
   question: Question | {
+    id?: string;
     content: string;
     answers: Array<NewAnswer>;
   };
@@ -59,8 +59,14 @@ export default function QuestionForm({
     if (isCreate) {
       onSave();
     } else {
-      const { id, content } = question as Question;
-      const response = await editQuestion({ userId: "user-id-placeholder", questionId: id, questionContent: content });
+      const { id, content, answers } = question as Question;
+      const editAnswerDtos = answers.map(answer => ({
+        id: answer.id,
+        userId: "user-id-placeholder",
+        answerContent: answer.content,
+        isCorrect: answer.isCorrect,
+      }));
+      const response = await editQuestion({ userId: "user-id-placeholder", questionId: id, questionContent: content }, editAnswerDtos);
       if (response.success) {
         onSave();
       } else {

@@ -13,14 +13,6 @@ export class EditQuestionDto {
   userId: string;
 
   /**
-   * The ID of the question being edited
-   * @example "question-123"
-   */
-  @IsString({ message: 'Question ID must be a string' })
-  @IsNotEmpty({ message: 'Question ID is required' })
-  questionId: string;
-
-  /**
    * The new content of the question
    * @example "What is the capital of France?"
    */

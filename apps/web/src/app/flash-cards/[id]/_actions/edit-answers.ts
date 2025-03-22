@@ -3,9 +3,8 @@
 import { serverApi } from "@/lib/api";
 import { auth } from "@clerk/nextjs/server";
 import { AxiosError } from "axios";
-import { Question } from "../types";
-import { EditQuestionDto } from "@eclairum/backend/dtos";
-import { editAnswers } from "./edit-answers";
+import { Answer } from "../types";
+import { EditAnswerDto } from "@eclairum/backend/dtos";
 
 interface ApiResponse<T> {
   data: T | null;
@@ -13,25 +12,21 @@ interface ApiResponse<T> {
   success: boolean;
 }
 
+interface EditAnswerRequest extends EditAnswerDto {
+  id: string;
+}
+
 /**
- * Server action that edits an existing question and its answers
+ * Server action that edits existing answers
  */
-export async function editQuestion(
-  request: EditQuestionDto,
-  answers: {
-    id: string;
-    userId: string;
-    answerContent: string;
-    isCorrect: boolean;
-  }[],
-): Promise<ApiResponse<Question>> {
+export async function editAnswers(
+  answers: EditAnswerRequest[],
+): Promise<ApiResponse<Answer[]>> {
   try {
     const { userId } = await auth();
 
-    const { questionId, questionContent } = request;
-
     // Input validation
-    if (!userId || !questionId || !questionContent) {
+    if (!userId || answers.length === 0) {
       return {
         data: null,
         metadata: {
@@ -41,19 +36,32 @@ export async function editQuestion(
       };
     }
 
-    // Use serverApi instead of fetch
-    const response = await serverApi.put(`/questions/${questionId}`, {
-      userId,
-      questionContent,
-    });
+    const updatedAnswers: Answer[] = [];
+    for (const answer of answers) {
+      const { id, answerContent, isCorrect } = answer;
 
-    // Call editAnswers to save the answers
-    await editAnswers(answers);
+      // Input validation
+      if (!id || !answerContent) {
+        throw new Error("Missing required fields");
+      }
 
-    // Axios directly returns the data from the response
-    return response.data;
+      // Use serverApi instead of fetch
+      const response = await serverApi.put(`/answers/${id}`, {
+        userId,
+        answerContent,
+        isCorrect,
+      });
+
+      updatedAnswers.push(response.data);
+    }
+
+    return {
+      data: updatedAnswers,
+      metadata: {},
+      success: true,
+    };
   } catch (error: unknown) {
-    console.error("Error editing question:", error);
+    console.error("Error editing answers:", error);
 
     // Enhanced error handling with proper type checking
     let errorMessage = "Unknown error occurred";
@@ -65,8 +73,6 @@ export async function editQuestion(
       // Handle standard Error object
       errorMessage = error.message;
     }
-
-    console.error("Error editing question:", errorMessage);
 
     return {
       data: null,

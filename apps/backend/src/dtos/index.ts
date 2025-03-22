@@ -4,3 +4,4 @@ export * from '../quiz-generation-tasks/dto/fetch-quiz-generation-tasks.response
 export * from '../quiz-generation-tasks/dto/fetch-quiz-generation-task.response.dto';
 export * from '../users/dto/create-user.dto';
 export * from '../questions/dto/edit-question.dto';
+export * from '../answers/dto/edit-answer.dto';
