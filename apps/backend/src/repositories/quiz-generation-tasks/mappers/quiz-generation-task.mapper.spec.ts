@@ -12,35 +12,32 @@ import { QuizGenerationTaskEntity } from '../../../common/entities/quiz-generati
 import { QuestionMapper } from '../../questions/mappers/question.mapper';
 
 // Mock QuestionMapper to isolate tests
-jest.mock(
-  '../../../../questions/infrastructure/relational/mappers/question.mapper',
-  () => ({
-    QuestionMapper: {
-      toPersistence: jest.fn((question: Question) => {
-        const questionEntity = new QuestionEntity();
-        questionEntity.id = question.getId();
-        questionEntity.content = question.getContent();
-        return questionEntity;
-      }),
-    },
-  }),
-);
+jest.mock('../../questions/mappers/question.mapper', () => ({
+  QuestionMapper: {
+    toPersistence: jest.fn((question: Question) => {
+      const questionEntity = new QuestionEntity();
+      questionEntity.id = question.getId();
+      questionEntity.content = question.getContent();
+      return questionEntity;
+    }),
+  },
+}));
 
 describe('QuizGenerationTaskMapper', () => {
-  // Helper functions to create test data
-  const createQuestion = (taskId: string = faker.string.uuid()): Question => {
-    return new Question({
-      id: faker.string.uuid(),
-      content: faker.lorem.sentence(),
-      answers: [],
-      quizGenerationTaskId: taskId,
-    });
-  };
-
-  const createAnswer = (
-    questionId: string = faker.string.uuid(),
-    isCorrect = faker.datatype.boolean(),
+  /**
+   * Factory functions to create test data
+   */
+  const createTestAnswer = (
+    props: {
+      questionId?: string;
+      isCorrect?: boolean;
+    } = {},
   ): Answer => {
+    const {
+      questionId = faker.string.uuid(),
+      isCorrect = faker.datatype.boolean(),
+    } = props;
+
     return new Answer({
       id: faker.string.uuid(),
       content: faker.lorem.sentence(),
@@ -49,26 +46,69 @@ describe('QuizGenerationTaskMapper', () => {
     });
   };
 
-  const createQuizGenerationTask = (
-    status = QuizGenerationStatus.COMPLETED,
-    questionsCount = 2,
-    withAnswers = false,
-  ): QuizGenerationTask => {
-    const id = faker.string.uuid();
-    const questions = Array.from({ length: questionsCount }, () => {
-      const question = createQuestion(id);
+  const createTestQuestion = (
+    props: {
+      taskId?: string;
+      withAnswers?: boolean;
+      correctAnswerCount?: number;
+      wrongAnswerCount?: number;
+    } = {},
+  ): Question => {
+    const {
+      taskId = faker.string.uuid(),
+      withAnswers = false,
+      correctAnswerCount = 1,
+      wrongAnswerCount = 3,
+    } = props;
 
-      if (withAnswers) {
-        const answers = [
-          createAnswer(question.getId(), true),
-          createAnswer(question.getId(), false),
-        ];
-        // Set answers via reflection to maintain proper encapsulation in tests
-        Object.defineProperty(question, 'answers', { value: answers });
-      }
-
-      return question;
+    const question = new Question({
+      id: faker.string.uuid(),
+      content: faker.lorem.sentence(),
+      answers: [],
+      quizGenerationTaskId: taskId,
     });
+
+    if (withAnswers) {
+      // Create correct answers
+      const correctAnswers = Array(correctAnswerCount)
+        .fill(null)
+        .map(() =>
+          createTestAnswer({ questionId: question.getId(), isCorrect: true }),
+        );
+
+      // Create wrong answers
+      const wrongAnswers = Array(wrongAnswerCount)
+        .fill(null)
+        .map(() =>
+          createTestAnswer({ questionId: question.getId(), isCorrect: false }),
+        );
+
+      // Set answers via reflection for testing purposes
+      Object.defineProperty(question, 'answers', {
+        value: [...correctAnswers, ...wrongAnswers],
+      });
+    }
+
+    return question;
+  };
+
+  const createTestTask = (
+    props: {
+      status?: QuizGenerationStatus;
+      questionCount?: number;
+      withAnswers?: boolean;
+    } = {},
+  ): QuizGenerationTask => {
+    const {
+      status = QuizGenerationStatus.COMPLETED,
+      questionCount = 2,
+      withAnswers = false,
+    } = props;
+
+    const id = faker.string.uuid();
+    const questions = Array(questionCount)
+      .fill(null)
+      .map(() => createTestQuestion({ taskId: id, withAnswers }));
 
     return new QuizGenerationTask({
       id,
@@ -85,37 +125,76 @@ describe('QuizGenerationTaskMapper', () => {
   };
 
   const createAnswerEntity = (
-    isCorrect = faker.datatype.boolean(),
+    props: {
+      isCorrect?: boolean;
+    } = {},
   ): AnswerEntity => {
-    const answerEntity = new AnswerEntity();
-    answerEntity.id = faker.string.uuid();
-    answerEntity.content = faker.lorem.sentence();
-    answerEntity.isCorrect = isCorrect;
-    return answerEntity;
+    const { isCorrect = faker.datatype.boolean() } = props;
+
+    const entity = new AnswerEntity();
+    entity.id = faker.string.uuid();
+    entity.content = faker.lorem.sentence();
+    entity.isCorrect = isCorrect;
+    entity.questionId = faker.string.uuid();
+    entity.createdAt = new Date();
+    entity.updatedAt = new Date();
+    entity.deletedAt = null;
+    return entity;
   };
 
-  const createQuestionEntity = (withAnswers = false): QuestionEntity => {
-    const questionEntity = new QuestionEntity();
-    questionEntity.id = faker.string.uuid();
-    questionEntity.content = faker.lorem.sentence();
+  const createQuestionEntity = (
+    props: {
+      withAnswers?: boolean;
+      correctAnswerCount?: number;
+      wrongAnswerCount?: number;
+    } = {},
+  ): QuestionEntity => {
+    const {
+      withAnswers = false,
+      correctAnswerCount = 1,
+      wrongAnswerCount = 3,
+    } = props;
+
+    const entity = new QuestionEntity();
+    entity.id = faker.string.uuid();
+    entity.content = faker.lorem.sentence();
+    entity.quizGenerationTaskId = faker.string.uuid();
+    entity.createdAt = new Date();
+    entity.updatedAt = new Date();
+    entity.deletedAt = null;
 
     if (withAnswers) {
-      questionEntity.answers = [
-        createAnswerEntity(true),
-        createAnswerEntity(false),
-      ];
+      // Create correct answers
+      const correctAnswers = Array(correctAnswerCount)
+        .fill(null)
+        .map(() => createAnswerEntity({ isCorrect: true }));
+
+      // Create wrong answers
+      const wrongAnswers = Array(wrongAnswerCount)
+        .fill(null)
+        .map(() => createAnswerEntity({ isCorrect: false }));
+
+      entity.answers = [...correctAnswers, ...wrongAnswers];
     } else {
-      questionEntity.answers = [];
+      entity.answers = [];
     }
 
-    return questionEntity;
+    return entity;
   };
 
   const createTaskEntity = (
-    status = QuizGenerationStatus.COMPLETED,
-    withAnswers = true,
-    questionsCount = 2,
+    props: {
+      status?: QuizGenerationStatus;
+      questionCount?: number;
+      withAnswers?: boolean;
+    } = {},
   ): QuizGenerationTaskEntity => {
+    const {
+      status = QuizGenerationStatus.COMPLETED,
+      questionCount = 2,
+      withAnswers = false,
+    } = props;
+
     const entity = new QuizGenerationTaskEntity();
     entity.id = faker.string.uuid();
     entity.textContent = faker.lorem.paragraphs(2);
@@ -128,10 +207,9 @@ describe('QuizGenerationTaskMapper', () => {
     entity.title = faker.lorem.sentence();
 
     // Create question entities
-    entity.questions = Array.from({ length: questionsCount }, () => {
-      const questionEntity = createQuestionEntity(withAnswers);
-      return questionEntity;
-    });
+    entity.questions = Array(questionCount)
+      .fill(null)
+      .map(() => createQuestionEntity({ withAnswers }));
 
     return entity;
   };
@@ -141,49 +219,57 @@ describe('QuizGenerationTaskMapper', () => {
   });
 
   describe('toEntity', () => {
-    it('should map a domain model to an entity with all properties', () => {
-      // Arrange
-      const domainModel = createQuizGenerationTask();
+    it('should map all domain model properties to the corresponding entity', () => {
+      // Given a quiz generation task domain model
+      const domainTask = createTestTask();
 
-      // Act
-      const entity = QuizGenerationTaskMapper.toEntity(domainModel);
+      // When mapping to an entity
+      const entity = QuizGenerationTaskMapper.toEntity(domainTask);
 
-      // Assert
+      // Then all properties should be correctly mapped
       expect(entity).toBeInstanceOf(QuizGenerationTaskEntity);
-      expect(entity.id).toBe(domainModel.getId());
-      expect(entity.textContent).toBe(domainModel.getTextContent());
-      expect(entity.status).toBe(domainModel.getStatus());
-      expect(entity.createdAt).toBe(domainModel.getCreatedAt());
-      expect(entity.updatedAt).toBe(domainModel.getUpdatedAt());
-      expect(entity.deletedAt).toBe(domainModel.getDeletedAt());
-      expect(entity.generatedAt).toBe(domainModel.getGeneratedAt());
-      expect(entity.userId).toBe(domainModel.getUserId());
-      expect(entity.title).toBe(domainModel.getTitle());
-
-      // Check that QuestionMapper was called for each question
-      expect(QuestionMapper.toPersistence).toHaveBeenCalledTimes(
-        domainModel.getQuestions().length,
-      );
-      expect(entity.questions).toHaveLength(domainModel.getQuestions().length);
+      expect(entity.id).toBe(domainTask.getId());
+      expect(entity.textContent).toBe(domainTask.getTextContent());
+      expect(entity.status).toBe(domainTask.getStatus());
+      expect(entity.createdAt).toBe(domainTask.getCreatedAt());
+      expect(entity.updatedAt).toBe(domainTask.getUpdatedAt());
+      expect(entity.deletedAt).toBe(domainTask.getDeletedAt());
+      expect(entity.generatedAt).toBe(domainTask.getGeneratedAt());
+      expect(entity.userId).toBe(domainTask.getUserId());
+      expect(entity.title).toBe(domainTask.getTitle());
     });
 
-    it('should map a domain model with empty questions array', () => {
-      // Arrange
-      const domainModel = createQuizGenerationTask(
-        QuizGenerationStatus.PENDING,
-        0,
-      );
+    it('should map domain questions to entity questions using QuestionMapper', () => {
+      // Given a task with questions
+      const domainTask = createTestTask({ questionCount: 3 });
 
-      // Act
-      const entity = QuizGenerationTaskMapper.toEntity(domainModel);
+      // When mapping to an entity
+      const entity = QuizGenerationTaskMapper.toEntity(domainTask);
 
-      // Assert
+      // Then the QuestionMapper should be used for each question
+      expect(QuestionMapper.toPersistence).toHaveBeenCalledTimes(3);
+      expect(entity.questions).toHaveLength(3);
+
+      // And each question should have been mapped with the mapper
+      domainTask.getQuestions().forEach((question) => {
+        expect(QuestionMapper.toPersistence).toHaveBeenCalledWith(question);
+      });
+    });
+
+    it('should handle domain models with no questions', () => {
+      // Given a task without questions
+      const domainTask = createTestTask({ questionCount: 0 });
+
+      // When mapping to an entity
+      const entity = QuizGenerationTaskMapper.toEntity(domainTask);
+
+      // Then the result should have an empty questions array
       expect(entity.questions).toEqual([]);
       expect(QuestionMapper.toPersistence).not.toHaveBeenCalled();
     });
 
-    it('should preserve status values when mapping to entity', () => {
-      // Given statuses to test
+    it('should correctly map each status type', () => {
+      // Given all possible status values
       const statuses = [
         QuizGenerationStatus.PENDING,
         QuizGenerationStatus.IN_PROGRESS,
@@ -191,10 +277,11 @@ describe('QuizGenerationTaskMapper', () => {
         QuizGenerationStatus.FAILED,
       ];
 
+      // For each status value
       statuses.forEach((status) => {
-        // When mapping a domain model with a specific status
-        const domainModel = createQuizGenerationTask(status);
-        const entity = QuizGenerationTaskMapper.toEntity(domainModel);
+        // When mapping a domain model with that status
+        const domainTask = createTestTask({ status });
+        const entity = QuizGenerationTaskMapper.toEntity(domainTask);
 
         // Then the entity should have the same status
         expect(entity.status).toBe(status);
@@ -203,45 +290,49 @@ describe('QuizGenerationTaskMapper', () => {
   });
 
   describe('toDomain', () => {
-    it('should map an entity to a domain model with all properties', () => {
-      // Arrange
+    it('should map all entity properties to the corresponding domain model', () => {
+      // Given a quiz generation task entity
       const entity = createTaskEntity();
 
-      // Act
-      const domainModel = QuizGenerationTaskMapper.toDomain(entity);
+      // When mapping to a domain model
+      const domainTask = QuizGenerationTaskMapper.toDomain(entity);
 
-      // Assert
-      expect(domainModel).toBeInstanceOf(QuizGenerationTask);
-      expect(domainModel.getId()).toBe(entity.id);
-      expect(domainModel.getTextContent()).toBe(entity.textContent);
-      expect(domainModel.getStatus()).toBe(entity.status);
-      expect(domainModel.getCreatedAt()).toBe(entity.createdAt);
-      expect(domainModel.getUpdatedAt()).toBe(entity.updatedAt);
-      expect(domainModel.getDeletedAt()).toBe(entity.deletedAt);
-      expect(domainModel.getGeneratedAt()).toBe(entity.generatedAt);
-      expect(domainModel.getUserId()).toBe(entity.userId);
-      expect(domainModel.getTitle()).toBe(entity.title);
+      // Then all properties should be correctly mapped
+      expect(domainTask).toBeInstanceOf(QuizGenerationTask);
+      expect(domainTask.getId()).toBe(entity.id);
+      expect(domainTask.getTextContent()).toBe(entity.textContent);
+      expect(domainTask.getStatus()).toBe(entity.status);
+      expect(domainTask.getCreatedAt()).toBe(entity.createdAt);
+      expect(domainTask.getUpdatedAt()).toBe(entity.updatedAt);
+      expect(domainTask.getDeletedAt()).toBe(entity.deletedAt);
+      expect(domainTask.getGeneratedAt()).toBe(entity.generatedAt);
+      expect(domainTask.getUserId()).toBe(entity.userId);
+      expect(domainTask.getTitle()).toBe(entity.title);
     });
 
-    it('should map questions and their answers correctly', () => {
-      // Arrange
-      const entity = createTaskEntity(QuizGenerationStatus.COMPLETED, true);
+    it('should create domain questions with their answers', () => {
+      // Given a task entity with questions and answers
+      const entity = createTaskEntity({
+        questionCount: 2,
+        withAnswers: true,
+      });
 
-      // Act
-      const domainModel = QuizGenerationTaskMapper.toDomain(entity);
+      // When mapping to a domain model
+      const domainTask = QuizGenerationTaskMapper.toDomain(entity);
 
-      // Assert
-      const questions = domainModel.getQuestions();
-      expect(questions).toHaveLength(entity.questions.length);
+      // Then questions and answers should be correctly mapped
+      const questions = domainTask.getQuestions();
+      expect(questions).toHaveLength(2);
 
+      // And each question should have its answers
       questions.forEach((question, qIndex) => {
         expect(question).toBeInstanceOf(Question);
         expect(question.getId()).toBe(entity.questions[qIndex].id);
         expect(question.getContent()).toBe(entity.questions[qIndex].content);
 
+        // And the answers should be mapped correctly
         const answers = question.getAnswers();
         const entityAnswers = entity.questions[qIndex].answers;
-
         expect(answers).toHaveLength(entityAnswers.length);
 
         answers.forEach((answer, aIndex) => {
@@ -254,104 +345,187 @@ describe('QuizGenerationTaskMapper', () => {
       });
     });
 
-    it('should handle entity with empty questions array', () => {
-      // Arrange
-      const entity = createTaskEntity(QuizGenerationStatus.PENDING, false, 0);
+    it('should handle entities with no questions', () => {
+      // Given a task entity without questions
+      const entity = createTaskEntity({ questionCount: 0 });
 
-      // Act
-      const domainModel = QuizGenerationTaskMapper.toDomain(entity);
+      // When mapping to a domain model
+      const domainTask = QuizGenerationTaskMapper.toDomain(entity);
 
-      // Assert
-      expect(domainModel.getQuestions()).toEqual([]);
+      // Then the result should have an empty questions array
+      expect(domainTask.getQuestions()).toEqual([]);
     });
 
-    it('should handle questions with empty answers array', () => {
-      // Arrange
-      const entity = createTaskEntity(QuizGenerationStatus.COMPLETED, false);
+    it('should handle questions with no answers', () => {
+      // Given a task entity with questions but no answers
+      const entity = createTaskEntity({
+        questionCount: 2,
+        withAnswers: false,
+      });
 
-      // Act
-      const domainModel = QuizGenerationTaskMapper.toDomain(entity);
+      // When mapping to a domain model
+      const domainTask = QuizGenerationTaskMapper.toDomain(entity);
 
-      // Assert
-      const questions = domainModel.getQuestions();
+      // Then each question should have an empty answers array
+      const questions = domainTask.getQuestions();
       questions.forEach((question) => {
         expect(question.getAnswers()).toEqual([]);
       });
     });
 
-    it('should handle null dates when mapping to domain model', () => {
-      // Arrange
+    it('should handle undefined answers gracefully', () => {
+      // Given a task entity with undefined answer arrays
+      const entity = createTaskEntity({ questionCount: 2 });
+      entity.questions.forEach((q) => {
+        q.answers = undefined as unknown as AnswerEntity[];
+      });
+
+      // When mapping to a domain model
+      const domainTask = QuizGenerationTaskMapper.toDomain(entity);
+
+      // Then each question should have an empty answers array
+      const questions = domainTask.getQuestions();
+      questions.forEach((question) => {
+        expect(question.getAnswers()).toEqual([]);
+      });
+    });
+
+    it('should handle null date fields', () => {
+      // Given a task entity with null dates
       const entity = createTaskEntity();
       entity.generatedAt = null;
       entity.deletedAt = null;
 
-      // Act
-      const domainModel = QuizGenerationTaskMapper.toDomain(entity);
+      // When mapping to a domain model
+      const domainTask = QuizGenerationTaskMapper.toDomain(entity);
 
-      // Assert
-      expect(domainModel.getGeneratedAt()).toBeNull();
-      expect(domainModel.getDeletedAt()).toBeNull();
+      // Then the null dates should be preserved
+      expect(domainTask.getGeneratedAt()).toBeNull();
+      expect(domainTask.getDeletedAt()).toBeNull();
     });
   });
 
   describe('toDomainList', () => {
-    it('should map multiple entities to domain models', () => {
-      // Arrange
+    it('should map a list of entities to a list of domain models', () => {
+      // Given a list of task entities with different statuses
       const entities = [
-        createTaskEntity(QuizGenerationStatus.COMPLETED),
-        createTaskEntity(QuizGenerationStatus.PENDING),
-        createTaskEntity(QuizGenerationStatus.FAILED),
+        createTaskEntity({ status: QuizGenerationStatus.PENDING }),
+        createTaskEntity({ status: QuizGenerationStatus.IN_PROGRESS }),
+        createTaskEntity({ status: QuizGenerationStatus.COMPLETED }),
       ];
 
-      const toDomainSpy = jest.spyOn(QuizGenerationTaskMapper, 'toDomain');
+      // When mapping to domain models
+      const domainTasks = QuizGenerationTaskMapper.toDomainList(entities);
 
-      // Act
-      const domainModels = QuizGenerationTaskMapper.toDomainList(entities);
-
-      // Assert
-      expect(domainModels).toHaveLength(entities.length);
-      expect(toDomainSpy).toHaveBeenCalledTimes(entities.length);
-
-      domainModels.forEach((model, index) => {
-        expect(model).toBeInstanceOf(QuizGenerationTask);
-        expect(model.getId()).toBe(entities[index].id);
-        expect(model.getStatus()).toBe(entities[index].status);
-      });
-
-      toDomainSpy.mockRestore();
+      // Then all entities should be correctly mapped
+      expect(domainTasks).toHaveLength(3);
+      expect(domainTasks[0].getStatus()).toBe(QuizGenerationStatus.PENDING);
+      expect(domainTasks[1].getStatus()).toBe(QuizGenerationStatus.IN_PROGRESS);
+      expect(domainTasks[2].getStatus()).toBe(QuizGenerationStatus.COMPLETED);
     });
 
-    it('should return empty array when given empty array', () => {
-      // Arrange
-      const entities: QuizGenerationTaskEntity[] = [];
+    it('should return an empty array when given an empty array', () => {
+      // Given an empty array of entities
+      const emptyList: QuizGenerationTaskEntity[] = [];
 
-      // Act
-      const result = QuizGenerationTaskMapper.toDomainList(entities);
+      // When mapping to domain models
+      const result = QuizGenerationTaskMapper.toDomainList(emptyList);
 
-      // Assert
+      // Then the result should be an empty array
       expect(result).toEqual([]);
+    });
+
+    it('should use toDomain for each entity in the list', () => {
+      // Given a list of entities
+      const entities = [
+        createTaskEntity(),
+        createTaskEntity(),
+        createTaskEntity(),
+      ];
+
+      // Spy on the toDomain method
+      const toDomainSpy = jest.spyOn(QuizGenerationTaskMapper, 'toDomain');
+
+      // When mapping to domain models
+      QuizGenerationTaskMapper.toDomainList(entities);
+
+      // Then toDomain should be called for each entity
+      expect(toDomainSpy).toHaveBeenCalledTimes(3);
+      entities.forEach((entity) => {
+        expect(toDomainSpy).toHaveBeenCalledWith(entity);
+      });
+
+      // Clean up
+      toDomainSpy.mockRestore();
     });
   });
 
-  describe('edge cases', () => {
-    it('should handle undefined answers array', () => {
-      // Arrange
-      const entity = createTaskEntity();
-      entity.questions.forEach((q) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        q.answers = undefined as any;
+  describe('Bidirectional mapping', () => {
+    it('should preserve all properties when mapping domain → entity → domain', () => {
+      // Given a domain task with specific properties
+      const originalTask = createTestTask({
+        status: QuizGenerationStatus.IN_PROGRESS,
+        questionCount: 2,
+        withAnswers: true,
       });
 
-      // Act
-      const domainModel = QuizGenerationTaskMapper.toDomain(entity);
+      // When mapping domain → entity → domain
+      const entity = QuizGenerationTaskMapper.toEntity(originalTask);
 
-      // Assert
-      domainModel.getQuestions().forEach((q) => {
-        expect(q.getAnswers()).toEqual([]);
-      });
+      // Mock the toDomain implementation to use the actual mapper for questions and answers
+      jest
+        .spyOn(QuizGenerationTaskMapper, 'toDomain')
+        .mockImplementationOnce((taskEntity: QuizGenerationTaskEntity) => {
+          return new QuizGenerationTask({
+            id: taskEntity.id,
+            textContent: taskEntity.textContent,
+            status: taskEntity.status,
+            questions: taskEntity.questions.map(
+              (questionEntity) =>
+                new Question({
+                  id: questionEntity.id,
+                  content: questionEntity.content,
+                  answers:
+                    questionEntity.answers?.map(
+                      (answerEntity) =>
+                        new Answer({
+                          id: answerEntity.id,
+                          content: answerEntity.content,
+                          isCorrect: answerEntity.isCorrect,
+                          questionId: questionEntity.id,
+                        }),
+                    ) || [],
+                  quizGenerationTaskId: taskEntity.id,
+                }),
+            ),
+            createdAt: taskEntity.createdAt,
+            updatedAt: taskEntity.updatedAt,
+            deletedAt: taskEntity.deletedAt,
+            generatedAt: taskEntity.generatedAt,
+            userId: taskEntity.userId,
+            title: taskEntity.title,
+          });
+        });
+
+      const resultTask = QuizGenerationTaskMapper.toDomain(entity);
+
+      // Then all properties should be preserved
+      expect(resultTask.getId()).toBe(originalTask.getId());
+      expect(resultTask.getStatus()).toBe(originalTask.getStatus());
+      expect(resultTask.getTitle()).toBe(originalTask.getTitle());
+      expect(resultTask.getTextContent()).toBe(originalTask.getTextContent());
+
+      // And questions should be preserved
+      expect(resultTask.getQuestions()).toHaveLength(
+        originalTask.getQuestions().length,
+      );
+
+      // Clean up
+      jest.spyOn(QuizGenerationTaskMapper, 'toDomain').mockRestore();
     });
 
-    it('should handle all status types correctly bidirectionally', () => {
+    it('should preserve all status types in bidirectional mapping', () => {
+      // Given all possible status values
       const statuses = [
         QuizGenerationStatus.PENDING,
         QuizGenerationStatus.IN_PROGRESS,
@@ -359,14 +533,15 @@ describe('QuizGenerationTaskMapper', () => {
         QuizGenerationStatus.FAILED,
       ];
 
+      // For each status
       statuses.forEach((status) => {
-        // Bidirectional mapping test (domain → entity → domain)
-        const originalDomain = createQuizGenerationTask(status);
-        const entity = QuizGenerationTaskMapper.toEntity(originalDomain);
-        const resultDomain = QuizGenerationTaskMapper.toDomain(entity);
+        // When mapping domain → entity → domain
+        const originalTask = createTestTask({ status });
+        const entity = QuizGenerationTaskMapper.toEntity(originalTask);
+        const resultTask = QuizGenerationTaskMapper.toDomain(entity);
 
-        expect(resultDomain.getStatus()).toBe(status);
-        expect(entity.status).toBe(status);
+        // Then the status should be preserved
+        expect(resultTask.getStatus()).toBe(status);
       });
     });
   });

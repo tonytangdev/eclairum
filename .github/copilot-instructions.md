@@ -63,6 +63,7 @@ Apply the "Boy Scout Rule" - leave code better than you found it
 - Always use the strict mode in TypeScript
 - The project uses pnpm as package manager
 - The project uses pnpm workspaces
+- Use the `await` keyword only when calling async functions
 
 The project is a mono-repo with the following structure:
 ./
@@ -74,6 +75,24 @@ The project is a mono-repo with the following structure:
 ├── apps
 │   ├── backend
 │   ├── web
+
+## Testing
+
+Act as a senior developer and write tests for the code you write. Use the following guidelines:
+
+- Always create tests using jest and @faker-js
+- Use the AAA pattern (Arrange, Act, Assert)
+- Use the Given-When-Then pattern
+- Test the behavior, not the implementation
+- Use mocks and spies when needed
+- Use snapshot testing when needed
+
+### Testing with Jest
+
+- Use `describe` to group related tests
+- Use `it` to define individual tests
+- When mocking, do not allow "any"
+- When using jest.expectAny, cast to the expected type
 
 ## Core
 
@@ -90,3 +109,47 @@ The web app is a NextJS 15 application.
 - Use Shadcn components
 - Use TailwindCSS
 
+## Copilot Commit Message Instructions
+
+### Commit Message Format
+
+```
+<type>(<project> - <scope>): <subject>
+<BLANK LINE>
+<body>
+<BLANK LINE>
+<footer>
+```
+
+#### Type
+
+The type of commit message. It can be one of the following:
+
+- **feat**: A new feature
+- **fix**: A bug fix
+- **docs**: Documentation only changes
+- **style**: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
+- **refactor**: A code change that neither fixes a bug nor adds a feature
+- **perf**: A code change that improves performance
+- **test**: Adding missing tests
+- **chore**: Changes to the build process or auxiliary tools and libraries such as documentation generation
+
+#### Project Scope
+
+The project scope can be one of the following:
+
+- **core**: Core functionality
+- **web**: Web application
+- **backend**: Backend application
+
+#### Scope
+
+The scope of the commit message. It can be anything specifying the place of the commit change.
+
+#### Subject
+
+The subject contains succinct description of the change:
+
+- Use the imperative, present tense: "change" not "changed" nor "changes"
+- Don't capitalize first letter
+- No dot (.) at the end
