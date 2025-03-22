@@ -69,4 +69,23 @@ export class Answer {
   public getQuestionId(): Question["id"] {
     return this.questionId;
   }
+
+  setContent(content: string): void {
+    if (!content) {
+      throw new RequiredContentError("Answer");
+    }
+    this.content = content;
+  }
+
+  setIsCorrect(isCorrect: boolean): void {
+    this.isCorrect = isCorrect;
+  }
+
+  setDeletedAt(deletedAt: Date | null): void {
+    this.deletedAt = deletedAt;
+  }
+
+  setUpdatedAt(updatedAt: Date): void {
+    this.updatedAt = updatedAt;
+  }
 }

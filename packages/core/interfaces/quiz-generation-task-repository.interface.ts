@@ -1,5 +1,6 @@
 import { User } from "../entities";
 import { QuizGenerationTask } from "../entities/quiz-generation-task";
+import { Question } from "../entities/question";
 import {
   PaginationParams,
   PaginatedResult,
@@ -19,4 +20,11 @@ export interface QuizGenerationTaskRepository {
    * @param id The task ID
    */
   softDelete(id: QuizGenerationTask["id"]): Promise<void>;
+
+  /**
+   * Finds a question by its ID
+   * @param id The question ID
+   * @returns The question or null if not found
+   */
+  findQuestionById(id: Question["id"]): Promise<Question | null>;
 }

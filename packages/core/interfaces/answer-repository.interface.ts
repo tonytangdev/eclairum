@@ -11,4 +11,10 @@ export interface AnswerRepository {
    * @param questionId The ID of the question
    */
   softDeleteByQuestionId(questionId: Question["id"]): Promise<void>;
+
+  /**
+   * Saves an answer
+   * @param answer The answer to save
+   */
+  save(answer: Answer): Promise<void>;
 }
