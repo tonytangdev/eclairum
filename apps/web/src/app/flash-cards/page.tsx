@@ -42,7 +42,6 @@ export default async function MyFlashCards({
           label: "Create New"
         }}
       />
-
       {tasks.length > 0 ? (
         <>
           <TasksTable tasks={tasks} />
@@ -64,7 +63,7 @@ export default async function MyFlashCards({
           }}
         />
       )}
-    </div>
+    </div >
   )
 }
 
