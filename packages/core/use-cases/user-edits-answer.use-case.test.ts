@@ -210,4 +210,34 @@ describe("UserEditsAnswerUseCase", () => {
       }),
     ).rejects.toThrow(TaskNotFoundError);
   });
+
+  it("should throw TaskNotFoundError if task is not found", async () => {
+    const userId = faker.string.uuid();
+    const answerId = faker.string.uuid();
+    const answerContent = faker.lorem.sentence();
+    const isCorrect = faker.datatype.boolean();
+
+    const user = { id: userId } as unknown as User;
+    const answer = {
+      getId: () => answerId,
+      getQuestionId: () => faker.string.uuid(),
+    } as unknown as Answer;
+    const question = {
+      getQuizGenerationTaskId: () => faker.string.uuid(),
+    } as unknown as Question;
+
+    userRepository.findById.mockResolvedValue(user);
+    answerRepository.findById.mockResolvedValue(answer);
+    quizGenerationTaskRepository.findQuestionById.mockResolvedValue(question);
+    quizGenerationTaskRepository.findById.mockResolvedValue(null);
+
+    await expect(
+      useCase.execute({
+        userId,
+        answerId,
+        answerContent,
+        isCorrect,
+      }),
+    ).rejects.toThrow(TaskNotFoundError);
+  });
 });
