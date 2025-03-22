@@ -371,6 +371,32 @@ describe('QuizGenerationTasksService', () => {
         await expect(promise).rejects.toThrow(scenario.expectedMessage);
       }
     });
+
+    it('should log and propagate unknown errors', async () => {
+      // Given a task ID and user ID
+      const taskId = faker.string.uuid();
+      const userId = faker.string.uuid();
+
+      // And an unexpected error that is not one of the domain-specific errors
+      const unexpectedError = new Error('Unexpected database error');
+      fetchTaskUseCase.execute.mockRejectedValue(unexpectedError);
+
+      // And we spy on the logger
+      const logSpy = jest.spyOn(Logger.prototype, 'error');
+
+      // When fetching the task, Then the error should be propagated
+      await expect(service.getTaskById(taskId, userId)).rejects.toThrow(
+        unexpectedError,
+      );
+
+      // And the error should be logged
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          `Failed to get quiz generation task with id ${taskId}`,
+        ),
+        expect.any(String),
+      );
+    });
   });
 
   describe('fetchTasksByUserId', () => {
@@ -477,6 +503,29 @@ describe('QuizGenerationTasksService', () => {
         `User with ID '${userId}' not found`,
       );
     });
+
+    it('should log and propagate unknown errors', async () => {
+      // Given a user ID
+      const userId = faker.string.uuid();
+
+      // And an unexpected error that is not UserNotFoundError
+      const unexpectedError = new Error('Database connection timeout');
+      fetchTasksUseCase.execute.mockRejectedValue(unexpectedError);
+
+      // And we spy on the logger
+      const logSpy = jest.spyOn(Logger.prototype, 'error');
+
+      // When fetching tasks, Then the error should be propagated
+      await expect(service.fetchTasksByUserId({ userId })).rejects.toThrow(
+        unexpectedError,
+      );
+
+      // And the error should be logged
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to fetch quiz generation tasks'),
+        expect.any(String),
+      );
+    });
   });
 
   describe('deleteTask', () => {
@@ -555,6 +604,47 @@ describe('QuizGenerationTasksService', () => {
         ),
         expect.any(String),
       );
+    });
+
+    it('should handle and log errors that are not Error instances', async () => {
+      // Given a task ID and user ID
+      const taskId = faker.string.uuid();
+      const userId = faker.string.uuid();
+
+      // Non-Error type errors that could occur
+      const nonErrorValues = [
+        'string error',
+        123,
+        { message: 'Object error' },
+        null,
+        undefined,
+      ];
+
+      // Test each non-Error value
+      for (const nonErrorValue of nonErrorValues) {
+        // Given the use case will throw this non-Error value
+        deleteTaskUseCase.execute.mockRejectedValueOnce(nonErrorValue);
+
+        // And we spy on the logger
+        const logSpy = jest.spyOn(Logger.prototype, 'error');
+
+        // When deleting the task, Then the error should be propagated
+        await expect(service.deleteTask(taskId, userId)).rejects.toBe(
+          nonErrorValue,
+        );
+
+        // And the error should be logged as an unknown error type
+        expect(logSpy).toHaveBeenCalledWith(
+          expect.stringContaining(
+            `Failed to delete quiz generation task with id ${taskId}: Unknown error type`,
+          ),
+          // eslint-disable-next-line @typescript-eslint/no-base-to-string
+          String(nonErrorValue),
+        );
+
+        // Reset the spy
+        logSpy.mockClear();
+      }
     });
   });
 });
