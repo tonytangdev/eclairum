@@ -10,16 +10,7 @@ import {
 } from '@nestjs/common';
 import { QuestionsService } from './services/questions.service';
 import { EditQuestionDto } from './dto/edit-question.dto'; // Import the new DTO
-
-interface AddQuestionDto {
-  userId: string;
-  taskId: string;
-  questionContent: string;
-  answers: {
-    content: string;
-    isCorrect: boolean;
-  }[];
-}
+import { AddQuestionDto } from './dto/add-question.dto'; // Import the new DTO
 
 @Controller('questions')
 export class QuestionsController {
