@@ -7,3 +7,4 @@ export * from "./fetch-quiz-generation-task-for-user.use-case";
 export * from "./soft-delete-quiz-generation-task-for-user.use-case";
 export * from "./user-adds-question.use-case";
 export * from "./user-edits-question.use-case";
+export * from "./user-edits-answer.use-case";
