@@ -167,11 +167,11 @@ describe('QuestionsController', () => {
       // Arrange
       const editQuestionDto = {
         userId: faker.string.uuid(),
-        questionId: faker.string.uuid(),
         questionContent: faker.lorem.sentence(),
       };
+      const questionId = faker.string.uuid();
       const mockQuestion = {
-        id: editQuestionDto.questionId,
+        id: questionId,
         content: editQuestionDto.questionContent,
       };
       mockQuestionsService.editQuestion.mockResolvedValue({
@@ -183,7 +183,7 @@ describe('QuestionsController', () => {
       });
 
       // Act
-      const result = await controller.editQuestion(editQuestionDto);
+      const result = await controller.editQuestion(editQuestionDto, questionId);
 
       // Assert
       expect(result).toEqual({
@@ -195,7 +195,7 @@ describe('QuestionsController', () => {
       });
       expect(mockQuestionsService.editQuestion).toHaveBeenCalledWith(
         editQuestionDto.userId,
-        editQuestionDto.questionId,
+        questionId,
         editQuestionDto.questionContent,
       );
     });
@@ -204,9 +204,9 @@ describe('QuestionsController', () => {
       // Arrange
       const editQuestionDto = {
         userId: faker.string.uuid(),
-        questionId: faker.string.uuid(),
         questionContent: faker.lorem.sentence(),
       };
+      const questionId = faker.string.uuid();
       const errorMessage = 'Failed to edit question';
       mockQuestionsService.editQuestion.mockResolvedValue({
         data: null,
@@ -217,7 +217,7 @@ describe('QuestionsController', () => {
       });
 
       // Act
-      const result = await controller.editQuestion(editQuestionDto);
+      const result = await controller.editQuestion(editQuestionDto, questionId);
 
       // Assert
       expect(result).toEqual({
@@ -229,7 +229,7 @@ describe('QuestionsController', () => {
       });
       expect(mockQuestionsService.editQuestion).toHaveBeenCalledWith(
         editQuestionDto.userId,
-        editQuestionDto.questionId,
+        questionId,
         editQuestionDto.questionContent,
       );
     });

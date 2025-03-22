@@ -6,7 +6,6 @@ describe('EditQuestionDto', () => {
     // Arrange
     const dto = new EditQuestionDto();
     dto.userId = 'user-123';
-    dto.questionId = 'question-123';
     dto.questionContent = 'What is the capital of France?';
 
     // Act
@@ -19,7 +18,6 @@ describe('EditQuestionDto', () => {
   it('should fail validation when userId is missing', async () => {
     // Arrange
     const dto = new EditQuestionDto();
-    dto.questionId = 'question-123';
     dto.questionContent = 'What is the capital of France?';
 
     // Act
@@ -30,25 +28,10 @@ describe('EditQuestionDto', () => {
     expect(errors[0].property).toBe('userId');
   });
 
-  it('should fail validation when questionId is missing', async () => {
-    // Arrange
-    const dto = new EditQuestionDto();
-    dto.userId = 'user-123';
-    dto.questionContent = 'What is the capital of France?';
-
-    // Act
-    const errors = await validate(dto);
-
-    // Assert
-    expect(errors.length).toBeGreaterThan(0);
-    expect(errors[0].property).toBe('questionId');
-  });
-
   it('should fail validation when questionContent is missing', async () => {
     // Arrange
     const dto = new EditQuestionDto();
     dto.userId = 'user-123';
-    dto.questionId = 'question-123';
 
     // Act
     const errors = await validate(dto);
@@ -62,7 +45,6 @@ describe('EditQuestionDto', () => {
     // Arrange
     const dto = new EditQuestionDto();
     dto.userId = 'user-123';
-    dto.questionId = 'question-123';
     dto.questionContent = '';
 
     // Act
