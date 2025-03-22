@@ -13,11 +13,15 @@ interface ApiResponse<T> {
   success: boolean;
 }
 
+interface EditQuestionRequest extends EditQuestionDto {
+  questionId: string;
+}
+
 /**
  * Server action that edits an existing question and its answers
  */
 export async function editQuestion(
-  request: EditQuestionDto,
+  request: EditQuestionRequest,
   answers: {
     id: string;
     userId: string;
