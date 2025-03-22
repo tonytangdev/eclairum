@@ -92,7 +92,12 @@ Act as a senior developer and write tests for the code you write. Use the follow
 - Use `describe` to group related tests
 - Use `it` to define individual tests
 - When mocking, do not allow "any"
-- When using jest.expectAny, cast to the expected type
+- When using jest.expectAny, cast to the expected type :
+  
+  ```typescript
+  expect(jest.expectAny(Date) as Date);
+  expect(jest.expectAny(String) as string);
+  ```
 
 ## Core
 
@@ -113,7 +118,7 @@ The web app is a NextJS 15 application.
 
 ### Commit Message Format
 
-```
+```bash
 <type>(<project> - <scope>): <subject>
 <BLANK LINE>
 <body>
