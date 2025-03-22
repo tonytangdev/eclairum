@@ -382,4 +382,37 @@ describe('AnswerRepository', () => {
       expect(mapperSpy).toHaveBeenCalledWith(entity);
     });
   });
+
+  describe('save', () => {
+    it('should persist a single answer to the database', async () => {
+      // Given an answer
+      const answer = createAnswer();
+
+      typeormRepo.save.mockResolvedValueOnce(createEntity(answer));
+
+      // When saving the answer
+      await repository.save(answer);
+
+      // Then it should be mapped and saved correctly
+      expect(AnswerMapper.toPersistence).toHaveBeenCalledWith(answer);
+      expect(typeormRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ id: answer.getId() }),
+      );
+    });
+
+    it('should surface database errors to the caller', async () => {
+      // Given an answer and a database error
+      const answer = createAnswer();
+      const dbError = new Error('Database unavailable');
+      typeormRepo.save.mockRejectedValueOnce(dbError);
+
+      // When saving the answer, it should propagate the error
+      await expect(repository.save(answer)).rejects.toThrow(
+        'Database unavailable',
+      );
+
+      // And the mapping should have been attempted
+      expect(AnswerMapper.toPersistence).toHaveBeenCalledWith(answer);
+    });
+  });
 });
