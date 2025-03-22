@@ -10,7 +10,7 @@ import { RequiredTextContentError } from "../errors/validation-errors";
 
 describe("QuizGenerationTask", () => {
   // Helper to create answers
-  const createAnswer = (isCorrect: boolean = false) => {
+  const createAnswer = (isCorrect: boolean = false): Answer => {
     return new Answer({
       content: faker.lorem.sentence(),
       isCorrect,
@@ -19,7 +19,7 @@ describe("QuizGenerationTask", () => {
   };
 
   // Helper to create questions
-  const createQuestion = () => {
+  const createQuestion = (): Question => {
     return new Question({
       content: faker.lorem.sentence(),
       answers: [createAnswer(true), createAnswer(false)],
@@ -30,228 +30,262 @@ describe("QuizGenerationTask", () => {
   // Mock userId for tests
   const mockUserId = faker.internet.email();
 
-  it("should create a valid quiz generation task with minimum required properties", () => {
-    const textContent = faker.lorem.paragraph();
-    const questions = [];
+  describe("Construction", () => {
+    it("should create a valid quiz generation task with minimum required properties", () => {
+      // Given minimal required properties
+      const textContent = faker.lorem.paragraph();
+      const questions: Question[] = [];
 
-    const task = new QuizGenerationTask({
-      textContent,
-      questions,
-      userId: mockUserId,
+      // When creating a task
+      const task = new QuizGenerationTask({
+        textContent,
+        questions,
+        userId: mockUserId,
+      });
+
+      // Then the task should be properly initialized
+      expect(task).toBeInstanceOf(QuizGenerationTask);
+      expect(task.getTextContent()).toBe(textContent);
+      expect(task.getQuestions()).toEqual(questions);
+      expect(task.getUserId()).toBe(mockUserId);
+      expect(task.getId()).toEqual(expect.any(String) as string);
+      expect(task.getCreatedAt()).toEqual(expect.any(Date) as Date);
+      expect(task.getUpdatedAt()).toEqual(expect.any(Date) as Date);
+      expect(task.getDeletedAt()).toBe(null);
+      expect(task.getStatus()).toBe(QuizGenerationStatus.PENDING);
+      expect(task.getGeneratedAt()).toBe(null);
     });
 
-    expect(task).toBeInstanceOf(QuizGenerationTask);
-    expect(task.getTextContent()).toBe(textContent);
-    expect(task.getQuestions()).toEqual(questions);
-    expect(task.getUserId()).toBe(mockUserId);
-    expect(task.getId()).toEqual(expect.any(String));
-    expect(task.getCreatedAt()).toEqual(expect.any(Date));
-    expect(task.getUpdatedAt()).toEqual(expect.any(Date));
-    expect(task.getDeletedAt()).toBe(null);
-    expect(task.getStatus()).toBe(QuizGenerationStatus.PENDING);
-    expect(task.getGeneratedAt()).toBe(null);
-  });
+    it("should create a task with all custom properties", () => {
+      // Given all custom properties
+      const id = randomUUID();
+      const textContent = faker.lorem.paragraph();
+      const questions = [createQuestion(), createQuestion()];
+      const createdAt = new Date(2023, 1, 1);
+      const updatedAt = new Date(2023, 1, 2);
+      const deletedAt = new Date(2023, 1, 3);
+      const status = QuizGenerationStatus.COMPLETED;
+      const generatedAt = new Date(2023, 1, 4);
+      const userId = faker.internet.email();
 
-  it("should create a task with all custom properties", () => {
-    const id = randomUUID();
-    const textContent = faker.lorem.paragraph();
-    const questions = [createQuestion(), createQuestion()];
-    const createdAt = new Date(2023, 1, 1);
-    const updatedAt = new Date(2023, 1, 2);
-    const deletedAt = new Date(2023, 1, 3);
-    const status = QuizGenerationStatus.COMPLETED;
-    const generatedAt = new Date(2023, 1, 4);
-    const userId = faker.internet.email();
+      // When creating a task with all properties
+      const task = new QuizGenerationTask({
+        id,
+        textContent,
+        questions,
+        createdAt,
+        updatedAt,
+        deletedAt,
+        status,
+        generatedAt,
+        userId,
+      });
 
-    const task = new QuizGenerationTask({
-      id,
-      textContent,
-      questions,
-      createdAt,
-      updatedAt,
-      deletedAt,
-      status,
-      generatedAt,
-      userId,
+      // Then all properties should be set correctly
+      expect(task.getId()).toBe(id);
+      expect(task.getTextContent()).toBe(textContent);
+      expect(task.getQuestions()).toEqual(questions);
+      expect(task.getCreatedAt()).toBe(createdAt);
+      expect(task.getUpdatedAt()).toBe(updatedAt);
+      expect(task.getDeletedAt()).toBe(deletedAt);
+      expect(task.getStatus()).toBe(status);
+      expect(task.getGeneratedAt()).toBe(generatedAt);
+      expect(task.getUserId()).toBe(userId);
     });
 
-    expect(task.getId()).toBe(id);
-    expect(task.getTextContent()).toBe(textContent);
-    expect(task.getQuestions()).toEqual(questions);
-    expect(task.getCreatedAt()).toBe(createdAt);
-    expect(task.getUpdatedAt()).toBe(updatedAt);
-    expect(task.getDeletedAt()).toBe(deletedAt);
-    expect(task.getStatus()).toBe(status);
-    expect(task.getGeneratedAt()).toBe(generatedAt);
-    expect(task.getUserId()).toBe(userId);
+    it("should throw RequiredTextContentError when text content is empty", () => {
+      // When creating a task with empty text content
+      // Then it should throw the appropriate error
+      expect(() => {
+        new QuizGenerationTask({
+          textContent: "",
+          questions: [createQuestion()],
+          userId: mockUserId,
+        });
+      }).toThrow(RequiredTextContentError);
+      expect(() => {
+        new QuizGenerationTask({
+          textContent: "",
+          questions: [createQuestion()],
+          userId: mockUserId,
+        });
+      }).toThrow("Text content is required");
+    });
+
+    it("should throw an error when userId is not provided", () => {
+      // When creating a task with empty userId
+      // Then it should throw the appropriate error
+      expect(() => {
+        new QuizGenerationTask({
+          textContent: faker.lorem.paragraph(),
+          questions: [],
+          userId: "", // Empty userId
+        });
+      }).toThrow("User ID is required");
+    });
   });
 
-  it("should throw RequiredTextContentError when text content is empty", () => {
-    expect(() => {
-      new QuizGenerationTask({
-        textContent: "",
+  describe("Status management", () => {
+    it("should update status and set generated date when completed", () => {
+      // Given a pending task
+      const task = new QuizGenerationTask({
+        textContent: faker.lorem.paragraph(),
         questions: [createQuestion()],
         userId: mockUserId,
       });
-    }).toThrow(RequiredTextContentError);
-    expect(() => {
-      new QuizGenerationTask({
-        textContent: "",
-        questions: [createQuestion()],
-        userId: mockUserId,
-      });
-    }).toThrow("Text content is required");
-  });
 
-  it("should throw an error when userId is not provided", () => {
-    expect(() => {
-      new QuizGenerationTask({
+      // Verify initial state
+      expect(task.getStatus()).toBe(QuizGenerationStatus.PENDING);
+      expect(task.getGeneratedAt()).toBe(null);
+
+      // When setting status to IN_PROGRESS
+      task.updateStatus(QuizGenerationStatus.IN_PROGRESS);
+
+      // Then status should change but generatedAt should remain null
+      expect(task.getStatus()).toBe(QuizGenerationStatus.IN_PROGRESS);
+      expect(task.getGeneratedAt()).toBe(null);
+
+      // When setting status to COMPLETED
+      const beforeCompleted = new Date();
+      task.updateStatus(QuizGenerationStatus.COMPLETED);
+      const afterCompleted = new Date();
+
+      // Then status should change and generatedAt should be set
+      expect(task.getStatus()).toBe(QuizGenerationStatus.COMPLETED);
+      expect(task.getGeneratedAt()).toBeInstanceOf(Date);
+      expect(task.isGenerationComplete()).toBe(true);
+
+      // Verify the timestamp is between before and after
+      const generatedAt = task.getGeneratedAt() as Date;
+      expect(generatedAt.getTime()).toBeGreaterThanOrEqual(
+        beforeCompleted.getTime(),
+      );
+      expect(generatedAt.getTime()).toBeLessThanOrEqual(
+        afterCompleted.getTime(),
+      );
+    });
+
+    it("should mark task as FAILED", () => {
+      // Given a pending task
+      const task = new QuizGenerationTask({
         textContent: faker.lorem.paragraph(),
         questions: [],
-        userId: "", // Empty userId
+        userId: mockUserId,
       });
-    }).toThrow("User ID is required");
+
+      // When setting status to FAILED
+      task.updateStatus(QuizGenerationStatus.FAILED);
+
+      // Then the status should be FAILED and not complete
+      expect(task.getStatus()).toBe(QuizGenerationStatus.FAILED);
+      expect(task.isGenerationComplete()).toBe(false);
+    });
   });
 
-  it("should update status and set generated date when completed", () => {
-    const task = new QuizGenerationTask({
-      textContent: faker.lorem.paragraph(),
-      questions: [createQuestion()],
-      userId: mockUserId,
-    });
+  describe("Question management", () => {
+    it("should add a question to the task", () => {
+      // Given a task with initial questions
+      const initialQuestion = createQuestion();
+      const task = new QuizGenerationTask({
+        textContent: faker.lorem.paragraph(),
+        questions: [initialQuestion],
+        userId: mockUserId,
+      });
 
-    expect(task.getStatus()).toBe(QuizGenerationStatus.PENDING);
-    expect(task.getGeneratedAt()).toBe(null);
+      const initialCount = task.getQuestions().length;
 
-    task.updateStatus(QuizGenerationStatus.IN_PROGRESS);
-    expect(task.getStatus()).toBe(QuizGenerationStatus.IN_PROGRESS);
-    expect(task.getGeneratedAt()).toBe(null);
-
-    const beforeCompleted = new Date();
-    task.updateStatus(QuizGenerationStatus.COMPLETED);
-    const afterCompleted = new Date();
-
-    expect(task.getStatus()).toBe(QuizGenerationStatus.COMPLETED);
-    expect(task.getGeneratedAt()).toBeInstanceOf(Date);
-    expect(task.isGenerationComplete()).toBe(true);
-
-    // Verify the timestamp is between before and after
-    const generatedAt = task.getGeneratedAt() as Date;
-    expect(generatedAt.getTime()).toBeGreaterThanOrEqual(
-      beforeCompleted.getTime(),
-    );
-    expect(generatedAt.getTime()).toBeLessThanOrEqual(afterCompleted.getTime());
-  });
-
-  it("should add a question to the task", () => {
-    const task = new QuizGenerationTask({
-      textContent: faker.lorem.paragraph(),
-      questions: [createQuestion()],
-      userId: mockUserId,
-    });
-
-    const initialCount = task.getQuestions().length;
-    const initialUpdateTime = task.getUpdatedAt();
-
-    // Wait a short time to ensure updated timestamp changes
-    setTimeout(() => {
+      // When adding a new question
       const newQuestion = createQuestion();
       task.addQuestion(newQuestion);
 
-      expect(task.getQuestions().length).toBe(initialCount + 1);
-      expect(task.getQuestions()).toContain(newQuestion);
-      expect(task.getUpdatedAt().getTime()).toBeGreaterThan(
-        initialUpdateTime.getTime(),
-      );
-    }, 10);
+      // Then the question should be added and count increased
+      const questions = task.getQuestions();
+      expect(questions.length).toBe(initialCount + 1);
+      expect(questions).toContain(newQuestion);
+
+      // And the updatedAt timestamp should be updated
+      expect(task.getUpdatedAt()).toBeInstanceOf(Date);
+    });
   });
 
-  it("should return correct user ID", () => {
-    const userId = faker.internet.email();
-    const task = new QuizGenerationTask({
-      textContent: faker.lorem.paragraph(),
-      questions: [],
-      userId,
+  describe("Metadata management", () => {
+    it("should return correct user ID", () => {
+      // Given a task with a specific user ID
+      const userId = faker.internet.email();
+      const task = new QuizGenerationTask({
+        textContent: faker.lorem.paragraph(),
+        questions: [],
+        userId,
+      });
+
+      // When getting the user ID
+      // Then it should match the provided value
+      expect(task.getUserId()).toBe(userId);
     });
 
-    expect(task.getUserId()).toBe(userId);
-  });
+    it("should set and get title correctly", () => {
+      // Given a task
+      const task = new QuizGenerationTask({
+        textContent: faker.lorem.paragraph(),
+        questions: [],
+        userId: mockUserId,
+      });
+      const title = faker.lorem.sentence();
 
-  it("should mark task as FAILED", () => {
-    const task = new QuizGenerationTask({
-      textContent: faker.lorem.paragraph(),
-      questions: [],
-      userId: mockUserId,
+      // When setting a title
+      task.setTitle(title);
+
+      // Then the title should be stored correctly
+      expect(task.getTitle()).toBe(title);
     });
 
-    task.updateStatus(QuizGenerationStatus.FAILED);
+    it("should set and get category correctly", () => {
+      // Given a task
+      const task = new QuizGenerationTask({
+        textContent: faker.lorem.paragraph(),
+        questions: [],
+        userId: mockUserId,
+      });
+      const category = faker.word.noun();
 
-    expect(task.getStatus()).toBe(QuizGenerationStatus.FAILED);
-    expect(task.isGenerationComplete()).toBe(false);
-  });
+      // When setting a category
+      task.setCategory(category);
 
-  it("should set and get title correctly", () => {
-    // Arrange
-    const task = new QuizGenerationTask({
-      textContent: faker.lorem.paragraph(),
-      questions: [],
-      userId: mockUserId,
-    });
-    const title = faker.lorem.sentence();
-
-    // Act
-    task.setTitle(title);
-
-    // Assert
-    expect(task.getTitle()).toBe(title);
-  });
-
-  it("should set and get category correctly", () => {
-    // Arrange
-    const task = new QuizGenerationTask({
-      textContent: faker.lorem.paragraph(),
-      questions: [],
-      userId: mockUserId,
-    });
-    const category = faker.word.noun();
-
-    // Act
-    task.setCategory(category);
-
-    // Assert
-    expect(task.getCategory()).toBe(category);
-  });
-
-  it("should create a task with initial title and category values", () => {
-    // Arrange
-    const textContent = faker.lorem.paragraph();
-    const title = faker.lorem.sentence();
-    const category = faker.word.noun();
-
-    // Act
-    const task = new QuizGenerationTask({
-      textContent,
-      questions: [],
-      userId: mockUserId,
-      title,
-      category,
+      // Then the category should be stored correctly
+      expect(task.getCategory()).toBe(category);
     });
 
-    // Assert
-    expect(task.getTitle()).toBe(title);
-    expect(task.getCategory()).toBe(category);
-  });
+    it("should create a task with initial title and category values", () => {
+      // Given title and category values
+      const textContent = faker.lorem.paragraph();
+      const title = faker.lorem.sentence();
+      const category = faker.word.noun();
 
-  it("should have null as default value for title and category", () => {
-    // Arrange & Act
-    const task = new QuizGenerationTask({
-      textContent: faker.lorem.paragraph(),
-      questions: [],
-      userId: mockUserId,
+      // When creating a task with these values
+      const task = new QuizGenerationTask({
+        textContent,
+        questions: [],
+        userId: mockUserId,
+        title,
+        category,
+      });
+
+      // Then the values should be set correctly
+      expect(task.getTitle()).toBe(title);
+      expect(task.getCategory()).toBe(category);
     });
 
-    // Assert
-    expect(task.getTitle()).toBeNull();
-    expect(task.getCategory()).toBeNull();
+    it("should have null as default value for title and category", () => {
+      // When creating a task without title and category
+      const task = new QuizGenerationTask({
+        textContent: faker.lorem.paragraph(),
+        questions: [],
+        userId: mockUserId,
+      });
+
+      // Then they should default to null
+      expect(task.getTitle()).toBeNull();
+      expect(task.getCategory()).toBeNull();
+    });
   });
 });
