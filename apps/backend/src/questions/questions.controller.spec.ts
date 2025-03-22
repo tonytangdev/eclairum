@@ -10,6 +10,7 @@ describe('QuestionsController', () => {
   const mockQuestionsService = {
     getQuestions: jest.fn(),
     addQuestion: jest.fn(),
+    editQuestion: jest.fn(), // Add mock for editQuestion
   };
 
   beforeEach(async () => {
@@ -157,6 +158,79 @@ describe('QuestionsController', () => {
         addQuestionDto.taskId,
         addQuestionDto.questionContent,
         addQuestionDto.answers,
+      );
+    });
+  });
+
+  describe('editQuestion', () => {
+    it('should edit a question successfully', async () => {
+      // Arrange
+      const editQuestionDto = {
+        userId: faker.string.uuid(),
+        questionId: faker.string.uuid(),
+        questionContent: faker.lorem.sentence(),
+      };
+      const mockQuestion = {
+        id: editQuestionDto.questionId,
+        content: editQuestionDto.questionContent,
+      };
+      mockQuestionsService.editQuestion.mockResolvedValue({
+        data: mockQuestion,
+        metadata: {
+          questionId: mockQuestion.id,
+        },
+        success: true,
+      });
+
+      // Act
+      const result = await controller.editQuestion(editQuestionDto);
+
+      // Assert
+      expect(result).toEqual({
+        data: mockQuestion,
+        metadata: {
+          questionId: mockQuestion.id,
+        },
+        success: true,
+      });
+      expect(mockQuestionsService.editQuestion).toHaveBeenCalledWith(
+        editQuestionDto.userId,
+        editQuestionDto.questionId,
+        editQuestionDto.questionContent,
+      );
+    });
+
+    it('should handle errors and return error response', async () => {
+      // Arrange
+      const editQuestionDto = {
+        userId: faker.string.uuid(),
+        questionId: faker.string.uuid(),
+        questionContent: faker.lorem.sentence(),
+      };
+      const errorMessage = 'Failed to edit question';
+      mockQuestionsService.editQuestion.mockResolvedValue({
+        data: null,
+        metadata: {
+          error: errorMessage,
+        },
+        success: false,
+      });
+
+      // Act
+      const result = await controller.editQuestion(editQuestionDto);
+
+      // Assert
+      expect(result).toEqual({
+        data: null,
+        metadata: {
+          error: errorMessage,
+        },
+        success: false,
+      });
+      expect(mockQuestionsService.editQuestion).toHaveBeenCalledWith(
+        editQuestionDto.userId,
+        editQuestionDto.questionId,
+        editQuestionDto.questionContent,
       );
     });
   });

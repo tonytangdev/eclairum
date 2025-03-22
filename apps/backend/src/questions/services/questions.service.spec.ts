@@ -7,6 +7,7 @@ import { UserAnswerRepositoryImpl } from '../../repositories/user-answers/user-a
 import {
   FetchQuestionsForUserUseCase,
   UserAddsQuestionUseCase,
+  UserEditsQuestionUseCase, // Import the new use case
 } from '@eclairum/core/use-cases';
 import { AnswerRepositoryImpl } from '../../repositories/answers/answer.repository';
 import { QuizGenerationTaskRepositoryImpl } from '../../repositories/quiz-generation-tasks/quiz-generation-task.repository';
@@ -20,6 +21,11 @@ jest.mock('@eclairum/core/use-cases', () => {
       };
     }),
     UserAddsQuestionUseCase: jest.fn().mockImplementation(() => {
+      return {
+        execute: jest.fn(),
+      };
+    }),
+    UserEditsQuestionUseCase: jest.fn().mockImplementation(() => {
       return {
         execute: jest.fn(),
       };
@@ -306,6 +312,88 @@ describe('QuestionsService', () => {
         taskId,
         questionContent,
         answers,
+      });
+    });
+  });
+
+  describe('editQuestion', () => {
+    it('should edit a question successfully', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const questionId = faker.string.uuid();
+      const questionContent = faker.lorem.sentence();
+      const mockQuestion = {
+        getId: jest.fn().mockReturnValue(questionId),
+      };
+
+      // Setup mock use case execute method
+      const executeMethod = jest.fn().mockResolvedValueOnce({
+        question: mockQuestion,
+      });
+
+      // Mock the use case constructor
+      (UserEditsQuestionUseCase as jest.Mock).mockImplementationOnce(() => ({
+        execute: executeMethod,
+      }));
+
+      // Act
+      const result = await service.editQuestion(
+        userId,
+        questionId,
+        questionContent,
+      );
+
+      // Assert
+      expect(result).toEqual({
+        data: mockQuestion,
+        metadata: {
+          questionId: questionId,
+        },
+        success: true,
+      });
+      expect(executeMethod).toHaveBeenCalledWith({
+        userId,
+        questionId,
+        questionContent,
+      });
+    });
+
+    it('should handle errors and return error response', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const questionId = faker.string.uuid();
+      const questionContent = faker.lorem.sentence();
+      const errorMessage = 'Failed to edit question';
+
+      // Setup mock use case execute method to throw an error
+      const executeMethod = jest
+        .fn()
+        .mockRejectedValueOnce(new Error(errorMessage));
+
+      // Mock the use case constructor
+      (UserEditsQuestionUseCase as jest.Mock).mockImplementationOnce(() => ({
+        execute: executeMethod,
+      }));
+
+      // Act
+      const result = await service.editQuestion(
+        userId,
+        questionId,
+        questionContent,
+      );
+
+      // Assert
+      expect(result).toEqual({
+        data: null,
+        metadata: {
+          error: errorMessage,
+        },
+        success: false,
+      });
+      expect(executeMethod).toHaveBeenCalledWith({
+        userId,
+        questionId,
+        questionContent,
       });
     });
   });
