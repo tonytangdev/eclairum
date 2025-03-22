@@ -3,6 +3,7 @@ import { UserEditsAnswerUseCase } from "./user-edits-answer.use-case";
 import { UserRepository } from "../interfaces/user-repository.interface";
 import { AnswerRepository } from "../interfaces/answer-repository.interface";
 import { QuizGenerationTaskRepository } from "../interfaces/quiz-generation-task-repository.interface";
+import { QuestionRepository } from "../interfaces/question-repository.interface";
 import { User } from "../entities/user";
 import { Answer } from "../entities/answer";
 import { Question } from "../entities/question";
@@ -18,6 +19,7 @@ describe("UserEditsAnswerUseCase", () => {
   let userRepository: jest.Mocked<UserRepository>;
   let answerRepository: jest.Mocked<AnswerRepository>;
   let quizGenerationTaskRepository: jest.Mocked<QuizGenerationTaskRepository>;
+  let questionRepository: jest.Mocked<QuestionRepository>;
   let useCase: UserEditsAnswerUseCase;
 
   beforeEach(() => {
@@ -32,13 +34,17 @@ describe("UserEditsAnswerUseCase", () => {
 
     quizGenerationTaskRepository = {
       findById: jest.fn(),
-      findQuestionById: jest.fn(),
     } as unknown as jest.Mocked<QuizGenerationTaskRepository>;
+
+    questionRepository = {
+      findById: jest.fn(),
+    } as unknown as jest.Mocked<QuestionRepository>;
 
     useCase = new UserEditsAnswerUseCase(
       userRepository,
       answerRepository,
       quizGenerationTaskRepository,
+      questionRepository,
     );
   });
 
@@ -64,7 +70,7 @@ describe("UserEditsAnswerUseCase", () => {
 
     userRepository.findById.mockResolvedValue(user);
     answerRepository.findById.mockResolvedValue(answer);
-    quizGenerationTaskRepository.findQuestionById.mockResolvedValue(question);
+    questionRepository.findById.mockResolvedValue(question);
     quizGenerationTaskRepository.findById.mockResolvedValue(task);
 
     const response = await useCase.execute({
@@ -139,7 +145,7 @@ describe("UserEditsAnswerUseCase", () => {
 
     userRepository.findById.mockResolvedValue(user);
     answerRepository.findById.mockResolvedValue(answer);
-    quizGenerationTaskRepository.findQuestionById.mockResolvedValue(question);
+    questionRepository.findById.mockResolvedValue(question);
     quizGenerationTaskRepository.findById.mockResolvedValue(task);
 
     await expect(
@@ -172,7 +178,7 @@ describe("UserEditsAnswerUseCase", () => {
 
     userRepository.findById.mockResolvedValue(user);
     answerRepository.findById.mockResolvedValue(answer);
-    quizGenerationTaskRepository.findQuestionById.mockResolvedValue(question);
+    questionRepository.findById.mockResolvedValue(question);
     quizGenerationTaskRepository.findById.mockResolvedValue(task);
 
     await expect(
@@ -199,7 +205,7 @@ describe("UserEditsAnswerUseCase", () => {
 
     userRepository.findById.mockResolvedValue(user);
     answerRepository.findById.mockResolvedValue(answer);
-    quizGenerationTaskRepository.findQuestionById.mockResolvedValue(null);
+    questionRepository.findById.mockResolvedValue(null);
 
     await expect(
       useCase.execute({
@@ -228,7 +234,7 @@ describe("UserEditsAnswerUseCase", () => {
 
     userRepository.findById.mockResolvedValue(user);
     answerRepository.findById.mockResolvedValue(answer);
-    quizGenerationTaskRepository.findQuestionById.mockResolvedValue(question);
+    questionRepository.findById.mockResolvedValue(question);
     quizGenerationTaskRepository.findById.mockResolvedValue(null);
 
     await expect(

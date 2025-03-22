@@ -9,6 +9,7 @@ import {
   UnauthorizedTaskAccessError,
 } from "../errors/quiz-errors";
 import { InvalidAnswerError } from "../errors";
+import { QuestionRepository } from "../interfaces";
 
 type UserEditsAnswerRequest = {
   userId: User["id"];
@@ -26,6 +27,7 @@ export class UserEditsAnswerUseCase {
     private readonly userRepository: UserRepository,
     private readonly answerRepository: AnswerRepository,
     private readonly quizGenerationTaskRepository: QuizGenerationTaskRepository,
+    private readonly questionRepository: QuestionRepository,
   ) {}
 
   async execute({
@@ -67,8 +69,7 @@ export class UserEditsAnswerUseCase {
     answer: Answer,
   ): Promise<void> {
     const questionId = answer.getQuestionId();
-    const question =
-      await this.quizGenerationTaskRepository.findQuestionById(questionId);
+    const question = await this.questionRepository.findById(questionId);
 
     if (!question) {
       throw new TaskNotFoundError(`Question with id ${questionId} not found`);
