@@ -84,4 +84,88 @@ describe("Answer", () => {
     expect(answer.getDeletedAt()).toStrictEqual(null);
     expect(answer.getQuestionId()).toStrictEqual(questionId);
   });
+
+  it("should update content correctly using setContent method", () => {
+    const questionId = randomUUID();
+    const originalContent = faker.lorem.sentence();
+    const newContent = faker.lorem.sentence();
+    const isCorrect = faker.datatype.boolean();
+
+    const answer = new Answer({
+      content: originalContent,
+      isCorrect,
+      questionId,
+    });
+
+    answer.setContent(newContent);
+
+    expect(answer.getContent()).toStrictEqual(newContent);
+  });
+
+  it("should throw RequiredContentError when setting empty content", () => {
+    const questionId = randomUUID();
+    const originalContent = faker.lorem.sentence();
+    const isCorrect = faker.datatype.boolean();
+
+    const answer = new Answer({
+      content: originalContent,
+      isCorrect,
+      questionId,
+    });
+
+    expect(() => {
+      answer.setContent("");
+    }).toThrow(RequiredContentError);
+  });
+
+  it("should update isCorrect correctly using setIsCorrect method", () => {
+    const questionId = randomUUID();
+    const content = faker.lorem.sentence();
+    const originalIsCorrect = faker.datatype.boolean();
+    const newIsCorrect = !originalIsCorrect;
+
+    const answer = new Answer({
+      content,
+      isCorrect: originalIsCorrect,
+      questionId,
+    });
+
+    answer.setIsCorrect(newIsCorrect);
+
+    expect(answer.getIsCorrect()).toStrictEqual(newIsCorrect);
+  });
+
+  it("should update deletedAt correctly using setDeletedAt method", () => {
+    const questionId = randomUUID();
+    const content = faker.lorem.sentence();
+    const isCorrect = faker.datatype.boolean();
+    const deletedAt = new Date();
+
+    const answer = new Answer({
+      content,
+      isCorrect,
+      questionId,
+    });
+
+    answer.setDeletedAt(deletedAt);
+
+    expect(answer.getDeletedAt()).toStrictEqual(deletedAt);
+  });
+
+  it("should update updatedAt correctly using setUpdatedAt method", () => {
+    const questionId = randomUUID();
+    const content = faker.lorem.sentence();
+    const isCorrect = faker.datatype.boolean();
+    const updatedAt = new Date();
+
+    const answer = new Answer({
+      content,
+      isCorrect,
+      questionId,
+    });
+
+    answer.setUpdatedAt(updatedAt);
+
+    expect(answer.getUpdatedAt()).toStrictEqual(updatedAt);
+  });
 });
