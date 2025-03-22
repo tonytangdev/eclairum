@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   FetchQuestionsForUserUseCase,
   UserAddsQuestionUseCase,
+  UserEditsQuestionUseCase, // Import the new use case
 } from '@eclairum/core/use-cases';
 import { QuestionRepositoryImpl } from '../../repositories/questions/question.repository';
 import { UserRepositoryImpl } from '../../repositories/users/user.repository';
@@ -72,6 +73,42 @@ export class QuestionsService {
         taskId,
         questionContent,
         answers,
+      });
+
+      return {
+        data: result.question,
+        metadata: {
+          questionId: result.question.getId(),
+        },
+        success: true,
+      };
+    } catch (error) {
+      return {
+        data: null,
+        metadata: {
+          error: (error as Error).message,
+        },
+        success: false,
+      };
+    }
+  }
+
+  async editQuestion(
+    userId: string,
+    questionId: string,
+    questionContent: string,
+  ) {
+    const editQuestionUseCase = new UserEditsQuestionUseCase(
+      this.userRepository,
+      this.questionRepository,
+      this.quizGenerationTaskRepository,
+    );
+
+    try {
+      const result = await editQuestionUseCase.execute({
+        userId,
+        questionId,
+        questionContent,
       });
 
       return {

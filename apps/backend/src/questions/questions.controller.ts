@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put, // Import Put decorator
   Query,
   Body,
   ParseIntPipe,
@@ -17,6 +18,12 @@ interface AddQuestionDto {
     content: string;
     isCorrect: boolean;
   }[];
+}
+
+interface EditQuestionDto {
+  userId: string;
+  questionId: string;
+  questionContent: string;
 }
 
 @Controller('questions')
@@ -42,6 +49,16 @@ export class QuestionsController {
       taskId,
       questionContent,
       answers,
+    );
+  }
+
+  @Put()
+  async editQuestion(@Body() editQuestionDto: EditQuestionDto) {
+    const { userId, questionId, questionContent } = editQuestionDto;
+    return this.questionsService.editQuestion(
+      userId,
+      questionId,
+      questionContent,
     );
   }
 }
