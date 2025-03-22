@@ -2,13 +2,14 @@ import {
   Controller,
   Get,
   Post,
-  Put, // Import Put decorator
+  Put,
   Query,
   Body,
   ParseIntPipe,
   Optional,
 } from '@nestjs/common';
 import { QuestionsService } from './services/questions.service';
+import { EditQuestionDto } from './dto/edit-question.dto'; // Import the new DTO
 
 interface AddQuestionDto {
   userId: string;
@@ -18,12 +19,6 @@ interface AddQuestionDto {
     content: string;
     isCorrect: boolean;
   }[];
-}
-
-interface EditQuestionDto {
-  userId: string;
-  questionId: string;
-  questionContent: string;
 }
 
 @Controller('questions')

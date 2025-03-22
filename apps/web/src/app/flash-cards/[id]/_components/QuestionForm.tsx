@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label"
 import { MessageSquare, ListChecks, CheckCircle2, Save, X, PlusCircle, PenLine, Loader2 } from "lucide-react"
 import { Question, Answer } from "../types"
 import { cn } from "@/lib/utils"
+import { editQuestion } from "../_actions/edit-question"
+
 
 // Represents an answer in a new question that doesn't have an ID yet
 interface NewAnswer {
@@ -52,6 +54,20 @@ export default function QuestionForm({
   const isValid = question.content.trim() !== '' &&
     question.answers.every(a => a.content.trim() !== '') &&
     question.answers.some(a => a.isCorrect);
+
+  const handleSave = async () => {
+    if (isCreate) {
+      onSave();
+    } else {
+      const { id, content } = question as Question;
+      const response = await editQuestion({ userId: "user-id-placeholder", questionId: id, questionContent: content });
+      if (response.success) {
+        onSave();
+      } else {
+        console.error(response.metadata.error);
+      }
+    }
+  };
 
   return (
     <div className={cn(
@@ -189,7 +205,7 @@ export default function QuestionForm({
         <Button
           variant={isCreate ? "default" : "default"}
           size="sm"
-          onClick={onSave}
+          onClick={handleSave}
           disabled={!isValid || isSubmitting}
           className={cn(
             "text-white transition-colors duration-200",
