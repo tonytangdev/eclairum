@@ -23,6 +23,7 @@ export function QuestionsTab({ quizId, questions, onQuestionsChange }: Questions
     setOpenAccordionItem,
     isAddingQuestion,
     newQuestion,
+    isSubmitting,
     startEditingQuestion,
     cancelEditingQuestion,
     updateEditedQuestionContent,
@@ -54,8 +55,8 @@ export function QuestionsTab({ quizId, questions, onQuestionsChange }: Questions
     onQuestionsChange(managedQuestions);
   };
 
-  const handleAddQuestion = () => {
-    saveNewQuestion();
+  const handleAddQuestion = async () => {
+    await saveNewQuestion();
     onQuestionsChange(managedQuestions);
   };
 
@@ -70,6 +71,7 @@ export function QuestionsTab({ quizId, questions, onQuestionsChange }: Questions
           variant="outline"
           size="sm"
           onClick={startAddingQuestion}
+          disabled={isAddingQuestion || isSubmitting}
           className="bg-green-50 border-green-200 hover:bg-green-100 hover:text-green-700 transition-colors duration-200"
         >
           <PlusCircle className="mr-2 h-4 w-4 text-green-500" />
@@ -82,10 +84,15 @@ export function QuestionsTab({ quizId, questions, onQuestionsChange }: Questions
           mode="create"
           question={newQuestion}
           onUpdateContent={updateNewQuestionContent}
-          onUpdateAnswerContent={updateNewAnswerContent}
-          onUpdateCorrectAnswer={updateNewCorrectAnswer}
+          onUpdateAnswerContent={(index, content) =>
+            updateNewAnswerContent(Number(index), content)
+          }
+          onUpdateCorrectAnswer={(index) =>
+            updateNewCorrectAnswer(Number(index))
+          }
           onSave={handleAddQuestion}
           onCancel={cancelAddingQuestion}
+          isSubmitting={isSubmitting}
         />
       )}
 

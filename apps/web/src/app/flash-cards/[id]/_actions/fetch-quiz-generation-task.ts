@@ -7,8 +7,6 @@ import { mapTaskResponseToQuiz } from "../types";
 
 export async function fetchQuizGenerationTask(taskId: string) {
   try {
-    // wait for 5 seconds
-    await new Promise((resolve) => setTimeout(resolve, 5000));
     const { userId } = await auth();
     if (!userId) {
       return {

@@ -1,14 +1,8 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { v4 as uuidv4 } from "uuid"; // Make sure this import is present
 import { Question } from "../types";
-
-interface NewQuestion {
-  content: string;
-  answers: Array<{
-    id: string;
-    content: string;
-    isCorrect: boolean;
-  }>;
-}
+import { toast } from "sonner";
+import { addQuestion } from "../_actions/add-question";
 
 export function useQuestionManagement(
   quizId: string,
@@ -21,51 +15,60 @@ export function useQuestionManagement(
   const [editedQuestion, setEditedQuestion] = useState<Question | null>(null);
   const [openAccordionItem, setOpenAccordionItem] = useState<string>("");
   const [isAddingQuestion, setIsAddingQuestion] = useState(false);
-  const [newQuestion, setNewQuestion] = useState<NewQuestion>(
-    createEmptyQuestion(),
-  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function createEmptyQuestion(): NewQuestion {
-    return {
-      content: "",
-      answers: [
-        { id: `new-a1-${Date.now()}`, content: "", isCorrect: true },
-        { id: `new-a2-${Date.now()}`, content: "", isCorrect: false },
-        { id: `new-a3-${Date.now()}`, content: "", isCorrect: false },
-        { id: `new-a4-${Date.now()}`, content: "", isCorrect: false },
-      ],
-    };
-  }
+  // Initialize empty question structure for the form without IDs
+  const [newQuestion, setNewQuestion] = useState<{
+    content: string;
+    answers: Array<{
+      content: string;
+      isCorrect: boolean;
+    }>;
+  }>({
+    content: "",
+    answers: [
+      { content: "", isCorrect: true },
+      { content: "", isCorrect: false },
+      { content: "", isCorrect: false },
+      { content: "", isCorrect: false },
+    ],
+  });
 
-  // Question editing functions
-  const startEditingQuestion = (question: Question) => {
+  // Start editing a question
+  const startEditingQuestion = useCallback((question: Question) => {
     setEditingQuestionId(question.id);
-    setEditedQuestion({ ...question, answers: [...question.answers] });
-    setOpenAccordionItem(question.id);
-  };
+    setEditedQuestion(JSON.parse(JSON.stringify(question)));
+  }, []);
 
-  const cancelEditingQuestion = () => {
+  // Cancel editing a question
+  const cancelEditingQuestion = useCallback(() => {
     setEditingQuestionId(null);
     setEditedQuestion(null);
-  };
+  }, []);
 
-  const updateEditedQuestionContent = (content: string) => {
+  // Update the edited question content
+  const updateEditedQuestionContent = useCallback((content: string) => {
     setEditedQuestion((prev) => (prev ? { ...prev, content } : null));
-  };
+  }, []);
 
-  const updateEditedAnswerContent = (answerId: string, content: string) => {
-    setEditedQuestion((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        answers: prev.answers.map((a) =>
-          a.id === answerId ? { ...a, content } : a,
-        ),
-      };
-    });
-  };
+  // Update an answer's content in the edited question
+  const updateEditedAnswerContent = useCallback(
+    (answerId: string, content: string) => {
+      setEditedQuestion((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          answers: prev.answers.map((a) =>
+            a.id === answerId ? { ...a, content } : a,
+          ),
+        };
+      });
+    },
+    [],
+  );
 
-  const updateEditedCorrectAnswer = (answerId: string) => {
+  // Update which answer is correct in the edited question
+  const updateEditedCorrectAnswer = useCallback((answerId: string) => {
     setEditedQuestion((prev) => {
       if (!prev) return null;
       return {
@@ -76,9 +79,10 @@ export function useQuestionManagement(
         })),
       };
     });
-  };
+  }, []);
 
-  const saveEditedQuestion = () => {
+  // Save the edited question
+  const saveEditedQuestion = useCallback(() => {
     if (!editedQuestion) return;
 
     setQuestions((prev) =>
@@ -87,56 +91,102 @@ export function useQuestionManagement(
 
     setEditingQuestionId(null);
     setEditedQuestion(null);
-  };
+    toast.success("Question updated successfully");
+  }, [editedQuestion, editingQuestionId]);
 
-  // New question functions
-  const startAddingQuestion = () => {
+  // Start adding a new question without assigning IDs
+  const startAddingQuestion = useCallback(() => {
     setIsAddingQuestion(true);
-    setNewQuestion(createEmptyQuestion());
-  };
+    // Reset the new question form without IDs
+    setNewQuestion({
+      content: "",
+      answers: [
+        { content: "", isCorrect: true },
+        { content: "", isCorrect: false },
+        { content: "", isCorrect: false },
+        { content: "", isCorrect: false },
+      ],
+    });
+  }, []);
 
-  const cancelAddingQuestion = () => {
+  // Cancel adding a new question
+  const cancelAddingQuestion = useCallback(() => {
     setIsAddingQuestion(false);
-  };
+  }, []);
 
-  const updateNewQuestionContent = (content: string) => {
+  // Update the new question content
+  const updateNewQuestionContent = useCallback((content: string) => {
     setNewQuestion((prev) => ({ ...prev, content }));
-  };
+  }, []);
 
-  const updateNewAnswerContent = (answerId: string, content: string) => {
+  // Update an answer's content in the new question using index instead of ID
+  const updateNewAnswerContent = useCallback(
+    (index: number, content: string) => {
+      setNewQuestion((prev) => ({
+        ...prev,
+        answers: prev.answers.map((a, i) =>
+          i === index ? { ...a, content } : a,
+        ),
+      }));
+    },
+    [],
+  );
+
+  // Update which answer is correct in the new question using index instead of ID
+  const updateNewCorrectAnswer = useCallback((index: number) => {
     setNewQuestion((prev) => ({
       ...prev,
-      answers: prev.answers.map((a) =>
-        a.id === answerId ? { ...a, content } : a,
-      ),
-    }));
-  };
-
-  const updateNewCorrectAnswer = (answerId: string) => {
-    setNewQuestion((prev) => ({
-      ...prev,
-      answers: prev.answers.map((a) => ({
+      answers: prev.answers.map((a, i) => ({
         ...a,
-        isCorrect: a.id === answerId,
+        isCorrect: i === index,
       })),
     }));
-  };
+  }, []);
 
-  const saveNewQuestion = () => {
-    const newQuestionId = `q${Date.now()}`;
-    const newQuestionObj = {
-      id: newQuestionId,
-      content: newQuestion.content,
-      answers: newQuestion.answers.map((a) => ({
-        ...a,
-        questionId: newQuestionId,
-      })),
-      quizGenerationTaskId: quizId,
-    };
+  // Save the new question
+  const saveNewQuestion = useCallback(async () => {
+    setIsSubmitting(true);
 
-    setQuestions((prev) => [...prev, newQuestionObj]);
-    setIsAddingQuestion(false);
-  };
+    try {
+      const response = await addQuestion({
+        taskId: quizId, // Using quizId as taskId (may need adjustment based on your data model)
+        questionContent: newQuestion.content,
+        answers: newQuestion.answers.map((answer) => ({
+          content: answer.content,
+          isCorrect: answer.isCorrect,
+        })),
+      });
+
+      if (response.success && response.data) {
+        // Get the new question to the state
+        const newQuestionWithId: Question = {
+          id: response.data.id || (response.metadata.questionId as string),
+          content: newQuestion.content,
+          answers: newQuestion.answers as unknown as Question["answers"],
+          quizGenerationTaskId: quizId,
+        };
+
+        setQuestions((prev) => [...prev, newQuestionWithId]);
+        setIsAddingQuestion(false);
+        toast.success("Question added successfully");
+      } else {
+        toast.error("Failed to add question", {
+          description:
+            (response.metadata.error as string) || "Unknown error occurred",
+        });
+      }
+    } catch (error) {
+      console.error("Error saving new question:", error);
+      toast.error("Failed to add question", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [newQuestion, quizId]);
 
   return {
     questions,
@@ -147,6 +197,7 @@ export function useQuestionManagement(
     setOpenAccordionItem,
     isAddingQuestion,
     newQuestion,
+    isSubmitting,
     startEditingQuestion,
     cancelEditingQuestion,
     updateEditedQuestionContent,
