@@ -92,6 +92,7 @@ Act as a senior developer and write tests for the code you write. Use the follow
 - Use `describe` to group related tests
 - Use `it` to define individual tests
 - When mocking, do not allow "any"
+- Be careful about private fields
 - When using jest.expectAny, cast to the expected type :
   
   ```typescript
