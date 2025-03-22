@@ -9,6 +9,7 @@ describe('QuestionsController', () => {
   // Mock the QuestionsService
   const mockQuestionsService = {
     getQuestions: jest.fn(),
+    addQuestion: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -73,6 +74,89 @@ describe('QuestionsController', () => {
       expect(mockQuestionsService.getQuestions).toHaveBeenCalledWith(
         userId,
         limit,
+      );
+    });
+  });
+
+  describe('addQuestion', () => {
+    it('should add a question successfully', async () => {
+      // Arrange
+      const addQuestionDto = {
+        userId: faker.string.uuid(),
+        taskId: faker.string.uuid(),
+        questionContent: faker.lorem.sentence(),
+        answers: [
+          { content: faker.lorem.sentence(), isCorrect: true },
+          { content: faker.lorem.sentence(), isCorrect: false },
+        ],
+      };
+      const mockQuestion = {
+        id: faker.string.uuid(),
+        content: addQuestionDto.questionContent,
+      };
+      mockQuestionsService.addQuestion.mockResolvedValue({
+        data: mockQuestion,
+        metadata: {
+          questionId: mockQuestion.id,
+        },
+        success: true,
+      });
+
+      // Act
+      const result = await controller.addQuestion(addQuestionDto);
+
+      // Assert
+      expect(result).toEqual({
+        data: mockQuestion,
+        metadata: {
+          questionId: mockQuestion.id,
+        },
+        success: true,
+      });
+      expect(mockQuestionsService.addQuestion).toHaveBeenCalledWith(
+        addQuestionDto.userId,
+        addQuestionDto.taskId,
+        addQuestionDto.questionContent,
+        addQuestionDto.answers,
+      );
+    });
+
+    it('should handle errors and return error response', async () => {
+      // Arrange
+      const addQuestionDto = {
+        userId: faker.string.uuid(),
+        taskId: faker.string.uuid(),
+        questionContent: faker.lorem.sentence(),
+        answers: [
+          { content: faker.lorem.sentence(), isCorrect: true },
+          { content: faker.lorem.sentence(), isCorrect: false },
+        ],
+      };
+      const errorMessage = 'Failed to add question';
+      mockQuestionsService.addQuestion.mockResolvedValue({
+        data: null,
+        metadata: {
+          error: errorMessage,
+        },
+        success: false,
+      });
+
+      // Act
+      const result = await controller.addQuestion(addQuestionDto);
+
+      // Assert
+      expect(result).toEqual({
+        data: null,
+        metadata: {
+          error: errorMessage,
+        },
+        success: false,
+      });
+      expect(mockQuestionsService.addQuestion).toHaveBeenCalledWith(
+        addQuestionDto.userId,
+        addQuestionDto.taskId,
+        addQuestionDto.questionContent,
+        addQuestionDto.answers,
       );
     });
   });
