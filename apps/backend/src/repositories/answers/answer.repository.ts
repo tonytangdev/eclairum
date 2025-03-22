@@ -47,4 +47,9 @@ export class AnswerRepositoryImpl implements AnswerRepository {
       { deletedAt: new Date() },
     );
   }
+
+  async save(answer: Answer): Promise<void> {
+    const answerEntity = AnswerMapper.toPersistence(answer);
+    await this.answerRepository.save(answerEntity);
+  }
 }
