@@ -1,12 +1,12 @@
 import { AlertCircle, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { fetchQuizGenerationTaskServer } from "./server-actions"
 import QuizDetailsClient from "./_components/QuizDetailsClient"
+import { fetchQuizGenerationTask } from "./_actions/fetch-quiz-generation-task";
 
 export default async function QuizDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const response = await fetchQuizGenerationTaskServer(id)
+  const response = await fetchQuizGenerationTask(id)
 
   if (!response.success || !response.data) {
     return (

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { deleteQuizGenerationTaskServer } from "../server-actions";
+import { deleteQuizGenerationTask } from "../_actions/delete-quiz-generation-task";
 
 export function useQuizDeletion() {
   const router = useRouter();
@@ -19,7 +19,7 @@ export function useQuizDeletion() {
     setIsDeleting(true);
 
     try {
-      const result = await deleteQuizGenerationTaskServer(quizId);
+      const result = await deleteQuizGenerationTask(quizId);
 
       if (result.success) {
         toast("Quiz deleted successfully");
