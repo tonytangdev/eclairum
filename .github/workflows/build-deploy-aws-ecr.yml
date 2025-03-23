@@ -22,7 +22,7 @@ env:
 jobs:
   deploy:
     name: Build, Push and Deploy
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
