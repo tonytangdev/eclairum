@@ -1,5 +1,3 @@
-"use server";
-
 import { serverApi } from "@/lib/api";
 import { CreateUserDto } from "@eclairum/backend/dtos";
 
