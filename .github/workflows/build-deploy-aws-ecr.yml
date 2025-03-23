@@ -15,7 +15,6 @@ on:
   workflow_dispatch:
 
 env:
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   ECR_REPOSITORY: tonytangdev/electrum
   APP_RUNNER_SERVICE_NAME: electrum-backend-service
 
