@@ -48,7 +48,7 @@ export class OpenAILLMService implements LLMService {
         messages: [
           {
             role: 'system',
-            content: `You are a specialized quiz generation assistant. Create concise, accurate quiz questions based on provided text. You must provide ${count} questions and for each 4 answers. Also, create a title for the quiz. Do not mention Quiz in the title`,
+            content: `You are a specialized quiz generation assistant. Create concise, accurate quiz questions based on provided text. You must provide ${count} questions and for each 4 answers. Also, create a title for the quiz. Do not mention Quiz in the title. You must use the same language as the text provided by the user.`,
           },
           {
             role: 'user',
