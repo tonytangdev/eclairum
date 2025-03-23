@@ -8,18 +8,20 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/backend/**'
-      - 'packages/core/**'
-      - '.github/workflows/build-deploy-aws-ecr.yml'
+      - "apps/backend/**"
+      - "packages/core/**"
+      - ".github/workflows/build-deploy-aws-ecr.yml"
   pull_request:
     branches: [main]
     paths:
-      - 'apps/backend/**'
-      - 'packages/core/**'
+      - "apps/backend/**"
+      - "packages/core/**"
   workflow_dispatch:
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  PORT: ${{ env.PORT }}
   ECR_REPOSITORY: tonytangdev/electrum
   APP_RUNNER_SERVICE_NAME: electrum-backend-service
 
