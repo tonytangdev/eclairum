@@ -34,12 +34,15 @@
     "docker:up": "docker compose --env-file .env.dev -f docker-compose.dev.yaml up -d",
     "docker:down": "docker compose --env-file .env.dev -f docker-compose.dev.yaml down",
     "docker:up:ci": "docker compose --env-file .env.ci -f docker-compose.ci.yaml up -d",
-    "docker:down:ci": "docker compose --env-file .env.ci -f docker-compose.ci.yaml down"
+    "docker:down:ci": "docker compose --env-file .env.ci -f docker-compose.ci.yaml down",
+    "typeorm": "typeorm-ts-node-commonjs",
+    "migration:generate": "pnpm run typeorm migration:generate -d ./src/database/data-source.ts",
+    "migration:run": "pnpm run typeorm -d=./src/database/data-source.ts migration:run"
   },
   "dependencies": {
-    "@faker-js/faker": "^9.5.1",
     "@eclairum/core": "workspace:*",
     "@eclairum/eslint-config": "workspace:*",
+    "@faker-js/faker": "^9.5.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.1",
     "@nestjs/core": "^11.0.1",
@@ -47,6 +50,7 @@
     "@nestjs/typeorm": "^11.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "dotenv": "^16.4.7",
     "openai": "^4.86.2",
     "pg": "^8.13.3",
     "reflect-metadata": "^0.2.2",
@@ -55,9 +59,9 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@eclairum/typescript-config": "workspace:*",
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
-    "@eclairum/typescript-config": "workspace:*",
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
