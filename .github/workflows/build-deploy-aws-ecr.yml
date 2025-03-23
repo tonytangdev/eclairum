@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
 
 env:
-  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_REGION: ${{ env.AWS_REGION }}
   ECR_REPOSITORY: tonytangdev/electrum
   APP_RUNNER_SERVICE_NAME: electrum-backend-service
 
