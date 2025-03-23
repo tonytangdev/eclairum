@@ -20,8 +20,8 @@ env:
   AWS_REGION: eu-west-3
 
 permissions:
-      id-token: write   # This is required for requesting the JWT
-      contents: read 
+  id-token: write
+  contents: read
 
 jobs:
   deploy:
