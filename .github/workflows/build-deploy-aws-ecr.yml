@@ -2,11 +2,16 @@ name: Deploy Backend to AWS
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
-      - "apps/backend/**"
-      - ".github/workflows/deploy-backend.yml"
+      - 'apps/backend/**'
+      - 'packages/core/**'
+      - '.github/workflows/backend-docker.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/backend/**'
+      - 'packages/core/**'
   workflow_dispatch:
 
 env:
