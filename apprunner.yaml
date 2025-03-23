@@ -1,5 +1,5 @@
 version: 1.0
-runtime: nodejs20
+runtime: nodejs18
 
 # For container-based deployment using the pre-built Docker image
 source:
