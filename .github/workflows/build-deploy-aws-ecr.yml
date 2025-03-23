@@ -17,6 +17,7 @@ on:
 env:
   ECR_REPOSITORY: tonytangdev/electrum
   APP_RUNNER_SERVICE_NAME: electrum-backend-service
+  AWS_REGION: eu-west-3
 
 jobs:
   deploy:
@@ -32,7 +33,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ secrets.AWS_REGION || env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: ecr-login
