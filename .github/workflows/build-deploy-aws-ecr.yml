@@ -1,0 +1,110 @@
+name: Deploy Backend to AWS
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY: tonytangdev/electrum
+  APP_RUNNER_SERVICE_NAME: electrum-backend-service
+
+jobs:
+  deploy:
+    name: Build, Push and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Create ECR repository if it doesn't exist
+        run: |
+          aws ecr describe-repositories --repository-names ${ECR_REPOSITORY} || \
+          aws ecr create-repository --repository-name ${ECR_REPOSITORY} \
+            --image-scanning-configuration scanOnPush=true \
+            --encryption-configuration encryptionType=AES256
+
+      - name: Build and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        working-directory: ./apps/backend
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Check if App Runner service exists
+        id: check-service
+        continue-on-error: true
+        run: |
+          SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='${APP_RUNNER_SERVICE_NAME}'].ServiceArn" --output text)
+          if [ -n "$SERVICE_ARN" ]; then
+            echo "service-exists=true" >> $GITHUB_OUTPUT
+            echo "service-arn=$SERVICE_ARN" >> $GITHUB_OUTPUT
+          else
+            echo "service-exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create App Runner service
+        if: steps.check-service.outputs.service-exists != 'true'
+        id: create-service
+        run: |
+          SERVICE_RESPONSE=$(aws apprunner create-service \
+            --service-name ${APP_RUNNER_SERVICE_NAME} \
+            --source-configuration '{
+              "ImageRepository": {
+                "ImageIdentifier": "${{ steps.build-image.outputs.image }}",
+                "ImageConfiguration": { "Port": "3000" },
+                "ImageRepositoryType": "ECR"
+              }
+            }' \
+            --instance-configuration '{
+              "Cpu": "2 vCPU", 
+              "Memory": "4 GB"
+            }')
+
+          echo "service-arn=$(echo $SERVICE_RESPONSE | jq -r '.Service.ServiceArn')" >> $GITHUB_OUTPUT
+
+      - name: Update existing App Runner service
+        if: steps.check-service.outputs.service-exists == 'true'
+        run: |
+          aws apprunner update-service \
+            --service-arn ${{ steps.check-service.outputs.service-arn }} \
+            --source-configuration '{
+              "ImageRepository": {
+                "ImageIdentifier": "${{ steps.build-image.outputs.image }}",
+                "ImageConfiguration": { "Port": "3000" },
+                "ImageRepositoryType": "ECR"
+              }
+            }'
+
+      - name: Wait for deployment to complete
+        run: |
+          SERVICE_ARN="${{ steps.check-service.outputs.service-arn || steps.create-service.outputs.service-arn }}"
+          aws apprunner wait service-updated --service-arn $SERVICE_ARN
+
+      - name: Output service URL
+        run: |
+          SERVICE_ARN="${{ steps.check-service.outputs.service-arn || steps.create-service.outputs.service-arn }}"
+          SERVICE_URL=$(aws apprunner describe-service --service-arn $SERVICE_ARN --query "Service.ServiceUrl" --output text)
+          echo "App Runner service deployed at: https://${SERVICE_URL}"
