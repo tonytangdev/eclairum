@@ -1,0 +1,23 @@
+version: 1.0
+runtime: nodejs20
+
+# For container-based deployment using the pre-built Docker image
+source:
+  image:
+    # Point to the Dockerfile in the backend app directory
+    path: apps/backend/Dockerfile
+    port: 3000
+
+# Health check configuration
+health-check:
+  path: /health
+  protocol: HTTP
+  interval: 10
+  timeout: 5
+  healthy-threshold: 3
+  unhealthy-threshold: 5
+
+# Instance configuration
+instance:
+  cpu: 2 vCPU
+  memory: 4 GB
