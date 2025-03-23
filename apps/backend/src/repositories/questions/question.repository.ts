@@ -8,7 +8,12 @@ import { QuestionMapper } from './mappers/question.mapper';
 
 @Injectable()
 export class QuestionRepositoryImpl implements QuestionRepository {
-  constructor(private readonly uowService: UnitOfWorkService) {}
+  constructor(private readonly uowService: UnitOfWorkService) {
+    console.log(
+      'QuestionRepositoryImpl initialized with UnitOfWorkService',
+      uowService,
+    );
+  }
 
   async saveQuestions(questions: Question[]): Promise<void> {
     if (questions.length === 0) return;
