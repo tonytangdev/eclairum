@@ -1,9 +1,5 @@
 name: Deploy Backend to AWS
 
-permissions:
-  contents: read
-  id-token: write
-
 on:
   push:
     branches: [main]
@@ -19,9 +15,7 @@ on:
   workflow_dispatch:
 
 env:
-  AWS_REGION: ${{ secrets.AWS_REGION }}
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  PORT: ${{ env.PORT }}
   ECR_REPOSITORY: tonytangdev/electrum
   APP_RUNNER_SERVICE_NAME: electrum-backend-service
 
