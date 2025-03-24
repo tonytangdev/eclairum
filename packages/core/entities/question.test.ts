@@ -288,4 +288,138 @@ describe("Question", () => {
       }).toThrow(RequiredContentError);
     });
   });
+
+  describe("answer shuffling", () => {
+    it("should preserve all answers when shuffling", () => {
+      // Arrange
+      const answers = [
+        createAnswer(true),
+        createAnswer(false),
+        createAnswer(false),
+        createAnswer(false),
+      ];
+      const question = new Question({
+        content: faker.lorem.sentence(),
+        answers: [...answers],
+        quizGenerationTaskId: randomUUID(),
+      });
+
+      // Act
+      question.shuffleAnswers();
+      const shuffledAnswers = question.getAnswers();
+
+      // Assert
+      expect(shuffledAnswers.length).toBe(answers.length);
+      answers.forEach((answer) => {
+        expect(shuffledAnswers).toContainEqual(answer);
+      });
+    });
+
+    it("should handle empty answers array when shuffling", () => {
+      // Arrange
+      const question = new Question({
+        content: faker.lorem.sentence(),
+        answers: [],
+        quizGenerationTaskId: randomUUID(),
+      });
+
+      // Act & Assert
+      expect(() => question.shuffleAnswers()).not.toThrow();
+      expect(question.getAnswers()).toEqual([]);
+    });
+
+    it("should handle single answer when shuffling", () => {
+      // Arrange
+      const answer = createAnswer(true);
+      const question = new Question({
+        content: faker.lorem.sentence(),
+        answers: [answer],
+        quizGenerationTaskId: randomUUID(),
+      });
+
+      // Act
+      question.shuffleAnswers();
+
+      // Assert
+      expect(question.getAnswers()).toEqual([answer]);
+    });
+
+    it("should actually shuffle answers (non-deterministic test)", () => {
+      // This test might occasionally fail due to the random nature of shuffling
+      // We create many answers to reduce the probability of the same order occurring
+
+      // Arrange
+      const answers = Array.from(
+        { length: 10 },
+        (_, i) => createAnswer(i === 0), // First answer is correct
+      );
+
+      const question = new Question({
+        content: faker.lorem.sentence(),
+        answers: [...answers],
+        quizGenerationTaskId: randomUUID(),
+      });
+
+      // Act
+      // Create a copy of the original order
+      const originalOrder = [...question.getAnswers()];
+
+      // Count shuffles that result in a different order
+      let differentOrderCount = 0;
+      const iterations = 5;
+
+      for (let i = 0; i < iterations; i++) {
+        question.shuffleAnswers();
+
+        // Check if current order is different from original
+        const currentOrder = question.getAnswers();
+        let isDifferent = false;
+
+        for (let j = 0; j < answers.length; j++) {
+          if (currentOrder[j] !== originalOrder[j]) {
+            isDifferent = true;
+            break;
+          }
+        }
+
+        if (isDifferent) {
+          differentOrderCount++;
+        }
+      }
+
+      // Assert - with 10 answers, it's extremely unlikely to get the same order multiple times
+      // We're generous here and just expect at least one different order
+      expect(differentOrderCount).toBeGreaterThan(0);
+    });
+
+    it("should preserve correct answer flags when shuffling", () => {
+      // Arrange
+      const correctAnswer = createAnswer(true);
+      const wrongAnswer1 = createAnswer(false);
+      const wrongAnswer2 = createAnswer(false);
+
+      const question = new Question({
+        content: faker.lorem.sentence(),
+        answers: [correctAnswer, wrongAnswer1, wrongAnswer2],
+        quizGenerationTaskId: randomUUID(),
+      });
+
+      // Act
+      question.shuffleAnswers();
+      const shuffledAnswers = question.getAnswers();
+
+      // Assert
+      // Count correct answers before and after
+      const correctAnswersCount = shuffledAnswers.filter((a) =>
+        a.getIsCorrect(),
+      ).length;
+      expect(correctAnswersCount).toBe(1);
+
+      // Verify the correct answer is preserved
+      const shuffledCorrectAnswer = shuffledAnswers.find((a) =>
+        a.getIsCorrect(),
+      );
+      expect(shuffledCorrectAnswer).toEqual(correctAnswer);
+    });
+  });
 });

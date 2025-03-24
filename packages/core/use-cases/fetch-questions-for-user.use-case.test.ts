@@ -23,9 +23,18 @@ describe("FetchQuestionsForUserUseCase", () => {
   const mockUser = { id: userId } as unknown as User;
 
   const mockQuestions = [
-    { getId: () => faker.string.uuid() } as Question,
-    { getId: () => faker.string.uuid() } as Question,
-    { getId: () => faker.string.uuid() } as Question,
+    {
+      getId: () => faker.string.uuid(),
+      shuffleAnswers: jest.fn(),
+    } as unknown as Question,
+    {
+      getId: () => faker.string.uuid(),
+      shuffleAnswers: jest.fn(),
+    } as unknown as Question,
+    {
+      getId: () => faker.string.uuid(),
+      shuffleAnswers: jest.fn(),
+    } as unknown as Question,
   ];
 
   beforeEach(() => {
@@ -247,5 +256,135 @@ describe("FetchQuestionsForUserUseCase", () => {
     expect(
       mockUserAnswersRepository.findQuestionAnswerFrequencies,
     ).not.toHaveBeenCalled();
+  });
+
+  describe("answer shuffling", () => {
+    it("should shuffle answers for each question", async () => {
+      // Arrange
+      const mockShuffleAnswers = jest.fn();
+      const questionWithShuffleSpy = [
+        {
+          getId: () => faker.string.uuid(),
+          shuffleAnswers: mockShuffleAnswers,
+        } as unknown as Question,
+        {
+          getId: () => faker.string.uuid(),
+          shuffleAnswers: mockShuffleAnswers,
+        } as unknown as Question,
+        {
+          getId: () => faker.string.uuid(),
+          shuffleAnswers: mockShuffleAnswers,
+        } as unknown as Question,
+      ];
+
+      const questionFrequencies = new Map<string, number>();
+
+      mockUserRepository.findById.mockResolvedValue(mockUser);
+      mockQuestionRepository.findByUserId.mockResolvedValue(
+        questionWithShuffleSpy,
+      );
+      mockUserAnswersRepository.findQuestionAnswerFrequencies.mockResolvedValue(
+        questionFrequencies,
+      );
+      mockQuestionSelector.selectQuestionsWithFrequencies.mockReturnValue(
+        questionWithShuffleSpy,
+      );
+
+      // Act
+      await useCase.execute({ userId });
+
+      // Assert
+      expect(mockShuffleAnswers).toHaveBeenCalledTimes(3); // Called for each question
+    });
+
+    it("should shuffle answers for questions from a specific task", async () => {
+      // Arrange
+      const mockShuffleAnswers = jest.fn();
+      const taskQuestions = [
+        {
+          getId: () => faker.string.uuid(),
+          shuffleAnswers: mockShuffleAnswers,
+        } as unknown as Question,
+        {
+          getId: () => faker.string.uuid(),
+          shuffleAnswers: mockShuffleAnswers,
+        } as unknown as Question,
+      ];
+
+      const questionFrequencies = new Map<string, number>();
+
+      mockUserRepository.findById.mockResolvedValue(mockUser);
+      mockQuestionRepository.findByQuizGenerationTaskId.mockResolvedValue(
+        taskQuestions,
+      );
+      mockUserAnswersRepository.findQuestionAnswerFrequencies.mockResolvedValue(
+        questionFrequencies,
+      );
+      mockQuestionSelector.selectQuestionsWithFrequencies.mockReturnValue(
+        taskQuestions,
+      );
+
+      // Act
+      await useCase.execute({ userId, quizGenerationTaskId: taskId });
+
+      // Assert
+      expect(mockShuffleAnswers).toHaveBeenCalledTimes(2); // Called for each task question
+      expect(
+        mockQuestionRepository.findByQuizGenerationTaskId,
+      ).toHaveBeenCalledWith(taskId);
+    });
+
+    it("should not attempt to shuffle answers when no questions are found", async () => {
+      // Arrange
+      const mockShuffleAnswers = jest.fn();
+
+      mockUserRepository.findById.mockResolvedValue(mockUser);
+      mockQuestionRepository.findByUserId.mockResolvedValue([]);
+
+      // Act
+      const result = await useCase.execute({ userId });
+
+      // Assert
+      expect(result.questions).toEqual([]);
+      expect(mockShuffleAnswers).not.toHaveBeenCalled();
+    });
+
+    it("should return questions with shuffled answers in the correct format", async () => {
+      // Arrange
+      const createMockQuestion = (id: string) => {
+        let shuffleCalled = false;
+        return {
+          getId: () => id,
+          shuffleAnswers: jest.fn().mockImplementation(() => {
+            shuffleCalled = true;
+          }),
+          wasShuffled: () => shuffleCalled,
+        } as unknown as Question;
+      };
+
+      const selectedQuestions = [
+        createMockQuestion(faker.string.uuid()),
+        createMockQuestion(faker.string.uuid()),
+      ];
+
+      mockUserRepository.findById.mockResolvedValue(mockUser);
+      mockQuestionRepository.findByUserId.mockResolvedValue(mockQuestions);
+      mockUserAnswersRepository.findQuestionAnswerFrequencies.mockResolvedValue(
+        new Map<string, number>(),
+      );
+      mockQuestionSelector.selectQuestionsWithFrequencies.mockReturnValue(
+        selectedQuestions,
+      );
+
+      // Act
+      const result = await useCase.execute({ userId });
+
+      // Assert
+      expect(result.questions).toEqual(selectedQuestions);
+      // Verify each question in the result had its answers shuffled
+      selectedQuestions.forEach((q) => {
+        expect(q.shuffleAnswers).toHaveBeenCalledTimes(1);
+      });
+    });
   });
 });
