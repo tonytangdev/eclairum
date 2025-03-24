@@ -66,6 +66,9 @@ export class FetchQuestionsForUserUseCase {
         limit,
       );
 
+    // Shuffle the answers for each selected question
+    selectedQuestions.forEach((question) => question.shuffleAnswers());
+
     return { questions: selectedQuestions };
   }
 

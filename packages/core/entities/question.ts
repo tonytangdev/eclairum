@@ -83,4 +83,27 @@ export class Question {
     this.content = content;
     this.updatedAt = new Date();
   }
+
+  /**
+   * Sets the answers array and updates the updatedAt timestamp
+   */
+  private setAnswers(answers: Answer[]): void {
+    this.answers = answers;
+  }
+
+  /**
+   * Shuffles the order of answers using Fisher-Yates algorithm
+   * This is useful for randomizing answer placement in quizzes
+   */
+  public shuffleAnswers(): void {
+    const answers = [...this.answers];
+
+    // Perform Fisher-Yates shuffle
+    for (let i = answers.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [answers[i], answers[j]] = [answers[j], answers[i]];
+    }
+
+    this.setAnswers(answers);
+  }
 }
