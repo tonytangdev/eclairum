@@ -9,6 +9,7 @@ import { UserRepositoryImpl } from '../../repositories/users/user.repository';
 import { UserAnswerRepositoryImpl } from '../../repositories/user-answers/user-answer.repository';
 import { AnswerRepositoryImpl } from '../../repositories/answers/answer.repository';
 import { QuizGenerationTaskRepositoryImpl } from '../../repositories/quiz-generation-tasks/quiz-generation-task.repository';
+import { QuizGenerationTask } from '@eclairum/core/entities';
 
 interface AnswerData {
   content: string;
@@ -25,7 +26,11 @@ export class QuestionsService {
     private readonly quizGenerationTaskRepository: QuizGenerationTaskRepositoryImpl,
   ) {}
 
-  async getQuestions(userId: string, limit: number = 3) {
+  async getQuestions(
+    userId: string,
+    limit: number = 3,
+    quizGenerationTaskId?: QuizGenerationTask['id'],
+  ) {
     const fetchQuestionsUseCase = new FetchQuestionsForUserUseCase(
       this.userRepository,
       this.questionRepository,
@@ -33,7 +38,11 @@ export class QuestionsService {
     );
 
     try {
-      const result = await fetchQuestionsUseCase.execute({ userId, limit });
+      const result = await fetchQuestionsUseCase.execute({
+        userId,
+        limit,
+        quizGenerationTaskId,
+      });
 
       return {
         data: result.questions,

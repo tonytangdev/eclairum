@@ -1,8 +1,13 @@
 import Quiz from "./_components/quiz";
-import { getUserQuestions } from "./_actions/getUserQuestions";
+import { getUserQuestions } from "./_actions/get-user-questions";
 
-export default async function Page() {
-  const result = await getUserQuestions(10);
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ quizGenerationTaskId?: string }>;
+}) {
+  const { quizGenerationTaskId } = await searchParams;
+  const result = await getUserQuestions(10, quizGenerationTaskId);
 
   if (!result.success) {
     return (

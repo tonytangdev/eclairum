@@ -1,5 +1,6 @@
 import { User } from "../entities/user";
 import { Question } from "../entities/question";
+import { QuizGenerationTask } from "../entities/quiz-generation-task";
 import { UserAnswersRepository } from "../interfaces/user-answers-repository.interface";
 import { QuestionRepository } from "../interfaces/question-repository.interface";
 import { UserRepository } from "../interfaces/user-repository.interface";
@@ -9,6 +10,7 @@ import { QuestionSelector } from "../services/question-selector.service";
 type FetchQuestionsForUserInput = {
   userId: User["id"];
   limit?: number;
+  quizGenerationTaskId?: QuizGenerationTask["id"];
 };
 
 type FetchQuestionsForUserOutput = {
@@ -29,6 +31,7 @@ export class FetchQuestionsForUserUseCase {
   async execute({
     userId,
     limit = 3,
+    quizGenerationTaskId,
   }: FetchQuestionsForUserInput): Promise<FetchQuestionsForUserOutput> {
     await this.validateUser(userId);
 
@@ -36,7 +39,19 @@ export class FetchQuestionsForUserUseCase {
       return { questions: [] };
     }
 
-    const allQuestions = await this.questionRepository.findByUserId(userId);
+    let allQuestions: Question[];
+
+    if (quizGenerationTaskId) {
+      // Fetch questions specifically for this task
+      allQuestions =
+        await this.questionRepository.findByQuizGenerationTaskId(
+          quizGenerationTaskId,
+        );
+    } else {
+      // Fetch all questions for the user as before
+      allQuestions = await this.questionRepository.findByUserId(userId);
+    }
+
     if (allQuestions.length === 0) {
       return { questions: [] };
     }

@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { FindManyOptions, IsNull, Repository } from 'typeorm';
 import { QuestionRepository } from '@eclairum/core/interfaces/question-repository.interface';
 import { Question, User } from '@eclairum/core/entities';
 import { UnitOfWorkService } from '../../unit-of-work/unit-of-work.service';
 import { QuestionEntity } from '../../common/entities/question.entity';
 import { QuestionMapper } from './mappers/question.mapper';
+import { QuizGenerationTask } from '@eclairum/core/entities/quiz-generation-task';
 
 @Injectable()
 export class QuestionRepositoryImpl implements QuestionRepository {
@@ -35,6 +36,21 @@ export class QuestionRepositoryImpl implements QuestionRepository {
     const repository = this.getRepository();
     const questionEntities = await repository.find({
       where: { quizGenerationTask: { user: { id: userId } } },
+      relations: ['answers'],
+    });
+
+    return questionEntities.map((entity) => QuestionMapper.toDomain(entity));
+  }
+
+  async findByQuizGenerationTaskId(
+    taskId: QuizGenerationTask['id'],
+  ): Promise<Question[]> {
+    const repository = this.getRepository();
+    const questionEntities = await repository.find({
+      where: {
+        quizGenerationTaskId: taskId,
+        deletedAt: IsNull(),
+      },
       relations: ['answers'],
     });
 

@@ -20,7 +20,10 @@ type QuestionResponse = {
   }[];
 };
 
-export async function getUserQuestions(limit?: number) {
+export async function getUserQuestions(
+  limit?: number,
+  quizGenerationTaskId?: string,
+) {
   try {
     const { userId } = await auth();
     if (!userId) {
@@ -33,9 +36,13 @@ export async function getUserQuestions(limit?: number) {
     const params: {
       userId: string;
       limit?: number | undefined;
-    } = { userId, limit: undefined };
+      quizGenerationTaskId?: string | undefined;
+    } = { userId, limit: undefined, quizGenerationTaskId: undefined };
     if (limit) {
       params.limit ??= limit;
+    }
+    if (quizGenerationTaskId) {
+      params.quizGenerationTaskId = quizGenerationTaskId;
     }
 
     const response = await serverApi.get<QuestionResponse>(`/questions`, {

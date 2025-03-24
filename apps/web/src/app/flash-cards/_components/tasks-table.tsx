@@ -2,7 +2,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { BookOpen, Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { BookOpen, Eye, MoreHorizontal } from "lucide-react"
 import { StatusBadge } from "./status-badge"
 import { TaskSummaryResponse } from "@eclairum/backend/dtos"
 import { formatDate } from "@/lib/dates"

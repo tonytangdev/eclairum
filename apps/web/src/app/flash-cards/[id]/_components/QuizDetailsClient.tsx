@@ -19,6 +19,7 @@ import { ErrorBoundary } from "./ErrorBoundary"
 
 // Import our custom hooks
 import { useQuizDeletion } from "../_hooks"
+import { useRouter } from "next/navigation"
 
 interface QuizDetailsClientProps {
   initialQuiz: Quiz;
@@ -27,6 +28,7 @@ interface QuizDetailsClientProps {
 export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProps) {
   const [quiz, setQuiz] = useState<Quiz>(initialQuiz)
   const [hasError, setHasError] = useState(false)
+  const router = useRouter()
 
   // Use our custom hook for deletion logic
   const { isDeleting, handleDeleteQuiz } = useQuizDeletion()
@@ -57,15 +59,14 @@ export default function QuizDetailsClient({ initialQuiz }: QuizDetailsClientProp
   // Handle starting a quiz
   const handleStartQuiz = useCallback(() => {
     try {
-      toast("Starting quiz...")
-      // Implementation for starting the quiz would go here
+      router.push(`/flash-cards-session?quizGenerationTaskId=${quiz.id}`)
     } catch (error) {
       console.error("Error starting quiz:", error)
       toast("Failed to start quiz", {
         description: "An unexpected error occurred. Please try again."
       })
     }
-  }, [])
+  }, [quiz.id, router])
 
   // Log errors for debugging
   useEffect(() => {

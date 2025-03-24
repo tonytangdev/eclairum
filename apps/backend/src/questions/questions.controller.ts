@@ -10,8 +10,8 @@ import {
   Param,
 } from '@nestjs/common';
 import { QuestionsService } from './services/questions.service';
-import { EditQuestionDto } from './dto/edit-question.dto'; // Import the new DTO
-import { AddQuestionDto } from './dto/add-question.dto'; // Import the new DTO
+import { EditQuestionDto } from './dto/edit-question.dto';
+import { AddQuestionDto } from './dto/add-question.dto';
 
 @Controller('questions')
 export class QuestionsController {
@@ -24,8 +24,15 @@ export class QuestionsController {
     @Optional()
     @Query('limit', new ParseIntPipe({ optional: true }))
     limit?: number,
+    @Optional()
+    @Query('quizGenerationTaskId')
+    quizGenerationTaskId?: string,
   ) {
-    return this.questionsService.getQuestions(userId, limit);
+    return this.questionsService.getQuestions(
+      userId,
+      limit,
+      quizGenerationTaskId,
+    );
   }
 
   @Post()
