@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { Question } from '@eclairum/core/entities';
 import { QuestionRepositoryImpl } from './question.repository';
 import { faker } from '@faker-js/faker';
@@ -254,6 +254,83 @@ describe('QuestionRepositoryImpl', () => {
       expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
       expect(mockRepository.find).toHaveBeenCalledWith({
         where: { quizGenerationTask: { user: { id: userId } } },
+        relations: ['answers'],
+      });
+    });
+  });
+
+  describe('findByQuizGenerationTaskId', () => {
+    it('should return all questions for a specific task', async () => {
+      // Arrange
+      const taskId = faker.string.uuid();
+      const questions = [createMockQuestion(), createMockQuestion()];
+      const entities = questions.map((q) => createMockEntity(q));
+
+      mockRepository.find.mockResolvedValueOnce(entities);
+
+      // Mock the toDomain method to return the corresponding question for each entity
+      QuestionMapper.toDomain = jest
+        .fn()
+        .mockReturnValueOnce(questions[0])
+        .mockReturnValueOnce(questions[1]);
+
+      // Act
+      const result =
+        await questionRepository.findByQuizGenerationTaskId(taskId);
+
+      // Assert
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(result).toEqual(questions);
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        where: {
+          quizGenerationTaskId: taskId,
+          deletedAt: IsNull(),
+        },
+        relations: ['answers'],
+      });
+      expect(QuestionMapper.toDomain).toHaveBeenCalledTimes(2);
+      expect(QuestionMapper.toDomain).toHaveBeenNthCalledWith(1, entities[0]);
+      expect(QuestionMapper.toDomain).toHaveBeenNthCalledWith(2, entities[1]);
+    });
+
+    it('should return empty array when no questions exist for the task', async () => {
+      // Arrange
+      const taskId = faker.string.uuid();
+      mockRepository.find.mockResolvedValueOnce([]);
+
+      // Act
+      const result =
+        await questionRepository.findByQuizGenerationTaskId(taskId);
+
+      // Assert
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(result).toEqual([]);
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        where: {
+          quizGenerationTaskId: taskId,
+          deletedAt: IsNull(),
+        },
+        relations: ['answers'],
+      });
+      expect(QuestionMapper.toDomain).not.toHaveBeenCalled();
+    });
+
+    it('should propagate database errors', async () => {
+      // Arrange
+      const taskId = faker.string.uuid();
+      const dbError = new Error('Database query error');
+      mockRepository.find.mockRejectedValueOnce(dbError);
+
+      // Act & Assert
+      await expect(
+        questionRepository.findByQuizGenerationTaskId(taskId),
+      ).rejects.toThrow(dbError);
+      expect(mockUnitOfWorkService.getManager).toHaveBeenCalled();
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        where: {
+          quizGenerationTaskId: taskId,
+          deletedAt: IsNull(),
+        },
         relations: ['answers'],
       });
     });
