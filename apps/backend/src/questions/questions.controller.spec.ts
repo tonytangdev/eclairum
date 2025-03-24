@@ -53,6 +53,7 @@ describe('QuestionsController', () => {
       expect(mockQuestionsService.getQuestions).toHaveBeenCalledWith(
         userId,
         undefined,
+        undefined,
       );
     });
 
@@ -75,6 +76,65 @@ describe('QuestionsController', () => {
       expect(mockQuestionsService.getQuestions).toHaveBeenCalledWith(
         userId,
         limit,
+        undefined,
+      );
+    });
+
+    // Add new test for quizGenerationTaskId parameter
+    it('should return questions for a specific quiz generation task', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const limit = faker.number.int({ min: 1, max: 10 });
+      const quizGenerationTaskId = faker.string.uuid();
+      const mockQuestions = Array.from({ length: limit }, () => ({
+        id: faker.string.uuid(),
+        text: faker.lorem.sentence(),
+        userId,
+        quizGenerationTaskId,
+      }));
+      mockQuestionsService.getQuestions.mockResolvedValue(mockQuestions);
+
+      // Act
+      const result = await controller.getQuestions(
+        userId,
+        limit,
+        quizGenerationTaskId,
+      );
+
+      // Assert
+      expect(result).toBe(mockQuestions);
+      expect(mockQuestionsService.getQuestions).toHaveBeenCalledWith(
+        userId,
+        limit,
+        quizGenerationTaskId,
+      );
+    });
+
+    it('should return questions for a task without specifying limit', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const quizGenerationTaskId = faker.string.uuid();
+      const mockQuestions = Array.from({ length: 3 }, () => ({
+        id: faker.string.uuid(),
+        text: faker.lorem.sentence(),
+        userId,
+        quizGenerationTaskId,
+      }));
+      mockQuestionsService.getQuestions.mockResolvedValue(mockQuestions);
+
+      // Act
+      const result = await controller.getQuestions(
+        userId,
+        undefined,
+        quizGenerationTaskId,
+      );
+
+      // Assert
+      expect(result).toBe(mockQuestions);
+      expect(mockQuestionsService.getQuestions).toHaveBeenCalledWith(
+        userId,
+        undefined,
+        quizGenerationTaskId,
       );
     });
   });
