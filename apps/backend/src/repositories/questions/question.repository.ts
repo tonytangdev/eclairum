@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { FindManyOptions, IsNull, Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { QuestionRepository } from '@eclairum/core/interfaces/question-repository.interface';
 import { Question, User } from '@eclairum/core/entities';
 import { UnitOfWorkService } from '../../unit-of-work/unit-of-work.service';

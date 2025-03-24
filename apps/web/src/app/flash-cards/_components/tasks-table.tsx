@@ -2,7 +2,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { BookOpen, Eye, MoreHorizontal } from "lucide-react"
+import { BookOpen, Eye, MoreHorizontal, PlayCircle } from "lucide-react"
 import { StatusBadge } from "./status-badge"
 import { TaskSummaryResponse } from "@eclairum/backend/dtos"
 import { formatDate } from "@/lib/dates"
@@ -72,6 +72,12 @@ function TaskActions({ taskId }: TaskActionsProps) {
             <Link href={`/flash-cards/${taskId}`}>
               <Eye className="mr-2 h-4 w-4" />
               <span>View</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href={`/flash-cards-session?quizGenerationTaskId=${taskId}`}>
+              <PlayCircle className="mr-2 h-4 w-4" />
+              <span>Start Quiz</span>
             </Link>
           </DropdownMenuItem>
         </DropdownMenuContent>
