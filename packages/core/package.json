@@ -79,7 +79,9 @@
     "coveragePathIgnorePatterns": [
       "/node_modules/",
       "/dist/",
-      "/index.ts"
+      "/index.ts",
+      "/constants/file-upload.ts",
+      "/interfaces/file-upload-service.interface.ts"
     ],
     "coverageThreshold": {
       "global": {
