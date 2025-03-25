@@ -59,11 +59,12 @@ export class CreateQuizGenerationTaskUseCase {
       return this.handleDirectTextProcessing(userId, text);
     }
 
-    return this.handleFileUpload(userId, text);
+    // For file uploads, text is optional (can be empty or serve as description)
+    return this.handleFileUpload(userId, text || "File upload task");
   }
 
   private validateText(text: string): void {
-    if (!text.trim()) {
+    if (!text?.trim()) {
       throw new RequiredTextContentError();
     }
 

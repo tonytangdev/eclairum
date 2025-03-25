@@ -9,7 +9,11 @@ export class QuizGenerationTaskMapper {
   /**
    * Maps a QuizGenerationTask entity to a TaskResponse DTO
    */
-  toTaskResponse(task: QuizGenerationTask, userId: string): TaskResponse {
+  toTaskResponse(
+    task: QuizGenerationTask,
+    userId: string,
+    fileUploadUrl?: string,
+  ): TaskResponse {
     const taskId = task.getId();
     const questionsCount = task.getQuestions().length;
 
@@ -20,6 +24,7 @@ export class QuizGenerationTaskMapper {
       questionsCount,
       message: `Quiz generation task created with ${questionsCount} questions`,
       generatedAt: task.getGeneratedAt()!,
+      fileUploadUrl,
     };
   }
 

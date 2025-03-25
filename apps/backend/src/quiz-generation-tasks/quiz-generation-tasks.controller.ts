@@ -24,12 +24,14 @@ export class QuizGenerationTasksController {
 
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
-  createQuizGenerationTask(
+  async createQuizGenerationTask(
     @Body() createQuizGenerationTaskDto: CreateQuizGenerationTaskDto,
   ) {
-    return this.quizGenerationTaskService.createTask(
+    const task = await this.quizGenerationTaskService.createTask(
       createQuizGenerationTaskDto,
     );
+
+    return task;
   }
 
   @Get()

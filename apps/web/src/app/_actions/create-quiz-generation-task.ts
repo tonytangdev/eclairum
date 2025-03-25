@@ -82,7 +82,7 @@ export async function createFileUploadTask(
     return {
       success: true,
       fileUploadUrl: response.data.fileUploadUrl,
-      taskId: response.data.quizGenerationTask.id,
+      taskId: response.data.taskId,
     };
   } catch (error) {
     console.error(

@@ -4,14 +4,13 @@ import {
   FetchQuizGenerationTasksForUserUseCase,
   SoftDeleteQuizGenerationTaskForUserUseCase,
 } from '@eclairum/core/use-cases';
-import { Injectable } from '@nestjs/common';
 import { LLMService } from '@eclairum/core/interfaces/llm-service.interface';
 import { QuestionRepositoryImpl } from '../../repositories/questions/question.repository';
 import { QuizGenerationTaskRepositoryImpl } from '../../repositories/quiz-generation-tasks/quiz-generation-task.repository';
 import { UserRepositoryImpl } from '../../repositories/users/user.repository';
 import { AnswerRepositoryImpl } from '../../repositories/answers/answer.repository';
+import { FileUploadService } from '@eclairum/core/interfaces';
 
-@Injectable()
 export class QuizGenerationTaskUseCaseFactory {
   constructor(
     private readonly llmService: LLMService,
@@ -19,6 +18,7 @@ export class QuizGenerationTaskUseCaseFactory {
     private readonly answerRepository: AnswerRepositoryImpl,
     private readonly quizGenerationTaskRepository: QuizGenerationTaskRepositoryImpl,
     private readonly userRepository: UserRepositoryImpl,
+    private readonly fileUploadService?: FileUploadService,
   ) {}
 
   /**
@@ -31,6 +31,7 @@ export class QuizGenerationTaskUseCaseFactory {
       this.answerRepository,
       this.quizGenerationTaskRepository,
       this.userRepository,
+      this.fileUploadService,
     );
   }
 

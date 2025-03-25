@@ -26,6 +26,10 @@ import { QuizGenerationTaskMapper } from '../mappers/quiz-generation-task.mapper
 import { QuizGenerationTaskUseCaseFactory } from '../factories/quiz-generation-task-use-case.factory';
 import { UnitOfWorkService } from '../../unit-of-work/unit-of-work.service';
 import { AnswerRepositoryImpl } from '../../repositories/answers/answer.repository';
+import {
+  FILE_UPLOAD_SERVICE_PROVIDER_KEY,
+  FileUploadService,
+} from '@eclairum/core/interfaces';
 
 @Injectable()
 export class QuizGenerationTasksService {
@@ -41,6 +45,8 @@ export class QuizGenerationTasksService {
     private readonly llmService: LLMService,
     private readonly userRepository: UserRepositoryImpl,
     private readonly uowService: UnitOfWorkService,
+    @Inject(FILE_UPLOAD_SERVICE_PROVIDER_KEY)
+    private readonly fileUploadService: FileUploadService,
   ) {
     this.mapper = new QuizGenerationTaskMapper();
     this.useCaseFactory = new QuizGenerationTaskUseCaseFactory(
@@ -49,26 +55,32 @@ export class QuizGenerationTasksService {
       this.answerRepository,
       this.quizGenerationTaskRepository,
       this.userRepository,
+      this.fileUploadService,
     );
   }
 
   async createTask(
     createQuizGenerationTaskDto: CreateQuizGenerationTaskDto,
   ): Promise<TaskResponse> {
-    const { text, userId } = createQuizGenerationTaskDto;
+    const { text, userId, isFileUpload = false } = createQuizGenerationTaskDto;
 
     try {
       return await this.uowService.doTransactional(async () => {
         const createQuizGenerationTaskUseCase =
           this.useCaseFactory.createCreateTaskUseCase();
 
-        const { quizGenerationTask } =
+        const { quizGenerationTask, fileUploadUrl } =
           await createQuizGenerationTaskUseCase.execute({
             userId,
             text,
+            isFileUpload,
           });
 
-        return this.mapper.toTaskResponse(quizGenerationTask, userId);
+        return this.mapper.toTaskResponse(
+          quizGenerationTask,
+          userId,
+          fileUploadUrl,
+        );
       });
     } catch (error) {
       this.logError('Failed to create quiz generation task', error);
