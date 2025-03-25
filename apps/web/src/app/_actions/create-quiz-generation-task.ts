@@ -96,3 +96,57 @@ export async function createFileUploadTask(
     };
   }
 }
+
+export type ResumeTaskResponse = {
+  success: boolean;
+  taskId?: string;
+  error?: string;
+};
+
+/**
+ * Resumes a quiz generation task after the file has been uploaded
+ * @param taskId The ID of the task to resume
+ * @returns Response indicating success or failure
+ */
+export async function resumeQuizGenerationTask(
+  taskId: string,
+): Promise<ResumeTaskResponse> {
+  try {
+    const { userId } = await auth();
+    console.log("Resuming task with ID:", taskId);
+    console.log("User ID:", userId);
+
+    if (!userId) {
+      return {
+        success: false,
+        error: "Authentication required",
+      };
+    }
+
+    // Call the backend API to resume the task
+    // Instead of sending null as body and userId as query parameter,
+    // we're sending an empty object as the body and using query parameters
+    await serverApi.post(
+      `/quiz-generation-tasks/${taskId}/resume`,
+      {},
+      {
+        params: { userId },
+      },
+    );
+
+    return {
+      success: true,
+      taskId,
+    };
+  } catch (error) {
+    console.error(
+      "Error in resumeQuizGenerationTask server action:",
+      JSON.stringify(error),
+    );
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "An unknown error occurred",
+    };
+  }
+}

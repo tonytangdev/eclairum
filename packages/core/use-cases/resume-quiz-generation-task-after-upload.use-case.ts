@@ -36,8 +36,6 @@ export class ResumeQuizGenerationTaskAfterUploadUseCase {
   }: ResumeQuizGenerationTaskAfterUploadRequest): Promise<ResumeQuizGenerationTaskAfterUploadResponse> {
     const task = await this.getAndValidateTask(taskId, userId);
 
-    console.log(`Resuming quiz generation task ${taskId} for user ${userId}`);
-
     // Start processing in background without waiting for it
     void this.processTaskInBackground(taskId, userId, task);
 
@@ -55,6 +53,7 @@ export class ResumeQuizGenerationTaskAfterUploadUseCase {
     try {
       const extractedText = await this.extractText(taskId);
 
+      console.log(`Extracted text from task ${taskId}: ${extractedText}`);
       // Resume quiz generation with the extracted text
       await this.createQuizGenerationTaskUseCase.execute({
         userId,

@@ -3,9 +3,13 @@
 import { createContext, useContext, useState, useRef, useCallback, ReactNode } from "react";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { MAX_TEXT_LENGTH, MAX_FILE_SIZE } from "@eclairum/core/constants";
-import { createQuizGenerationTask, createFileUploadTask } from "@/app/_actions/create-quiz-generation-task";
+import {
+  createQuizGenerationTask,
+  createFileUploadTask,
+  resumeQuizGenerationTask
+} from "@/app/_actions/create-quiz-generation-task";
 
-type UploadStatus = "idle" | "preparing" | "uploading" | "complete" | "error";
+type UploadStatus = "idle" | "preparing" | "uploading" | "complete" | "processing" | "error";
 type FeedbackType = { type: "success" | "error"; message: string } | null;
 type TabType = "text" | "upload";
 
@@ -61,6 +65,40 @@ export function FlashCardsProvider({ children }: { children: ReactNode }) {
   const isOverLimit = characterCount > MAX_TEXT_LENGTH;
   const isFileTooLarge = Boolean(file && file.size > MAX_FILE_SIZE);
   const fileUploadReady = Boolean(file && !isFileTooLarge);
+
+  /**
+   * Resumes the quiz generation task after the file has been uploaded successfully
+   * @param id - The ID of the task to resume (explicitly passed to avoid state closure issues)
+   */
+  const handleResumeTask = useCallback(async (id: string) => {
+    if (!id) return;
+
+    try {
+      setUploadStatus("processing");
+      setFeedback({
+        type: "success",
+        message: "Processing your file. This may take a moment..."
+      });
+
+      const result = await resumeQuizGenerationTask(id);
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to process file");
+      }
+
+      setFeedback({
+        type: "success",
+        message: "Your file has been processed. You'll be able to review your flash cards soon!"
+      });
+    } catch (error) {
+      console.error("Error resuming task:", error);
+      setFeedback({
+        type: "error",
+        message: "Error processing your file. Please try again."
+      });
+      setUploadStatus("error");
+    }
+  }, []);
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
@@ -154,6 +192,8 @@ export function FlashCardsProvider({ children }: { children: ReactNode }) {
         throw new Error(result.error || "Failed to create upload task");
       }
 
+      // Store the taskId for later tracking
+      const uploadTaskId = result.taskId;
       setUploadStatus("uploading");
 
       const xhr = new XMLHttpRequest();
@@ -172,8 +212,11 @@ export function FlashCardsProvider({ children }: { children: ReactNode }) {
             setUploadStatus("complete");
             setFeedback({
               type: "success",
-              message: "Your file has been uploaded and is being processed. You'll be able to review your flash cards soon!"
+              message: "File uploaded successfully! Starting processing..."
             });
+
+
+            await handleResumeTask(uploadTaskId);
           } else {
             setUploadStatus("error");
             setFeedback({
