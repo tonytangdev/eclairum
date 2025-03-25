@@ -1,9 +1,4 @@
 /**
- * Provider key for OCR service dependency injection
- */
-export const OCR_SERVICE_PROVIDER_KEY = "OCRService";
-
-/**
  * Interface for services that extract text from uploaded files using OCR
  */
 export interface OCRService {
