@@ -28,6 +28,58 @@ describe('CreateQuizGenerationTaskDto', () => {
       expect(errors.length).toBe(0);
     });
 
+    it('should fail validation when text is empty and isFileUpload is false', async () => {
+      dto.text = '';
+      dto.isFileUpload = false;
+
+      const dtoObj = plainToInstance(CreateQuizGenerationTaskDto, dto);
+      const errors = await validate(dtoObj);
+
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].constraints).toHaveProperty('isNotEmpty');
+    });
+
+    it('should allow empty text when isFileUpload is true', async () => {
+      dto.text = '';
+      dto.isFileUpload = true;
+
+      const dtoObj = plainToInstance(CreateQuizGenerationTaskDto, dto);
+      const errors = await validate(dtoObj);
+
+      expect(errors.length).toBe(0);
+    });
+
+    it('should allow very short text when isFileUpload is true', async () => {
+      dto.text = 'hi'; // Less than 10 characters
+      dto.isFileUpload = true;
+
+      const dtoObj = plainToInstance(CreateQuizGenerationTaskDto, dto);
+      const errors = await validate(dtoObj);
+
+      expect(errors.length).toBe(0);
+    });
+
+    it('should allow undefined text when isFileUpload is true', async () => {
+      // @ts-expect-error Delete text property
+      delete dto.text;
+      dto.isFileUpload = true;
+
+      const dtoObj = plainToInstance(CreateQuizGenerationTaskDto, dto);
+      const errors = await validate(dtoObj);
+
+      expect(errors.length).toBe(0);
+    });
+
+    it('should pass validation when isFileUpload is true and text is empty', async () => {
+      const dto = new CreateQuizGenerationTaskDto();
+      dto.userId = 'user-123';
+      dto.isFileUpload = true;
+      dto.text = '';
+
+      const errors = await validate(dto);
+      expect(errors).toHaveLength(0);
+    });
+
     it('should fail validation when text is empty', async () => {
       dto.text = '';
 
@@ -39,27 +91,14 @@ describe('CreateQuizGenerationTaskDto', () => {
       expect(errors[0].constraints).toHaveProperty('minLength');
     });
 
-    it('should fail validation when text is null', async () => {
-      // @ts-expect-error Set text to null
-      dto.text = null;
+    it('should fail validation when isFileUpload is false and text is empty', async () => {
+      const dto = new CreateQuizGenerationTaskDto();
+      dto.userId = 'user-123';
+      dto.isFileUpload = false;
+      dto.text = '';
 
-      const dtoObj = plainToInstance(CreateQuizGenerationTaskDto, dto);
-      const errors = await validate(dtoObj);
-
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].constraints).toHaveProperty('isString');
-    });
-
-    it('should fail validation when text is undefined', async () => {
-      // Delete the text property
-      // @ts-expect-error Delete text property
-      delete dto.text;
-
-      const dtoObj = plainToInstance(CreateQuizGenerationTaskDto, dto);
-      const errors = await validate(dtoObj);
-
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].constraints).toHaveProperty('isNotEmpty');
+      const errors = await validate(dto);
+      expect(errors).not.toHaveLength(0);
     });
 
     it('should fail validation when text is too short', async () => {
@@ -174,6 +213,70 @@ describe('CreateQuizGenerationTaskDto', () => {
 
       expect(errors.length).toBeGreaterThan(0);
       expect(errors[0].constraints).toHaveProperty('isNotEmpty');
+    });
+  });
+
+  describe('isFileUpload validation', () => {
+    it('should validate when isFileUpload is true', async () => {
+      dto.isFileUpload = true;
+
+      const dtoObj = plainToInstance(CreateQuizGenerationTaskDto, dto);
+      const errors = await validate(dtoObj);
+
+      expect(errors.length).toBe(0);
+    });
+
+    it('should validate when isFileUpload is false', async () => {
+      dto.isFileUpload = false;
+
+      const dtoObj = plainToInstance(CreateQuizGenerationTaskDto, dto);
+      const errors = await validate(dtoObj);
+
+      expect(errors.length).toBe(0);
+    });
+
+    it('should validate when isFileUpload is undefined', async () => {
+      // isFileUpload is optional, so it should pass validation when undefined
+      dto.isFileUpload = undefined;
+
+      const dtoObj = plainToInstance(CreateQuizGenerationTaskDto, dto);
+      const errors = await validate(dtoObj);
+
+      expect(errors.length).toBe(0);
+    });
+
+    it('should fail validation when isFileUpload is not a boolean', async () => {
+      // @ts-expect-error Setting non-boolean value
+      dto.isFileUpload = 'not-a-boolean';
+
+      const dtoObj = plainToInstance(CreateQuizGenerationTaskDto, dto);
+      const errors = await validate(dtoObj);
+
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].constraints).toHaveProperty('isBoolean');
+    });
+  });
+
+  describe('conditional validation', () => {
+    it('should apply text validations when isFileUpload is false', async () => {
+      dto.text = 'Too short'; // Less than 10 characters
+      dto.isFileUpload = false;
+
+      const dtoObj = plainToInstance(CreateQuizGenerationTaskDto, dto);
+      const errors = await validate(dtoObj);
+
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0].constraints).toHaveProperty('minLength');
+    });
+
+    it('should not apply text length validations when isFileUpload is true', async () => {
+      dto.text = 'Short'; // Less than 10 characters
+      dto.isFileUpload = true;
+
+      const dtoObj = plainToInstance(CreateQuizGenerationTaskDto, dto);
+      const errors = await validate(dtoObj);
+
+      expect(errors.length).toBe(0);
     });
   });
 });

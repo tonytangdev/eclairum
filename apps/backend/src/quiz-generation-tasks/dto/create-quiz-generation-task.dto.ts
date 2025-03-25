@@ -21,18 +21,13 @@ export class CreateQuizGenerationTaskDto {
   @IsString({ message: 'Text must be a string' })
   @ValidateIf((o: CreateQuizGenerationTaskDto) => o.isFileUpload !== true)
   @IsNotEmpty({ message: 'Text is required when not uploading a file' })
-  @MinLength(10, {
-    message: 'Text must be at least 10 characters',
-    groups: ['text-required'],
-  })
+  @MinLength(10, { message: 'Text must be at least 10 characters' })
+  @ValidateIf(
+    (o: CreateQuizGenerationTaskDto) => o.text !== null && o.text !== undefined,
+  )
   @MaxLength(MAX_TEXT_LENGTH, {
     message: `Text cannot exceed ${MAX_TEXT_LENGTH} characters`,
-    groups: ['text-required', 'text-optional'],
   })
-  @ValidateIf(
-    (o: CreateQuizGenerationTaskDto) =>
-      o.isFileUpload === true || o.text?.length > 0,
-  )
   text: string;
 
   /**
