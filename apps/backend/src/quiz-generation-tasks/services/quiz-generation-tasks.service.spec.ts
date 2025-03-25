@@ -14,6 +14,7 @@ import {
 } from '@eclairum/core/errors';
 import { UnitOfWorkService } from '../../unit-of-work/unit-of-work.service';
 import { AnswerRepositoryImpl } from '../../repositories/answers/answer.repository';
+import { FILE_UPLOAD_SERVICE_PROVIDER_KEY } from '@eclairum/core/interfaces';
 
 // Mock core use cases
 jest.mock('@eclairum/core/use-cases', () => ({
@@ -48,6 +49,7 @@ describe('QuizGenerationTasksService', () => {
   let fetchTaskUseCase: { execute: jest.Mock };
   let deleteTaskUseCase: { execute: jest.Mock };
   let unitOfWorkService: jest.Mocked<UnitOfWorkService>;
+  let mockFileUploadService: { generateUploadUrl: jest.Mock };
 
   // Define interfaces for mock objects
   interface MockAnswer {
@@ -162,6 +164,9 @@ describe('QuizGenerationTasksService', () => {
     fetchTaskUseCase = { execute: jest.fn() };
     deleteTaskUseCase = { execute: jest.fn() };
 
+    // Setup file upload service mock
+    mockFileUploadService = { generateUploadUrl: jest.fn() };
+
     // Setup use case factory mocks
     (CreateQuizGenerationTaskUseCase as jest.Mock).mockReturnValue(
       createTaskUseCase,
@@ -196,6 +201,10 @@ describe('QuizGenerationTasksService', () => {
         },
         { provide: UserRepositoryImpl, useValue: { findById: jest.fn() } },
         { provide: UnitOfWorkService, useValue: unitOfWorkService },
+        {
+          provide: FILE_UPLOAD_SERVICE_PROVIDER_KEY,
+          useValue: mockFileUploadService,
+        },
       ],
     }).compile();
 
@@ -248,6 +257,92 @@ describe('QuizGenerationTasksService', () => {
       });
     });
 
+    it('should create a file upload task with isFileUpload=true and return URL', async () => {
+      // Given a file upload task request
+      const userId = faker.string.uuid();
+      const text = 'Description for file upload';
+      const createDto = { userId, text, isFileUpload: true };
+
+      // And a mock file upload URL
+      const mockFileUploadUrl = 'https://example.com/upload';
+
+      // And a mock task that will be returned
+      const mockTask = createMockTask({
+        userId,
+        textContent: text,
+        status: QuizGenerationStatus.IN_PROGRESS,
+        questions: [],
+      });
+
+      // And the use case will return this task with a file upload URL
+      createTaskUseCase.execute.mockResolvedValue({
+        quizGenerationTask: mockTask,
+        fileUploadUrl: mockFileUploadUrl,
+      });
+
+      // When creating a file upload task
+      const result = await service.createTask(createDto);
+
+      // Then the result should include the file upload URL
+      expect(result).toEqual({
+        taskId: mockTask.getId(),
+        userId: mockTask.getUserId(),
+        status: mockTask.getStatus(),
+        questionsCount: 0,
+        message: expect.stringContaining(
+          'Quiz generation task created',
+        ) as string,
+        generatedAt: mockTask.getGeneratedAt(),
+        fileUploadUrl: mockFileUploadUrl,
+      });
+
+      // And the use case should have been called with isFileUpload=true
+      expect(createTaskUseCase.execute).toHaveBeenCalledWith({
+        userId,
+        text,
+        isFileUpload: true,
+      });
+    });
+
+    it('should handle empty text when isFileUpload=true', async () => {
+      // Given a file upload task request with empty text
+      const userId = faker.string.uuid();
+      const createDto = { userId, text: '', isFileUpload: true };
+
+      // And a mock file upload URL
+      const mockFileUploadUrl = 'https://example.com/upload';
+
+      // And a mock task that will be returned
+      const mockTask = createMockTask({
+        userId,
+        textContent: 'File upload task', // Default text for file uploads
+        status: QuizGenerationStatus.IN_PROGRESS,
+      });
+
+      // And the use case will return this task with a file upload URL
+      createTaskUseCase.execute.mockResolvedValue({
+        quizGenerationTask: mockTask,
+        fileUploadUrl: mockFileUploadUrl,
+      });
+
+      // When creating a file upload task with empty text
+      const result = await service.createTask(createDto);
+
+      // Then the result should be correctly structured with the file upload URL
+      expect(result).toEqual(
+        expect.objectContaining({
+          fileUploadUrl: mockFileUploadUrl,
+        }),
+      );
+
+      // And the use case should have been called with the empty text
+      expect(createTaskUseCase.execute).toHaveBeenCalledWith({
+        userId,
+        text: '',
+        isFileUpload: true,
+      });
+    });
+
     it('should handle null generatedAt date in response', async () => {
       // Given a task with null generatedAt
       const mockTask = createMockTask({ generatedAt: null });
@@ -275,6 +370,21 @@ describe('QuizGenerationTasksService', () => {
         service.createTask({
           userId: faker.string.uuid(),
           text: faker.lorem.paragraph(),
+        }),
+      ).rejects.toThrow(error);
+    });
+
+    it('should propagate file upload errors', async () => {
+      // Given a file upload error
+      const error = new Error('File upload service not configured');
+      createTaskUseCase.execute.mockRejectedValue(error);
+
+      // When creating a file upload task
+      await expect(
+        service.createTask({
+          userId: faker.string.uuid(),
+          text: 'Description',
+          isFileUpload: true,
         }),
       ).rejects.toThrow(error);
     });
