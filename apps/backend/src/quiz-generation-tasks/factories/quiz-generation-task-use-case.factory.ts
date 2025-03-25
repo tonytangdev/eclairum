@@ -3,6 +3,7 @@ import {
   FetchQuizGenerationTaskForUserUseCase,
   FetchQuizGenerationTasksForUserUseCase,
   SoftDeleteQuizGenerationTaskForUserUseCase,
+  ResumeQuizGenerationTaskAfterUploadUseCase,
 } from '@eclairum/core/use-cases';
 import { LLMService } from '@eclairum/core/interfaces/llm-service.interface';
 import { QuestionRepositoryImpl } from '../../repositories/questions/question.repository';
@@ -10,6 +11,7 @@ import { QuizGenerationTaskRepositoryImpl } from '../../repositories/quiz-genera
 import { UserRepositoryImpl } from '../../repositories/users/user.repository';
 import { AnswerRepositoryImpl } from '../../repositories/answers/answer.repository';
 import { FileUploadService } from '@eclairum/core/interfaces';
+import { OCRService } from '@eclairum/core/interfaces/ocr-service.interface';
 
 export class QuizGenerationTaskUseCaseFactory {
   constructor(
@@ -19,6 +21,7 @@ export class QuizGenerationTaskUseCaseFactory {
     private readonly quizGenerationTaskRepository: QuizGenerationTaskRepositoryImpl,
     private readonly userRepository: UserRepositoryImpl,
     private readonly fileUploadService?: FileUploadService,
+    private readonly ocrService?: OCRService,
   ) {}
 
   /**
@@ -64,6 +67,22 @@ export class QuizGenerationTaskUseCaseFactory {
       this.quizGenerationTaskRepository,
       this.questionRepository,
       this.answerRepository,
+    );
+  }
+
+  /**
+   * Creates a new instance of the ResumeQuizGenerationTaskAfterUploadUseCase
+   * @throws Error if OCR service is not provided
+   */
+  createResumeTaskAfterUploadUseCase(): ResumeQuizGenerationTaskAfterUploadUseCase {
+    if (!this.ocrService) {
+      throw new Error('OCR service is required to resume a task after upload');
+    }
+
+    return new ResumeQuizGenerationTaskAfterUploadUseCase(
+      this.ocrService,
+      this.quizGenerationTaskRepository,
+      this.createCreateTaskUseCase(),
     );
   }
 }

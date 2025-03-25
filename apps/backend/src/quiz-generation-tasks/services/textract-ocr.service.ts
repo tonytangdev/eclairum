@@ -8,7 +8,7 @@ import {
 } from '@aws-sdk/client-textract';
 import { ConfigService } from '@nestjs/config';
 
-export const FILE_UPLOAD_SERVICE_PROVIDER_KEY = 'FILE_UPLOAD_SERVICE';
+export const OCR_SERVICE_PROVIDER_KEY = 'OCR_SERVICE_PROVIDER_KEY';
 
 @Injectable()
 export class TextractOCRService implements OCRService {

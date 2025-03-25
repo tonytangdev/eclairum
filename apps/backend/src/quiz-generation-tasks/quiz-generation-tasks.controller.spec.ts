@@ -7,6 +7,8 @@ import { FetchQuizGenerationTasksDto } from './dto/fetch-quiz-generation-tasks.d
 import { QuizGenerationStatus } from '@eclairum/core/entities';
 import { faker } from '@faker-js/faker';
 import { TaskResponse } from './dto/fetch-quiz-generation-tasks.response.dto';
+import { ResumeQuizGenerationTaskDto } from './dto/resume-quiz-generation-task.dto';
+import { TaskDetailResponse } from './dto/fetch-quiz-generation-task.response.dto';
 
 describe('QuizGenerationTasksController', () => {
   let controller: QuizGenerationTasksController;
@@ -17,6 +19,7 @@ describe('QuizGenerationTasksController', () => {
     fetchTasksByUserId: jest.Mock;
     getTaskById: jest.Mock;
     deleteTask: jest.Mock;
+    resumeTask: jest.Mock;
   };
 
   // Test data generators
@@ -67,6 +70,7 @@ describe('QuizGenerationTasksController', () => {
       fetchTasksByUserId: jest.fn(),
       getTaskById: jest.fn(),
       deleteTask: jest.fn(),
+      resumeTask: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -283,6 +287,73 @@ describe('QuizGenerationTasksController', () => {
 
       // Then
       expect(httpCodeMetadata).toBe(HttpStatus.OK);
+    });
+  });
+
+  describe('resumeQuizGenerationTask', () => {
+    it('should resume a task and return the result', async () => {
+      // Arrange
+      const taskId = faker.string.uuid();
+      const userId = faker.string.uuid();
+      const resumeDto = new ResumeQuizGenerationTaskDto();
+      resumeDto.userId = userId;
+
+      const mockTaskDetail: TaskDetailResponse = {
+        id: taskId,
+        status: 'IN_PROGRESS',
+        title: 'Sample Title',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        generatedAt: null,
+        textContent: 'Sample text content',
+        questions: [],
+      };
+
+      const expectedResult = {
+        success: true,
+        task: mockTaskDetail,
+      };
+
+      serviceMock.resumeTask.mockResolvedValue(expectedResult);
+
+      // Act
+      const result = await controller.resumeQuizGenerationTask(
+        taskId,
+        resumeDto,
+      );
+
+      // Assert
+      expect(result).toBe(expectedResult);
+      expect(serviceMock.resumeTask).toHaveBeenCalledWith(taskId, userId);
+      expect(serviceMock.resumeTask).toHaveBeenCalledTimes(1);
+    });
+
+    it('should propagate errors from the service', async () => {
+      // Arrange
+      const taskId = faker.string.uuid();
+      const userId = faker.string.uuid();
+      const resumeDto = new ResumeQuizGenerationTaskDto();
+      resumeDto.userId = userId;
+
+      const error = new Error('Failed to resume task');
+      serviceMock.resumeTask.mockRejectedValue(error);
+
+      // Act & Assert
+      await expect(
+        controller.resumeQuizGenerationTask(taskId, resumeDto),
+      ).rejects.toThrow(error);
+    });
+
+    it('should use HTTP 202 Accepted status code', () => {
+      // Arrange & Act
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const httpCodeMetadata = Reflect.getMetadata(
+        '__httpCode__',
+        controller.resumeQuizGenerationTask,
+      );
+
+      // Assert
+      expect(httpCodeMetadata).toBe(HttpStatus.ACCEPTED);
     });
   });
 });

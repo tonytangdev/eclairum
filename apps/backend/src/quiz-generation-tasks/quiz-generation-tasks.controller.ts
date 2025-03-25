@@ -14,6 +14,7 @@ import { CreateQuizGenerationTaskDto } from './dto/create-quiz-generation-task.d
 import { FetchQuizGenerationTasksDto } from './dto/fetch-quiz-generation-tasks.dto';
 import { FetchQuizGenerationTaskDto } from './dto/fetch-quiz-generation-task.dto';
 import { DeleteQuizGenerationTaskDto } from './dto/delete-quiz-generation-task.dto';
+import { ResumeQuizGenerationTaskDto } from './dto/resume-quiz-generation-task.dto';
 import { QuizGenerationTasksService } from './services/quiz-generation-tasks.service';
 
 @Controller('quiz-generation-tasks')
@@ -79,6 +80,31 @@ export class QuizGenerationTasksController {
     return this.quizGenerationTaskService.deleteTask(
       id,
       deleteQuizGenerationTaskDto.userId,
+    );
+  }
+
+  /**
+   * Resume a quiz generation task after file upload
+   * @param id The ID of the task to resume
+   * @param resumeQuizGenerationTaskDto DTO containing the user ID
+   * @returns The resumed task if successful
+   */
+  @Post(':id/resume')
+  @HttpCode(HttpStatus.ACCEPTED)
+  async resumeQuizGenerationTask(
+    @Param(
+      'id',
+      new ParseUUIDPipe({
+        version: '4',
+        errorHttpStatusCode: HttpStatus.BAD_REQUEST,
+      }),
+    )
+    id: string,
+    @Query() resumeQuizGenerationTaskDto: ResumeQuizGenerationTaskDto,
+  ) {
+    return this.quizGenerationTaskService.resumeTask(
+      id,
+      resumeQuizGenerationTaskDto.userId,
     );
   }
 }

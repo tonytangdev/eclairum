@@ -12,9 +12,11 @@ import {
   S3FileUploadService,
 } from './services/s3-file-upload.service';
 import { OpenAIProvider } from './providers/openai.provider';
-import { TextractOCRService } from './services/textract-ocr.service';
+import {
+  OCR_SERVICE_PROVIDER_KEY,
+  TextractOCRService,
+} from './services/textract-ocr.service';
 import { ConfigModule } from '@nestjs/config';
-import { OCR_SERVICE_PROVIDER_KEY } from '@eclairum/core/interfaces';
 
 @Module({
   imports: [RepositoriesModule, UnitOfWorkModule, ConfigModule],

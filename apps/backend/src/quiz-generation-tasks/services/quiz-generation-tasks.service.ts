@@ -26,8 +26,9 @@ import { QuizGenerationTaskMapper } from '../mappers/quiz-generation-task.mapper
 import { QuizGenerationTaskUseCaseFactory } from '../factories/quiz-generation-task-use-case.factory';
 import { UnitOfWorkService } from '../../unit-of-work/unit-of-work.service';
 import { AnswerRepositoryImpl } from '../../repositories/answers/answer.repository';
-import { FileUploadService } from '@eclairum/core/interfaces';
+import { FileUploadService, OCRService } from '@eclairum/core/interfaces';
 import { FILE_UPLOAD_SERVICE_PROVIDER_KEY } from './s3-file-upload.service';
+import { OCR_SERVICE_PROVIDER_KEY } from './textract-ocr.service';
 
 @Injectable()
 export class QuizGenerationTasksService {
@@ -45,6 +46,8 @@ export class QuizGenerationTasksService {
     private readonly uowService: UnitOfWorkService,
     @Inject(FILE_UPLOAD_SERVICE_PROVIDER_KEY)
     private readonly fileUploadService: FileUploadService,
+    @Inject(OCR_SERVICE_PROVIDER_KEY)
+    private readonly ocrService: OCRService,
   ) {
     this.mapper = new QuizGenerationTaskMapper();
     this.useCaseFactory = new QuizGenerationTaskUseCaseFactory(
@@ -54,6 +57,7 @@ export class QuizGenerationTasksService {
       this.quizGenerationTaskRepository,
       this.userRepository,
       this.fileUploadService,
+      this.ocrService,
     );
   }
 
@@ -150,6 +154,35 @@ export class QuizGenerationTasksService {
     }
   }
 
+  /**
+   * Resumes a quiz generation task after file upload
+   * @param taskId The ID of the task to resume
+   * @param userId The ID of the user who owns the task
+   * @returns A response indicating success and the updated task
+   */
+  async resumeTask(
+    taskId: string,
+    userId: string,
+  ): Promise<{ success: boolean; task: TaskDetailResponse }> {
+    try {
+      const resumeTaskUseCase =
+        this.useCaseFactory.createResumeTaskAfterUploadUseCase();
+
+      const { success, task } = await resumeTaskUseCase.execute({
+        taskId,
+        userId,
+      });
+
+      return {
+        success,
+        task: this.mapper.toTaskDetailResponse(task),
+      };
+    } catch (error) {
+      this.handleResumeTaskError(error, userId, taskId);
+      throw error;
+    }
+  }
+
   private handleGetTaskError(
     error: unknown,
     userId: string,
@@ -196,6 +229,33 @@ export class QuizGenerationTasksService {
 
     this.logError(
       `Failed to delete quiz generation task with id ${taskId}`,
+      error,
+    );
+  }
+
+  /**
+   * Handles errors that occur when resuming a task
+   * @param error The error that occurred
+   * @param userId The ID of the user who was attempting to resume the task
+   * @param taskId The ID of the task that was being resumed
+   */
+  private handleResumeTaskError(
+    error: unknown,
+    userId: string,
+    taskId: string,
+  ): void {
+    if (error instanceof TaskNotFoundError) {
+      throw new NotFoundException(error.message);
+    }
+    if (error instanceof UnauthorizedTaskAccessError) {
+      throw new NotFoundException('Quiz generation task not found');
+    }
+    if (error instanceof UserNotFoundError) {
+      throw new BadRequestException(`User with ID '${userId}' not found`);
+    }
+
+    this.logError(
+      `Failed to resume quiz generation task with id ${taskId}`,
       error,
     );
   }
