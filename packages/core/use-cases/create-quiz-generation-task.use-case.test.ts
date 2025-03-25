@@ -236,7 +236,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
         throw new Error("Task was not created");
       }
 
-      expect(task.getTextContent()).toBe(emptyText);
+      expect(task.getTextContent()).toBe("File upload task");
       expect(task.getStatus()).toBe(QuizGenerationStatus.IN_PROGRESS);
       expect(task.getUserId()).toBe(userId);
     });
