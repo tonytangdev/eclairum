@@ -36,8 +36,23 @@ export class ResumeQuizGenerationTaskAfterUploadUseCase {
   }: ResumeQuizGenerationTaskAfterUploadRequest): Promise<ResumeQuizGenerationTaskAfterUploadResponse> {
     const task = await this.getAndValidateTask(taskId, userId);
 
+    console.log(`Resuming quiz generation task ${taskId} for user ${userId}`);
+
+    // Start processing in background without waiting for it
+    void this.processTaskInBackground(taskId, userId, task);
+
+    return {
+      success: true,
+      task,
+    };
+  }
+
+  private async processTaskInBackground(
+    taskId: string,
+    userId: string,
+    task: QuizGenerationTask,
+  ): Promise<void> {
     try {
-      console.log(`Resuming quiz generation task ${taskId} for user ${userId}`);
       const extractedText = await this.extractText(taskId);
 
       // Resume quiz generation with the extracted text
@@ -46,14 +61,8 @@ export class ResumeQuizGenerationTaskAfterUploadUseCase {
         text: extractedText,
         existingTask: task,
       });
-
-      return {
-        success: true,
-        task,
-      };
     } catch (error) {
       await this.handleFailedTask(task, error);
-      throw error;
     }
   }
 
