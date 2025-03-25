@@ -6,4 +6,4 @@
  * - PDFs with formatting, fonts, and small images typically range from 500KB to 5MB
  * - 10MB allows for rich documents while preventing excessively large files
  */
-export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
