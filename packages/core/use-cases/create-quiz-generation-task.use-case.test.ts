@@ -75,14 +75,10 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     return () => capturedTask;
   };
 
-  /**
-   * Helper function to set up and wait for async processes
-   */
-  const waitForAsyncProcessing = async (): Promise<void> => {
-    await new Promise(process.nextTick);
-  };
-
   beforeEach(() => {
+    // Setup fake timers
+    jest.useFakeTimers();
+
     // Reset mocks
     jest.clearAllMocks();
 
@@ -150,6 +146,11 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       mockUserRepository,
       mockFileUploadService,
     );
+  });
+
+  afterEach(() => {
+    // Reset timers
+    jest.useRealTimers();
   });
 
   describe("Input validation", () => {
@@ -361,7 +362,9 @@ describe("CreateQuizGenerationTaskUseCase", () => {
 
       // Act
       await useCase.execute({ userId, text: defaultText });
-      await waitForAsyncProcessing();
+
+      // Run all pending micro tasks (promises)
+      jest.runAllTicks();
 
       // Assert
       expect(
@@ -454,7 +457,9 @@ describe("CreateQuizGenerationTaskUseCase", () => {
 
       // Act
       await useCase.execute({ userId, text: defaultText });
-      await waitForAsyncProcessing();
+
+      // Run all pending micro tasks
+      jest.runAllTicks();
 
       // Assert
       const task = getTask();
@@ -481,7 +486,9 @@ describe("CreateQuizGenerationTaskUseCase", () => {
 
       // Act
       await useCase.execute({ userId, text: defaultText });
-      await waitForAsyncProcessing();
+
+      // Run all pending micro tasks
+      jest.runAllTicks();
 
       // Assert
       expect(consoleErrorSpy).toHaveBeenCalled();
@@ -523,7 +530,9 @@ describe("CreateQuizGenerationTaskUseCase", () => {
 
       // Act
       await useCase.execute({ userId, text: defaultText });
-      await waitForAsyncProcessing();
+
+      // Run all pending micro tasks
+      jest.runAllTicks();
 
       // Assert
       expect(capturedTask).not.toBeNull();
@@ -538,6 +547,4 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       expect(capturedQuestions).toEqual(mockQuestions);
     });
   });
-
-  // ...existing code for async processing and service dependencies...
 });
