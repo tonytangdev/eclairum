@@ -9,18 +9,22 @@ import { AnswerRepository } from "../interfaces/answer-repository.interface";
 import { QuizGenerationTaskRepository } from "../interfaces/quiz-generation-task-repository.interface";
 import { UserRepository } from "../interfaces/user-repository.interface";
 import { TextTooLongError, UserNotFoundError } from "../errors/quiz-errors";
+import { RequiredTextContentError } from "../errors/validation-errors";
 import { User } from "../entities";
 import { MAX_TEXT_LENGTH } from "../constants/quiz";
 import { QuizGeneratorService } from "../services/quiz-generator.service";
 import { QuizStorageService } from "../services/quiz-storage.service";
+import { FileUploadService } from "../interfaces/file-upload-service.interface";
 
 type CreateQuizGenerationTaskUseCaseRequest = {
   userId: User["id"];
   text: string;
+  isFileUpload?: boolean;
 };
 
 type CreateQuizGenerationTaskUseCaseResponse = {
   quizGenerationTask: QuizGenerationTask;
+  fileUploadUrl?: string;
 };
 
 export class CreateQuizGenerationTaskUseCase {
@@ -33,6 +37,7 @@ export class CreateQuizGenerationTaskUseCase {
     readonly answerRepository: AnswerRepository,
     readonly quizGenerationTaskRepository: QuizGenerationTaskRepository,
     private readonly userRepository: UserRepository,
+    private readonly fileUploadService?: FileUploadService,
   ) {
     this.quizGenerator = new QuizGeneratorService(llmService);
     this.quizStorage = new QuizStorageService(
@@ -45,12 +50,31 @@ export class CreateQuizGenerationTaskUseCase {
   async execute({
     userId,
     text,
+    isFileUpload = false,
   }: CreateQuizGenerationTaskUseCaseRequest): Promise<CreateQuizGenerationTaskUseCaseResponse> {
-    this.validateTextLength(text);
     await this.validateUser(userId);
 
-    const quizGenerationTask = this.createTask(text, userId);
-    await this.quizStorage.saveTask(quizGenerationTask);
+    if (!isFileUpload) {
+      this.validateText(text);
+      return this.handleDirectTextProcessing(userId, text);
+    }
+
+    return this.handleFileUpload(userId, text);
+  }
+
+  private validateText(text: string): void {
+    if (!text.trim()) {
+      throw new RequiredTextContentError();
+    }
+
+    this.validateTextLength(text);
+  }
+
+  private async handleDirectTextProcessing(
+    userId: User["id"],
+    text: string,
+  ): Promise<CreateQuizGenerationTaskUseCaseResponse> {
+    const quizGenerationTask = await this.createAndSaveTask(userId, text);
 
     this.processQuizGeneration(quizGenerationTask, text).catch((error) => {
       console.error(`Error during async quiz generation: ${error}`);
@@ -58,6 +82,40 @@ export class CreateQuizGenerationTaskUseCase {
     });
 
     return { quizGenerationTask };
+  }
+
+  private async handleFileUpload(
+    userId: User["id"],
+    text: string,
+  ): Promise<CreateQuizGenerationTaskUseCaseResponse> {
+    this.ensureFileUploadServiceExists();
+
+    const quizGenerationTask = await this.createAndSaveTask(userId, text);
+    const fileUploadUrl = await this.generateFileUploadUrl(
+      quizGenerationTask.getId(),
+    );
+
+    return { quizGenerationTask, fileUploadUrl };
+  }
+
+  private async createAndSaveTask(
+    userId: User["id"],
+    text: string,
+  ): Promise<QuizGenerationTask> {
+    const quizGenerationTask = this.createTask(text, userId);
+    await this.quizStorage.saveTask(quizGenerationTask);
+    return quizGenerationTask;
+  }
+
+  private ensureFileUploadServiceExists(): void {
+    if (!this.fileUploadService) {
+      throw new Error("File upload service is not configured");
+    }
+  }
+
+  private async generateFileUploadUrl(taskId: string): Promise<string> {
+    this.ensureFileUploadServiceExists();
+    return this.fileUploadService!.generateUploadUrl(taskId);
   }
 
   private validateTextLength(text: string): void {

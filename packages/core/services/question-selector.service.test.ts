@@ -6,6 +6,7 @@ import { UserAnswer } from "../entities/user-answer";
 describe("QuestionSelector", () => {
   let selector: QuestionSelector;
 
+  // Create predictable test data for consistent assertions
   const createMockQuestion = (id: string) =>
     ({
       getId: () => id,
@@ -19,316 +20,333 @@ describe("QuestionSelector", () => {
       getQuestionId: () => questionId,
     }) as UserAnswer;
 
-  // Create a fixed set of questions for more predictable tests
+  // Generate a fixed set of question IDs for consistent tests
+  let questionIds: string[];
   let mockQuestions: Question[];
 
   beforeEach(() => {
     selector = new QuestionSelector();
 
-    // Reset mock questions for each test to ensure isolation
-    mockQuestions = [
-      createMockQuestion(faker.string.uuid()),
-      createMockQuestion(faker.string.uuid()),
-      createMockQuestion(faker.string.uuid()),
-      createMockQuestion(faker.string.uuid()),
-      createMockQuestion(faker.string.uuid()),
-    ];
+    // Generate consistent IDs for predictable tests
+    questionIds = Array.from({ length: 10 }, (_, i) => `q${i + 1}`);
+
+    // Create questions with these IDs
+    mockQuestions = questionIds.map((id) => createMockQuestion(id));
   });
 
   describe("selectQuestions", () => {
-    it("should select random unanswered questions when there are enough of them", () => {
-      const userAnswers = [createMockUserAnswer(mockQuestions[0].getId())];
+    it("should prioritize unanswered questions when there are enough", () => {
+      // Given user has answered two questions
+      const userAnswers = [
+        createMockUserAnswer(questionIds[0]),
+        createMockUserAnswer(questionIds[1]),
+      ];
 
+      // When selecting 3 questions
       const result = selector.selectQuestions(mockQuestions, userAnswers, 3);
 
+      // Then all selected questions should be unanswered ones
       expect(result.length).toBe(3);
-      expect(result.map((q) => q.getId())).not.toContain(
-        mockQuestions[0].getId(),
-      );
-      // All selected questions should be from the original list
       result.forEach((question) => {
-        expect(
-          mockQuestions.some((q) => q.getId() === question.getId()),
-        ).toBeTruthy();
+        expect(question.getId()).not.toBe(questionIds[0]);
+        expect(question.getId()).not.toBe(questionIds[1]);
       });
     });
 
-    it("should combine unanswered and least answered questions when needed", () => {
+    it("should combine unanswered with least frequently answered questions when needed", () => {
+      // Given:
+      // - Question 0: answered 3 times
+      // - Question 1: answered 2 times
+      // - Question 2: answered 1 time
+      // - Others: unanswered
       const userAnswers = [
-        createMockUserAnswer(mockQuestions[0].getId()),
-        createMockUserAnswer(mockQuestions[1].getId()),
-        createMockUserAnswer(mockQuestions[2].getId()),
-        createMockUserAnswer(mockQuestions[0].getId()),
-        createMockUserAnswer(mockQuestions[1].getId()),
+        // Question 0 answered 3 times
+        createMockUserAnswer(questionIds[0]),
+        createMockUserAnswer(questionIds[0]),
+        createMockUserAnswer(questionIds[0]),
+        // Question 1 answered 2 times
+        createMockUserAnswer(questionIds[1]),
+        createMockUserAnswer(questionIds[1]),
+        // Question 2 answered 1 time
+        createMockUserAnswer(questionIds[2]),
       ];
 
-      const result = selector.selectQuestions(mockQuestions, userAnswers, 3);
+      // When selecting 8 questions
+      const result = selector.selectQuestions(mockQuestions, userAnswers, 8);
 
-      expect(result.length).toBe(3);
+      // Then all unanswered questions (7) should be included plus the least frequently answered
+      expect(result.length).toBe(8);
 
-      // Should include the 2 unanswered questions
-      const resultIds = result.map((q) => q.getId());
-      expect(resultIds).toContain(mockQuestions[3].getId());
-      expect(resultIds).toContain(mockQuestions[4].getId());
+      // The result should contain all unanswered questions (3-9)
+      for (let i = 3; i < 10; i++) {
+        expect(result.some((q) => q.getId() === questionIds[i])).toBeTruthy();
+      }
 
-      // Should include the least frequently answered question (question 2, answered once)
-      expect(resultIds).toContain(mockQuestions[2].getId());
+      // And the least frequently answered question (2)
+      expect(result.some((q) => q.getId() === questionIds[2])).toBeTruthy();
+
+      // But not the more frequently answered questions (0 and 1)
+      expect(result.some((q) => q.getId() === questionIds[0])).toBeFalsy();
+      expect(result.some((q) => q.getId() === questionIds[1])).toBeFalsy();
     });
 
     it("should select least frequently answered questions when all are answered", () => {
+      // Given all questions are answered with different frequencies
       const userAnswers = [
-        // Different answer frequencies
-        createMockUserAnswer(mockQuestions[0].getId()),
-        createMockUserAnswer(mockQuestions[0].getId()),
-        createMockUserAnswer(mockQuestions[1].getId()),
-        createMockUserAnswer(mockQuestions[1].getId()),
-        createMockUserAnswer(mockQuestions[1].getId()),
-        createMockUserAnswer(mockQuestions[2].getId()),
-        createMockUserAnswer(mockQuestions[3].getId()),
-        createMockUserAnswer(mockQuestions[4].getId()),
-        createMockUserAnswer(mockQuestions[4].getId()),
+        createMockUserAnswer(questionIds[0]), // 1 time
+        createMockUserAnswer(questionIds[1]),
+        createMockUserAnswer(questionIds[1]), // 2 times
+        createMockUserAnswer(questionIds[2]),
+        createMockUserAnswer(questionIds[2]),
+        createMockUserAnswer(questionIds[2]), // 3 times
+        createMockUserAnswer(questionIds[3]), // 1 time
+        createMockUserAnswer(questionIds[4]),
+        createMockUserAnswer(questionIds[4]), // 2 times
+        createMockUserAnswer(questionIds[5]),
+        createMockUserAnswer(questionIds[5]),
+        createMockUserAnswer(questionIds[5]), // 3 times
+        createMockUserAnswer(questionIds[6]), // 1 time
+        createMockUserAnswer(questionIds[7]),
+        createMockUserAnswer(questionIds[7]), // 2 times
+        createMockUserAnswer(questionIds[8]),
+        createMockUserAnswer(questionIds[8]),
+        createMockUserAnswer(questionIds[8]), // 3 times
+        createMockUserAnswer(questionIds[9]), // 1 time
       ];
 
-      const result = selector.selectQuestions(mockQuestions, userAnswers, 2);
+      // When selecting 4 questions
+      const result = selector.selectQuestions(mockQuestions, userAnswers, 4);
 
-      expect(result.length).toBe(2);
-
-      // Should select the questions with lowest frequency (2 and 3, answered once each)
-      const resultIds = result.map((q) => q.getId());
-      expect(resultIds).toContain(mockQuestions[2].getId());
-      expect(resultIds).toContain(mockQuestions[3].getId());
+      // Then the 4 least frequently answered questions should be selected (answered 1 time)
+      expect(result.length).toBe(4);
+      expect(result.some((q) => q.getId() === questionIds[0])).toBeTruthy();
+      expect(result.some((q) => q.getId() === questionIds[3])).toBeTruthy();
+      expect(result.some((q) => q.getId() === questionIds[6])).toBeTruthy();
+      expect(result.some((q) => q.getId() === questionIds[9])).toBeTruthy();
     });
 
-    it("should respect the limit parameter", () => {
-      const result = selector.selectQuestions(mockQuestions, [], 2);
-      expect(result.length).toBe(2);
+    it("should respect the limit parameter even when it's less than available questions", () => {
+      // Given 10 questions and no user answers
+      const userAnswers: UserAnswer[] = [];
+
+      // When selecting 5 questions (less than available)
+      const result = selector.selectQuestions(mockQuestions, userAnswers, 5);
+
+      // Then only 5 questions should be returned
+      expect(result.length).toBe(5);
+    });
+
+    it("should handle the case when limit exceeds available questions", () => {
+      // Given only 10 questions
+      const userAnswers: UserAnswer[] = [];
+
+      // When requesting 15 questions
+      const result = selector.selectQuestions(mockQuestions, userAnswers, 15);
+
+      // Then all available questions should be returned
+      expect(result.length).toBe(10);
     });
 
     it("should return empty array when limit is 0", () => {
+      // Given questions exist
+      // When selecting 0 questions
       const result = selector.selectQuestions(mockQuestions, [], 0);
+
+      // Then result should be empty
       expect(result.length).toBe(0);
-      expect(result).toEqual([]);
     });
   });
 
   describe("selectQuestionsWithAnsweredIds", () => {
-    it("should select unanswered questions when there are enough", () => {
-      const answeredQuestionIds = [
-        mockQuestions[0].getId(),
-        mockQuestions[1].getId(),
-      ];
+    it("should prioritize unanswered questions", () => {
+      // Given a set of answered question IDs
+      const answeredIds = [questionIds[0], questionIds[1], questionIds[2]];
 
+      // When selecting 4 questions
       const result = selector.selectQuestionsWithAnsweredIds(
         mockQuestions,
-        answeredQuestionIds,
-        3,
-      );
-
-      expect(result.length).toBe(3);
-      // Result should only contain questions that weren't in answeredQuestionIds
-      const resultIds = result.map((q) => q.getId());
-      expect(resultIds).not.toContain(mockQuestions[0].getId());
-      expect(resultIds).not.toContain(mockQuestions[1].getId());
-      expect(resultIds).toContain(mockQuestions[2].getId());
-      expect(resultIds).toContain(mockQuestions[3].getId());
-      expect(resultIds).toContain(mockQuestions[4].getId());
-    });
-
-    it("should combine unanswered and answered questions when needed", () => {
-      const answeredQuestionIds = [
-        mockQuestions[0].getId(),
-        mockQuestions[1].getId(),
-        mockQuestions[2].getId(),
-      ];
-
-      const result = selector.selectQuestionsWithAnsweredIds(
-        mockQuestions,
-        answeredQuestionIds,
+        answeredIds,
         4,
       );
 
+      // Then all unanswered questions should be included
       expect(result.length).toBe(4);
 
-      // Result must include all unanswered questions
-      const resultIds = result.map((q) => q.getId());
-      expect(resultIds).toContain(mockQuestions[3].getId());
-      expect(resultIds).toContain(mockQuestions[4].getId());
-
-      // And must include some answered questions to reach the limit
-      const answeredInResult = answeredQuestionIds.filter((id) =>
-        resultIds.includes(id),
+      // Count how many unanswered questions are in the result
+      const unansweredInResult = result.filter(
+        (q) => !answeredIds.includes(q.getId()),
       );
-      expect(answeredInResult.length).toBe(2); // We need 2 answered questions to reach limit of 4
+
+      // All 7 unanswered questions should take priority, but only 4 fit the limit
+      expect(unansweredInResult.length).toBe(4);
     });
 
-    it("should select from answered questions when all questions are answered", () => {
-      const answeredQuestionIds = mockQuestions.map((q) => q.getId());
+    it("should combine unanswered and answered questions when needed", () => {
+      // Given most questions are answered
+      const answeredIds = questionIds.slice(0, 8); // 8 answered, 2 unanswered
 
+      // When selecting 5 questions
       const result = selector.selectQuestionsWithAnsweredIds(
         mockQuestions,
-        answeredQuestionIds,
-        3,
+        answeredIds,
+        5,
       );
 
-      expect(result.length).toBe(3);
-      // All questions should be from the answered set
-      const resultIds = result.map((q) => q.getId());
-      resultIds.forEach((id) => {
-        expect(answeredQuestionIds).toContain(id);
+      // Then all unanswered and some answered questions should be included
+      expect(result.length).toBe(5);
+
+      // All unanswered questions should be included
+      const unansweredIds = [questionIds[8], questionIds[9]];
+      unansweredIds.forEach((id) => {
+        expect(result.some((q) => q.getId() === id)).toBeTruthy();
       });
+
+      // And 3 answered questions to make up the difference
+      const answeredInResult = result.filter((q) =>
+        answeredIds.includes(q.getId()),
+      );
+      expect(answeredInResult.length).toBe(3);
     });
 
-    it("should respect the limit parameter", () => {
-      const result = selector.selectQuestionsWithAnsweredIds(
-        mockQuestions,
-        [],
-        2,
-      );
-      expect(result.length).toBe(2);
+    it("should randomize the question order", () => {
+      // Given no questions are answered
+      const answeredIds: string[] = [];
+
+      // When running multiple selections
+      const runs = 5;
+      const results: string[][] = [];
+
+      for (let i = 0; i < runs; i++) {
+        const result = selector.selectQuestionsWithAnsweredIds(
+          mockQuestions,
+          answeredIds,
+          5,
+        );
+        results.push(result.map((q) => q.getId()));
+      }
+
+      // Then the order should vary across runs
+      const uniqueOrderings = new Set(results.map((r) => JSON.stringify(r)));
+      expect(uniqueOrderings.size).toBeGreaterThan(1);
     });
   });
 
   describe("selectQuestionsWithFrequencies", () => {
-    it("should select questions with frequency 0 when there are enough", () => {
-      const questionFrequencies = new Map<string, number>([
-        [mockQuestions[0].getId(), 2],
-        [mockQuestions[1].getId(), 1],
+    it("should prioritize questions with zero frequency", () => {
+      // Given a frequency map with some questions having non-zero frequencies
+      const frequencies = new Map<string, number>([
+        [questionIds[0], 3],
+        [questionIds[1], 2],
+        [questionIds[2], 1],
       ]);
 
+      // When selecting 5 questions
       const result = selector.selectQuestionsWithFrequencies(
         mockQuestions,
-        questionFrequencies,
-        3,
+        frequencies,
+        5,
       );
 
-      expect(result.length).toBe(3);
+      // Then all zero-frequency questions should be included
+      expect(result.length).toBe(5);
 
-      // Result should prioritize questions with frequency 0 (not in the map)
-      const resultIds = result.map((q) => q.getId());
-      expect(resultIds).toContain(mockQuestions[2].getId());
-      expect(resultIds).toContain(mockQuestions[3].getId());
-      expect(resultIds).toContain(mockQuestions[4].getId());
+      // Verify all zero-frequency questions are included
+      const zeroFreqIds = questionIds.slice(3); // IDs 3-9
+
+      // Count how many zero-frequency questions are in the result
+      // Since we asked for 5 but have 7 zero-frequency questions, we should get 5 of them
+      const zeroFreqInResult = result.filter((q) =>
+        zeroFreqIds.includes(q.getId()),
+      );
+      expect(zeroFreqInResult.length).toBe(5);
     });
 
-    it("should prioritize by frequency when not enough unanswered questions", () => {
-      const questionFrequencies = new Map<string, number>([
-        [mockQuestions[0].getId(), 3],
-        [mockQuestions[1].getId(), 2],
-        [mockQuestions[2].getId(), 1],
-        [mockQuestions[3].getId(), 4],
-      ]);
+    it("should select questions with lower frequencies when not enough zero-frequency questions", () => {
+      // Given most questions have non-zero frequencies
+      const frequencies = new Map<string, number>(
+        questionIds.slice(0, 8).map((id, i) => [id, i + 1]),
+      );
+      // Questions 0-7 have frequencies 1-8, questions 8-9 have zero frequency
 
+      // When selecting 5 questions
       const result = selector.selectQuestionsWithFrequencies(
         mockQuestions,
-        questionFrequencies,
-        3,
+        frequencies,
+        5,
       );
 
-      expect(result.length).toBe(3);
+      // Then zero-frequency and lowest-frequency questions should be selected
+      expect(result.length).toBe(5);
 
-      const resultIds = result.map((q) => q.getId());
+      // All zero-frequency questions should be included
+      const zeroFreqIds = [questionIds[8], questionIds[9]];
+      zeroFreqIds.forEach((id) => {
+        expect(result.some((q) => q.getId() === id)).toBeTruthy();
+      });
 
-      // Should include the unanswered question
-      expect(resultIds).toContain(mockQuestions[4].getId());
+      // And the lowest frequency questions to make up the difference
+      const lowFreqIds = [questionIds[0], questionIds[1], questionIds[2]]; // Frequencies 1, 2, 3
 
-      // Should include the lowest frequency questions
-      expect(resultIds).toContain(mockQuestions[2].getId()); // freq = 1
-      expect(resultIds).toContain(mockQuestions[1].getId()); // freq = 2
-
-      // Should not include higher frequency questions
-      expect(resultIds).not.toContain(mockQuestions[0].getId()); // freq = 3
-      expect(resultIds).not.toContain(mockQuestions[3].getId()); // freq = 4
+      // Count how many of the expected low-frequency questions are in the result
+      // We need 3 of them to reach our limit of 5
+      const lowFreqInResult = result.filter((q) =>
+        lowFreqIds.includes(q.getId()),
+      );
+      expect(lowFreqInResult.length).toBe(3);
     });
 
-    it("should handle the case where all questions have frequencies", () => {
-      const questionFrequencies = new Map<string, number>(
-        mockQuestions.map((q, i) => [q.getId(), i + 1]),
-      );
+    it("should handle empty frequency map by treating all questions as zero-frequency", () => {
+      // Given an empty frequency map
+      const frequencies = new Map<string, number>();
 
+      // When selecting 5 questions
       const result = selector.selectQuestionsWithFrequencies(
         mockQuestions,
-        questionFrequencies,
-        3,
+        frequencies,
+        5,
       );
 
-      expect(result.length).toBe(3);
+      // Then 5 random questions should be selected
+      expect(result.length).toBe(5);
 
-      // Should prioritize lowest frequency questions
-      const resultIds = result.map((q) => q.getId());
-      expect(resultIds).toContain(mockQuestions[0].getId()); // freq = 1
-      expect(resultIds).toContain(mockQuestions[1].getId()); // freq = 2
-      expect(resultIds).toContain(mockQuestions[2].getId()); // freq = 3
-    });
-
-    it("should respect the limit parameter and randomize results", () => {
-      // Run the test multiple times to check randomization
-      const runs = 10;
-      const resultSets: string[][] = [];
-
-      for (let i = 0; i < runs; i++) {
-        const result = selector.selectQuestionsWithFrequencies(
-          mockQuestions,
-          new Map(),
-          2,
-        );
-        expect(result.length).toBe(2);
-        resultSets.push(result.map((q) => q.getId()).sort());
-      }
-
-      // Check that we got at least 2 different combinations (this is probabilistic)
-      // The chance of getting the same combination 10 times in a row is very low
-      const uniqueSets = new Set(resultSets.map((set) => JSON.stringify(set)));
-      expect(uniqueSets.size).toBeGreaterThan(1);
-    });
-
-    it("should handle empty frequency map correctly", () => {
-      const result = selector.selectQuestionsWithFrequencies(
-        mockQuestions,
-        new Map(),
-        3,
-      );
-
-      expect(result.length).toBe(3);
-      // All questions should be treated as unanswered
-      result.forEach((question) => {
+      // All questions should be from the original set
+      result.forEach((q) => {
         expect(
-          mockQuestions.some((q) => q.getId() === question.getId()),
+          mockQuestions.some((mq) => mq.getId() === q.getId()),
         ).toBeTruthy();
       });
     });
 
-    it("should handle zero frequencies as unanswered questions", () => {
-      const questionFrequencies = new Map<string, number>([
-        [mockQuestions[0].getId(), 0],
-        [mockQuestions[1].getId(), 1],
-        [mockQuestions[2].getId(), 0],
-        [mockQuestions[3].getId(), 2],
+    it("should handle explicit zero frequencies", () => {
+      // Given a frequency map with explicit zeros and non-zeros
+      const frequencies = new Map<string, number>([
+        [questionIds[0], 0],
+        [questionIds[1], 1],
+        [questionIds[2], 0],
+        [questionIds[3], 2],
       ]);
 
+      // When selecting 3 questions
       const result = selector.selectQuestionsWithFrequencies(
         mockQuestions,
-        questionFrequencies,
-        2,
+        frequencies,
+        3,
       );
 
-      expect(result.length).toBe(2);
+      // Then questions with explicit zero frequency should be prioritized
+      expect(result.length).toBe(3);
 
-      // Should prioritize questions with frequency 0
-      const resultIds = result.map((q) => q.getId());
+      // Combine explicit zeros and implicit zeros (not in the map)
       const zeroFreqIds = [
-        mockQuestions[0].getId(),
-        mockQuestions[2].getId(),
-        mockQuestions[4].getId(),
-      ]; // Include question 4 which isn't in the map (implicitly zero)
+        questionIds[0], // Explicit zero
+        questionIds[2], // Explicit zero
+        ...questionIds.slice(4), // Implicit zeros (not in map)
+      ];
 
-      // Each result ID should be one of the zero frequency IDs
-      resultIds.forEach((id) => {
-        expect(zeroFreqIds).toContain(id);
+      // All selected questions should have zero frequency
+      result.forEach((q) => {
+        expect(zeroFreqIds).toContain(q.getId());
       });
-
-      // Should not include any non-zero frequency questions
-      expect(resultIds).not.toContain(mockQuestions[1].getId()); // freq = 1
-      expect(resultIds).not.toContain(mockQuestions[3].getId()); // freq = 2
     });
   });
 });

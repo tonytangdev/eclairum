@@ -6,7 +6,6 @@ import {
 } from "./quiz-generation-task";
 import { Question } from "./question";
 import { Answer } from "./answer";
-import { RequiredTextContentError } from "../errors/validation-errors";
 
 describe("QuizGenerationTask", () => {
   // Helper to create answers
@@ -67,6 +66,8 @@ describe("QuizGenerationTask", () => {
       const status = QuizGenerationStatus.COMPLETED;
       const generatedAt = new Date(2023, 1, 4);
       const userId = faker.internet.email();
+      const title = faker.lorem.sentence();
+      const category = faker.word.noun();
 
       // When creating a task with all properties
       const task = new QuizGenerationTask({
@@ -79,6 +80,8 @@ describe("QuizGenerationTask", () => {
         status,
         generatedAt,
         userId,
+        title,
+        category,
       });
 
       // Then all properties should be set correctly
@@ -91,37 +94,41 @@ describe("QuizGenerationTask", () => {
       expect(task.getStatus()).toBe(status);
       expect(task.getGeneratedAt()).toBe(generatedAt);
       expect(task.getUserId()).toBe(userId);
+      expect(task.getTitle()).toBe(title);
+      expect(task.getCategory()).toBe(category);
     });
 
-    it("should throw RequiredTextContentError when text content is empty", () => {
-      // When creating a task with empty text content
-      // Then it should throw the appropriate error
-      expect(() => {
-        new QuizGenerationTask({
-          textContent: "",
-          questions: [createQuestion()],
+    it("should allow empty text content to support file uploads", () => {
+      // Given empty string values
+      const emptyValues = ["", " ", "\t", "\n"];
+
+      // Then it should create tasks with empty text content
+      emptyValues.forEach((emptyValue) => {
+        const task = new QuizGenerationTask({
+          textContent: emptyValue,
+          questions: [],
           userId: mockUserId,
         });
-      }).toThrow(RequiredTextContentError);
-      expect(() => {
-        new QuizGenerationTask({
-          textContent: "",
-          questions: [createQuestion()],
-          userId: mockUserId,
-        });
-      }).toThrow("Text content is required");
+
+        expect(task).toBeInstanceOf(QuizGenerationTask);
+        expect(task.getTextContent()).toBe(emptyValue);
+      });
     });
 
     it("should throw an error when userId is not provided", () => {
-      // When creating a task with empty userId
-      // Then it should throw the appropriate error
-      expect(() => {
-        new QuizGenerationTask({
-          textContent: faker.lorem.paragraph(),
-          questions: [],
-          userId: "", // Empty userId
-        });
-      }).toThrow("User ID is required");
+      // Given various invalid userId values
+      const invalidUserIds = ["", null, undefined];
+
+      // Then it should throw the appropriate error for each invalid value
+      invalidUserIds.forEach((invalidUserId) => {
+        expect(() => {
+          new QuizGenerationTask({
+            textContent: faker.lorem.paragraph(),
+            questions: [],
+            userId: invalidUserId as string,
+          });
+        }).toThrow("User ID is required");
+      });
     });
   });
 

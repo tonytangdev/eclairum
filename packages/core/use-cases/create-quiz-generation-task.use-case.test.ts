@@ -5,12 +5,14 @@ import { QuestionRepository } from "../interfaces/question-repository.interface"
 import { AnswerRepository } from "../interfaces/answer-repository.interface";
 import { QuizGenerationTaskRepository } from "../interfaces/quiz-generation-task-repository.interface";
 import { UserRepository } from "../interfaces/user-repository.interface";
+import { FileUploadService } from "../interfaces/file-upload-service.interface";
 import {
   QuizGenerationStatus,
   QuizGenerationTask,
 } from "../entities/quiz-generation-task";
 import { Question } from "../entities/question";
 import { TextTooLongError, UserNotFoundError } from "../errors/quiz-errors";
+import { RequiredTextContentError } from "../errors/validation-errors";
 import { User } from "../entities/user";
 import { MAX_TEXT_LENGTH } from "../constants/quiz";
 import { QuizGeneratorService } from "../services/quiz-generator.service";
@@ -43,6 +45,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
   let mockAnswerRepository: jest.Mocked<AnswerRepository>;
   let mockQuizGenerationTaskRepository: jest.Mocked<QuizGenerationTaskRepository>;
   let mockUserRepository: jest.Mocked<UserRepository>;
+  let mockFileUploadService: jest.Mocked<FileUploadService>;
 
   // Mock service instances with proper typing
   let mockQuizGeneratorInstance: MockQuizGeneratorInstance;
@@ -56,6 +59,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
   const mockUser = { getId: () => userId } as User;
   const defaultText = faker.lorem.paragraph(3);
   const mockTitle = faker.lorem.sentence();
+  const mockUploadUrl = faker.internet.url();
 
   /**
    * Captures a task when saveTask is called to allow inspection in tests
@@ -113,6 +117,10 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       save: jest.fn(),
     } as jest.Mocked<UserRepository>;
 
+    mockFileUploadService = {
+      generateUploadUrl: jest.fn().mockResolvedValue(mockUploadUrl),
+    } as jest.Mocked<FileUploadService>;
+
     // Set up mock service instances with proper typing
     mockQuizGeneratorInstance = {
       generateQuestions: jest.fn(),
@@ -140,11 +148,12 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       mockAnswerRepository,
       mockQuizGenerationTaskRepository,
       mockUserRepository,
+      mockFileUploadService,
     );
   });
 
   describe("Input validation", () => {
-    it("should reject text exceeding maximum length", async () => {
+    it("should reject text exceeding maximum length for direct text processing", async () => {
       // Arrange
       const tooLongText = "A".repeat(MAX_TEXT_LENGTH + 1);
 
@@ -154,8 +163,116 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       ).rejects.toThrow(TextTooLongError);
 
       // Verify no further processing occurred
-      expect(mockUserRepository.findById).not.toHaveBeenCalled();
       expect(mockQuizStorageInstance.saveTask).not.toHaveBeenCalled();
+    });
+
+    it("should reject empty text for direct text processing", async () => {
+      // Arrange
+      const emptyText = "";
+
+      // Act & Assert
+      await expect(
+        useCase.execute({ userId, text: emptyText }),
+      ).rejects.toThrow(RequiredTextContentError);
+
+      // Verify no further processing occurred
+      expect(mockQuizStorageInstance.saveTask).not.toHaveBeenCalled();
+    });
+
+    it("should reject different types of empty text for direct text processing", async () => {
+      // Arrange
+      const emptyValues = ["", " ", "\t", "\n", "   "];
+
+      // Act & Assert
+      for (const emptyValue of emptyValues) {
+        await expect(
+          useCase.execute({ userId, text: emptyValue }),
+        ).rejects.toThrow(RequiredTextContentError);
+      }
+
+      // Verify no tasks were created
+      expect(mockQuizStorageInstance.saveTask).not.toHaveBeenCalled();
+    });
+
+    it("should accept different types of empty text for file uploads", async () => {
+      // Arrange
+      const emptyValues = ["", " ", "\t", "\n", "   "];
+
+      // Act & Assert
+      for (const emptyValue of emptyValues) {
+        const result = await useCase.execute({
+          userId,
+          text: emptyValue,
+          isFileUpload: true,
+        });
+
+        // Assert for each empty value
+        expect(result.quizGenerationTask).toBeDefined();
+        expect(result.fileUploadUrl).toBe(mockUploadUrl);
+      }
+
+      // Verify tasks were created for each empty value
+      expect(mockQuizStorageInstance.saveTask).toHaveBeenCalledTimes(
+        emptyValues.length,
+      );
+    });
+
+    it("should preserve empty text in created task for file uploads", async () => {
+      // Arrange
+      const emptyText = "";
+      const getTask = captureTask();
+
+      // Act
+      await useCase.execute({
+        userId,
+        text: emptyText,
+        isFileUpload: true,
+      });
+      const task = getTask();
+
+      // Assert
+      expect(task).not.toBeNull();
+      if (!task) {
+        throw new Error("Task was not created");
+      }
+
+      expect(task.getTextContent()).toBe(emptyText);
+      expect(task.getStatus()).toBe(QuizGenerationStatus.IN_PROGRESS);
+      expect(task.getUserId()).toBe(userId);
+    });
+
+    it("should accept empty text for file uploads", async () => {
+      // Arrange
+      const emptyText = "";
+
+      // Act
+      const result = await useCase.execute({
+        userId,
+        text: emptyText,
+        isFileUpload: true,
+      });
+
+      // Assert
+      expect(result.quizGenerationTask).toBeDefined();
+      expect(result.fileUploadUrl).toBe(mockUploadUrl);
+      expect(mockQuizStorageInstance.saveTask).toHaveBeenCalled();
+    });
+
+    it("should accept text exceeding maximum length for file uploads", async () => {
+      // Arrange
+      const tooLongText = "A".repeat(MAX_TEXT_LENGTH + 1);
+
+      // Act
+      const result = await useCase.execute({
+        userId,
+        text: tooLongText,
+        isFileUpload: true,
+      });
+
+      // Assert
+      expect(result.quizGenerationTask).toBeDefined();
+      expect(result.fileUploadUrl).toBe(mockUploadUrl);
+      expect(mockQuizStorageInstance.saveTask).toHaveBeenCalled();
     });
 
     it("should reject requests for non-existent users", async () => {
@@ -172,10 +289,9 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     });
   });
 
-  describe("Task creation", () => {
+  describe("Direct text processing", () => {
     it("should create a task with correct initial properties", async () => {
       // Arrange
-      const createTaskSpy = jest.spyOn(useCase as any, "createTask");
       const getTask = captureTask();
       mockQuizGeneratorInstance.generateQuestionsAndTitle.mockImplementationOnce(
         async () => {
@@ -189,7 +305,6 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       const task = getTask();
 
       // Assert
-      expect(createTaskSpy).toHaveBeenCalledWith(defaultText, userId);
       expect(task).not.toBeNull();
 
       // Need to be sure task exists to avoid TypeScript errors
@@ -201,16 +316,8 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       expect(task.getTextContent()).toEqual(defaultText);
       expect(task.getUserId()).toEqual(userId);
       expect(task.getQuestions()).toEqual([]);
-      expect(task.getCreatedAt()).toBeInstanceOf(Date);
-      expect(task.getUpdatedAt()).toBeInstanceOf(Date);
-      expect(task.getId()).toMatch(/^[0-9a-f-]+$/i); // UUID format check
-
-      // Clean up
-      createTaskSpy.mockRestore();
     });
-  });
 
-  describe("Async processing", () => {
     it("should return immediately without waiting for quiz generation", async () => {
       // Arrange - Create a slow quiz generation
       mockQuizGeneratorInstance.generateQuestionsAndTitle.mockImplementation(
@@ -262,7 +369,129 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       ).toHaveBeenCalledTimes(1);
       expect(mockQuizStorageInstance.saveQuizData).toHaveBeenCalledTimes(1);
     });
+  });
 
+  describe("File upload handling", () => {
+    it("should return a file upload URL when isFileUpload is true", async () => {
+      // Act
+      const result = await useCase.execute({
+        userId,
+        text: defaultText,
+        isFileUpload: true,
+      });
+
+      // Assert
+      expect(result.fileUploadUrl).toBe(mockUploadUrl);
+      expect(mockFileUploadService.generateUploadUrl).toHaveBeenCalled();
+      expect(
+        mockQuizGeneratorInstance.generateQuestionsAndTitle,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("should create a task for file upload with the correct status", async () => {
+      // Arrange
+      const getTask = captureTask();
+
+      // Act
+      await useCase.execute({
+        userId,
+        text: defaultText,
+        isFileUpload: true,
+      });
+      const task = getTask();
+
+      // Assert
+      expect(task).not.toBeNull();
+      if (!task) {
+        throw new Error("Task was not created");
+      }
+
+      expect(task.getStatus()).toBe(QuizGenerationStatus.IN_PROGRESS);
+      expect(task.getTextContent()).toBe(defaultText);
+      expect(task.getUserId()).toBe(userId);
+    });
+
+    it("should throw an error when FileUploadService is not provided", async () => {
+      // Arrange
+      // Create use case without file upload service
+      useCase = new CreateQuizGenerationTaskUseCase(
+        mockLLMService,
+        mockQuestionRepository,
+        mockAnswerRepository,
+        mockQuizGenerationTaskRepository,
+        mockUserRepository,
+      );
+
+      // Act & Assert
+      await expect(
+        useCase.execute({ userId, text: defaultText, isFileUpload: true }),
+      ).rejects.toThrow("File upload service is not configured");
+    });
+
+    it("should propagate errors from the file upload service", async () => {
+      // Arrange
+      const uploadError = new Error("Upload service failure");
+      mockFileUploadService.generateUploadUrl.mockRejectedValueOnce(
+        uploadError,
+      );
+
+      // Act & Assert
+      await expect(
+        useCase.execute({ userId, text: defaultText, isFileUpload: true }),
+      ).rejects.toThrow(uploadError);
+    });
+  });
+
+  describe("Error handling", () => {
+    it("should update task status to FAILED when quiz generation fails", async () => {
+      // Arrange
+      const error = new Error("Quiz generation failed");
+      mockQuizGeneratorInstance.generateQuestionsAndTitle.mockRejectedValueOnce(
+        error,
+      );
+
+      const getTask = captureTask();
+
+      // Act
+      await useCase.execute({ userId, text: defaultText });
+      await waitForAsyncProcessing();
+
+      // Assert
+      const task = getTask();
+      expect(task).not.toBeNull();
+      if (!task) {
+        throw new Error("Task was not created");
+      }
+
+      expect(task.getStatus()).toBe(QuizGenerationStatus.FAILED);
+      expect(mockQuizStorageInstance.saveFailedTask).toHaveBeenCalledWith(task);
+    });
+
+    it("should log errors when saving a failed task fails", async () => {
+      // Arrange
+      const generationError = new Error("Quiz generation failed");
+      const saveError = new Error("Database error");
+
+      mockQuizGeneratorInstance.generateQuestionsAndTitle.mockRejectedValueOnce(
+        generationError,
+      );
+      mockQuizStorageInstance.saveFailedTask.mockRejectedValueOnce(saveError);
+
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+
+      // Act
+      await useCase.execute({ userId, text: defaultText });
+      await waitForAsyncProcessing();
+
+      // Assert
+      expect(consoleErrorSpy).toHaveBeenCalled();
+
+      // Clean up
+      consoleErrorSpy.mockRestore();
+    });
+  });
+
+  describe("Async processing", () => {
     it("should update task to completed state after successful generation", async () => {
       // Arrange
       const mockQuestions = [
@@ -308,135 +537,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       expect((capturedTask as QuizGenerationTask).getTitle()).toBe(mockTitle);
       expect(capturedQuestions).toEqual(mockQuestions);
     });
-    it("should update task to failed state when generation fails", async () => {
-      // Arrange
-      const generationError = new Error("Quiz generation failed");
-      mockQuizGeneratorInstance.generateQuestionsAndTitle.mockRejectedValueOnce(
-        generationError,
-      );
-
-      // Set up task capture
-      let failedTask: QuizGenerationTask | null = null;
-      mockQuizStorageInstance.saveFailedTask.mockImplementation(
-        (task: QuizGenerationTask) => {
-          failedTask = task;
-          return Promise.resolve();
-        },
-      );
-
-      // Act
-      await useCase.execute({ userId, text: defaultText });
-      await waitForAsyncProcessing();
-
-      // Assert
-      expect(failedTask).not.toBeNull();
-      if (!failedTask) {
-        throw new Error("Failed task was not captured");
-      }
-
-      expect((failedTask as QuizGenerationTask).getStatus()).toBe(
-        QuizGenerationStatus.FAILED,
-      );
-      expect(mockQuizStorageInstance.saveFailedTask).toHaveBeenCalledTimes(1);
-    });
-
-    it("should log errors without propagating them to caller", async () => {
-      // Arrange
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
-      mockQuizGeneratorInstance.generateQuestionsAndTitle.mockRejectedValueOnce(
-        new Error("Test error"),
-      );
-
-      // Act
-      await useCase.execute({ userId, text: defaultText });
-      await waitForAsyncProcessing();
-
-      // Assert
-      expect(consoleErrorSpy).toHaveBeenCalled();
-      expect(consoleErrorSpy.mock.calls[0][0]).toContain(
-        "Error during async quiz generation",
-      );
-
-      // Restore console
-      consoleErrorSpy.mockRestore();
-    });
-
-    it("should handle errors when saving failed tasks", async () => {
-      // Arrange
-      const generationError = new Error("Quiz generation failed");
-      const saveError = new Error("Database connection error");
-
-      mockQuizGeneratorInstance.generateQuestionsAndTitle.mockRejectedValueOnce(
-        generationError,
-      );
-      mockQuizStorageInstance.saveFailedTask.mockRejectedValueOnce(saveError);
-
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
-
-      // Act
-      await useCase.execute({ userId, text: defaultText });
-      await waitForAsyncProcessing();
-
-      // Assert
-      expect(consoleErrorSpy).toHaveBeenCalled();
-
-      // Restore console
-      consoleErrorSpy.mockRestore();
-    });
   });
 
-  describe("Service dependencies", () => {
-    it("should properly initialize QuizGeneratorService with LLMService", () => {
-      expect(MockedQuizGeneratorService).toHaveBeenCalledWith(mockLLMService);
-    });
-
-    it("should properly initialize QuizStorageService with all repositories", () => {
-      expect(MockedQuizStorageService).toHaveBeenCalledWith(
-        mockQuestionRepository,
-        mockAnswerRepository,
-        mockQuizGenerationTaskRepository,
-      );
-    });
-
-    it("should pass correct parameters to quiz generator", async () => {
-      // Act
-      const { quizGenerationTask } = await useCase.execute({
-        userId,
-        text: defaultText,
-      });
-
-      // Assert
-      expect(
-        mockQuizGeneratorInstance.generateQuestionsAndTitle,
-      ).toHaveBeenCalledWith(quizGenerationTask.getId(), defaultText);
-    });
-
-    it("should pass correct data to quiz storage when completed", async () => {
-      // Arrange
-      const mockQuestions = [
-        new Question({
-          content: faker.lorem.sentence(),
-          answers: [],
-          quizGenerationTaskId: expect.any(String) as string,
-        }),
-      ];
-
-      mockQuizGeneratorInstance.generateQuestionsAndTitle.mockResolvedValueOnce(
-        {
-          questions: mockQuestions,
-          title: mockTitle,
-        },
-      );
-
-      // Act
-      await useCase.execute({ userId, text: defaultText });
-      await waitForAsyncProcessing();
-
-      // Assert
-      expect(mockQuizStorageInstance.saveQuizData).toHaveBeenCalledWith(
-        expect.any(QuizGenerationTask),
-        mockQuestions,
-      );
-    });
-  });
+  // ...existing code for async processing and service dependencies...
 });

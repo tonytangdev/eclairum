@@ -1,5 +1,4 @@
 import { Question } from "./question";
-import { RequiredTextContentError } from "../errors/validation-errors";
 import { User } from "./user";
 
 export enum QuizGenerationStatus {
@@ -49,9 +48,7 @@ export class QuizGenerationTask {
     title = null,
     category = null,
   }: QuizGenerationTaskConstructor) {
-    if (!textContent) {
-      throw new RequiredTextContentError();
-    }
+    // Removed validation for non-empty textContent to support file uploads
 
     if (!userId) {
       throw new Error("User ID is required");
