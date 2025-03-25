@@ -1,9 +1,4 @@
 /**
- * Provider token for the FileUploadService
- */
-export const FILE_UPLOAD_SERVICE_PROVIDER_KEY = "FILE_UPLOAD_SERVICE";
-
-/**
  * Interface for services that handle file uploads
  */
 export interface FileUploadService {

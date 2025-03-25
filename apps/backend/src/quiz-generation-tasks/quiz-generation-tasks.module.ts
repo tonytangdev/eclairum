@@ -7,12 +7,17 @@ import {
   LLM_SERVICE_PROVIDER_KEY,
   OpenAILLMService,
 } from './services/openai-llm.service';
-import { S3FileUploadService } from './services/s3-file-upload.service';
-import { FILE_UPLOAD_SERVICE_PROVIDER_KEY } from '@eclairum/core/interfaces';
+import {
+  FILE_UPLOAD_SERVICE_PROVIDER_KEY,
+  S3FileUploadService,
+} from './services/s3-file-upload.service';
 import { OpenAIProvider } from './providers/openai.provider';
+import { TextractOCRService } from './services/textract-ocr.service';
+import { ConfigModule } from '@nestjs/config';
+import { OCR_SERVICE_PROVIDER_KEY } from '@eclairum/core/interfaces';
 
 @Module({
-  imports: [RepositoriesModule, UnitOfWorkModule],
+  imports: [RepositoriesModule, UnitOfWorkModule, ConfigModule],
   controllers: [QuizGenerationTasksController],
   providers: [
     QuizGenerationTasksService,
@@ -24,6 +29,10 @@ import { OpenAIProvider } from './providers/openai.provider';
     {
       provide: FILE_UPLOAD_SERVICE_PROVIDER_KEY,
       useClass: S3FileUploadService,
+    },
+    {
+      provide: OCR_SERVICE_PROVIDER_KEY,
+      useClass: TextractOCRService,
     },
   ],
 })

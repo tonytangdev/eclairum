@@ -4,6 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
+export const FILE_UPLOAD_SERVICE_PROVIDER_KEY = 'FILE_UPLOAD_SERVICE';
+
 @Injectable()
 export class S3FileUploadService implements FileUploadService {
   private readonly logger = new Logger(S3FileUploadService.name);

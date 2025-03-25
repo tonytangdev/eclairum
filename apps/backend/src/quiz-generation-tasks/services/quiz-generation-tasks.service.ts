@@ -26,10 +26,8 @@ import { QuizGenerationTaskMapper } from '../mappers/quiz-generation-task.mapper
 import { QuizGenerationTaskUseCaseFactory } from '../factories/quiz-generation-task-use-case.factory';
 import { UnitOfWorkService } from '../../unit-of-work/unit-of-work.service';
 import { AnswerRepositoryImpl } from '../../repositories/answers/answer.repository';
-import {
-  FILE_UPLOAD_SERVICE_PROVIDER_KEY,
-  FileUploadService,
-} from '@eclairum/core/interfaces';
+import { FileUploadService } from '@eclairum/core/interfaces';
+import { FILE_UPLOAD_SERVICE_PROVIDER_KEY } from './s3-file-upload.service';
 
 @Injectable()
 export class QuizGenerationTasksService {
