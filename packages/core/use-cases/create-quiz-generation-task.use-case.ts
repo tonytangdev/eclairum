@@ -20,6 +20,7 @@ type CreateQuizGenerationTaskUseCaseRequest = {
   userId: User["id"];
   text: string;
   isFileUpload?: boolean;
+  existingTask?: QuizGenerationTask;
 };
 
 type CreateQuizGenerationTaskUseCaseResponse = {
@@ -51,12 +52,13 @@ export class CreateQuizGenerationTaskUseCase {
     userId,
     text,
     isFileUpload = false,
+    existingTask,
   }: CreateQuizGenerationTaskUseCaseRequest): Promise<CreateQuizGenerationTaskUseCaseResponse> {
     await this.validateUser(userId);
 
     if (!isFileUpload) {
       this.validateText(text);
-      return this.handleDirectTextProcessing(userId, text);
+      return this.handleDirectTextProcessing(userId, text, existingTask);
     }
 
     // For file uploads, text is optional (can be empty or serve as description)
@@ -74,8 +76,10 @@ export class CreateQuizGenerationTaskUseCase {
   private async handleDirectTextProcessing(
     userId: User["id"],
     text: string,
+    existingTask?: QuizGenerationTask,
   ): Promise<CreateQuizGenerationTaskUseCaseResponse> {
-    const quizGenerationTask = await this.createAndSaveTask(userId, text);
+    const quizGenerationTask =
+      existingTask || (await this.createAndSaveTask(userId, text));
 
     this.processQuizGeneration(quizGenerationTask, text).catch((error) => {
       console.error(`Error during async quiz generation: ${error}`);
