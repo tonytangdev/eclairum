@@ -62,10 +62,3 @@ export class InvalidQuestionError extends Error {
     Object.setPrototypeOf(this, InvalidQuestionError.prototype);
   }
 }
-
-export class OCRProcessingError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "OCRProcessingError";
-  }
-}
