@@ -117,9 +117,7 @@ export class CreateQuizGenerationTaskUseCase {
 
     await this.saveFile(file);
 
-    const fileUploadUrl = await this.generateFileUploadUrl(
-      quizGenerationTask.getId(),
-    );
+    const fileUploadUrl = await this.generateFileUploadUrl(file);
 
     return { quizGenerationTask, fileUploadUrl };
   }
@@ -150,9 +148,13 @@ export class CreateQuizGenerationTaskUseCase {
     }
   }
 
-  private async generateFileUploadUrl(taskId: string): Promise<string> {
+  private async generateFileUploadUrl(file: File): Promise<string> {
     this.ensureFileUploadServiceExists();
-    return this.fileUploadService!.generateUploadUrl(taskId);
+
+    return this.fileUploadService!.generateUploadUrl(
+      file.getBucketName(),
+      file.getPath(),
+    );
   }
 
   private validateTextLength(text: string): void {

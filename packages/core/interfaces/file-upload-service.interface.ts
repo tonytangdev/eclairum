@@ -7,5 +7,5 @@ export interface FileUploadService {
    * @param taskId The ID of the task to associate with the upload
    * @returns A pre-signed URL that can be used to upload a file
    */
-  generateUploadUrl(taskId: string): Promise<string>;
+  generateUploadUrl(bucketName: string, filePath: string): Promise<string>;
 }

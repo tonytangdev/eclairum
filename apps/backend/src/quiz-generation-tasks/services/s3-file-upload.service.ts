@@ -14,6 +14,27 @@ export class S3FileUploadService implements FileUploadService {
   // Default to 30 minutes
   private readonly urlExpirationSeconds: number = 1800;
 
+  private getContentType(filePath: string): string {
+    const extension = filePath.split('.').pop()?.toLowerCase();
+    if (!extension) {
+      return 'application/octet-stream';
+    }
+
+    const mimeTypes: Record<string, string> = {
+      pdf: 'application/pdf',
+      doc: 'application/msword',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      txt: 'text/plain',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      gif: 'image/gif',
+    };
+
+    const mimeType = mimeTypes[extension] ?? 'application/octet-stream';
+    return mimeType;
+  }
+
   constructor(private readonly configService: ConfigService) {
     this.bucketName =
       this.configService.getOrThrow<string>('AWS_S3_BUCKET_NAME');
@@ -39,14 +60,17 @@ export class S3FileUploadService implements FileUploadService {
    * @param taskId The ID of the quiz generation task
    * @returns A pre-signed URL for uploading the file
    */
-  async generateUploadUrl(taskId: string): Promise<string> {
-    this.logger.log(`Generating pre-signed URL for task ${taskId}`);
+  async generateUploadUrl(
+    bucketName: string,
+    filePath: string,
+  ): Promise<string> {
+    this.logger.log(`Generating pre-signed URL for file ${filePath}`);
 
-    const key = `uploads/${taskId}/document.pdf`;
+    const key = filePath;
     const command = new PutObjectCommand({
-      Bucket: this.bucketName,
+      Bucket: bucketName,
       Key: key,
-      ContentType: 'application/pdf',
+      ContentType: this.getContentType(filePath),
     });
 
     try {
@@ -54,11 +78,11 @@ export class S3FileUploadService implements FileUploadService {
         expiresIn: this.urlExpirationSeconds,
       });
 
-      this.logger.log(`Generated pre-signed URL for task ${taskId}`);
+      this.logger.log(`Generated pre-signed URL for file ${filePath}`);
       return url;
     } catch (error) {
       this.logger.error(
-        `Failed to generate pre-signed URL for task ${taskId}`,
+        `Failed to generate pre-signed URL for file ${filePath}`,
         error,
       );
       throw new Error(
