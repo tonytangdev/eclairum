@@ -6,6 +6,7 @@ import {
 } from "./quiz-generation-task";
 import { Question } from "./question";
 import { Answer } from "./answer";
+import { File } from "./file";
 
 describe("QuizGenerationTask", () => {
   // Helper to create answers
@@ -23,6 +24,15 @@ describe("QuizGenerationTask", () => {
       content: faker.lorem.sentence(),
       answers: [createAnswer(true), createAnswer(false)],
       quizGenerationTaskId: randomUUID(),
+    });
+  };
+
+  // Helper to create a file
+  const createFile = (taskId: string = randomUUID()): File => {
+    return new File({
+      path: faker.system.filePath(),
+      bucketName: faker.word.sample(),
+      quizGenerationTaskId: taskId,
     });
   };
 
@@ -96,6 +106,53 @@ describe("QuizGenerationTask", () => {
       expect(task.getUserId()).toBe(userId);
       expect(task.getTitle()).toBe(title);
       expect(task.getCategory()).toBe(category);
+    });
+
+    it("should create a task with all custom properties including a file", () => {
+      // Given all custom properties
+      const id = randomUUID();
+      const textContent = faker.lorem.paragraph();
+      const questions = [createQuestion(), createQuestion()];
+      const createdAt = new Date(2023, 1, 1);
+      const updatedAt = new Date(2023, 1, 2);
+      const deletedAt = new Date(2023, 1, 3);
+      const status = QuizGenerationStatus.COMPLETED;
+      const generatedAt = new Date(2023, 1, 4);
+      const userId = faker.internet.email();
+      const title = faker.lorem.sentence();
+      const category = faker.word.noun();
+      const file = createFile(id);
+
+      // When creating a task with all properties
+      const task = new QuizGenerationTask({
+        id,
+        textContent,
+        questions,
+        createdAt,
+        updatedAt,
+        deletedAt,
+        status,
+        generatedAt,
+        userId,
+        title,
+        category,
+        file,
+      });
+
+      // Then all properties should be set correctly
+      expect(task.getId()).toBe(id);
+      expect(task.getTextContent()).toBe(textContent);
+      expect(task.getQuestions()).toEqual(questions);
+      expect(task.getCreatedAt()).toBe(createdAt);
+      expect(task.getUpdatedAt()).toBe(updatedAt);
+      expect(task.getDeletedAt()).toBe(deletedAt);
+      expect(task.getStatus()).toBe(status);
+      expect(task.getGeneratedAt()).toBe(generatedAt);
+      expect(task.getUserId()).toBe(userId);
+      expect(task.getTitle()).toBe(title);
+      expect(task.getCategory()).toBe(category);
+      expect(task.getFile()).toBe(file);
+      expect(task.hasFile()).toBe(true);
     });
 
     it("should allow empty text content to support file uploads", () => {
@@ -293,6 +350,49 @@ describe("QuizGenerationTask", () => {
       // Then they should default to null
       expect(task.getTitle()).toBeNull();
       expect(task.getCategory()).toBeNull();
+    });
+  });
+
+  describe("File management", () => {
+    it("should have null as default value for file", () => {
+      // Given a task without a file
+      const task = new QuizGenerationTask({
+        textContent: faker.lorem.paragraph(),
+        questions: [],
+        userId: mockUserId,
+      });
+
+      // Then file should default to null
+      expect(task.getFile()).toBeNull();
+      expect(task.hasFile()).toBe(false);
+    });
+
+    it("should set a file correctly", () => {
+      // Given a task without a file
+      const task = new QuizGenerationTask({
+        textContent: faker.lorem.paragraph(),
+        questions: [],
+        userId: mockUserId,
+      });
+
+      // And a file to associate with the task
+      const file = createFile(task.getId());
+
+      // When setting the file
+      const beforeUpdate = new Date();
+      task.setFile(file);
+      const afterUpdate = new Date();
+
+      // Then the file should be stored correctly
+      expect(task.getFile()).toBe(file);
+      expect(task.hasFile()).toBe(true);
+
+      // And the updatedAt timestamp should be updated
+      const updatedAt = task.getUpdatedAt();
+      expect(updatedAt.getTime()).toBeGreaterThanOrEqual(
+        beforeUpdate.getTime(),
+      );
+      expect(updatedAt.getTime()).toBeLessThanOrEqual(afterUpdate.getTime());
     });
   });
 });

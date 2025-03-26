@@ -1,5 +1,6 @@
 import { Question } from "./question";
 import { User } from "./user";
+import { File } from "./file";
 
 export enum QuizGenerationStatus {
   "PENDING" = "PENDING",
@@ -20,6 +21,7 @@ type QuizGenerationTaskConstructor = {
   userId: User["id"];
   title?: string | null;
   category?: string | null;
+  file?: File | null;
 };
 
 export class QuizGenerationTask {
@@ -34,6 +36,7 @@ export class QuizGenerationTask {
   private userId: User["id"];
   private title: string | null;
   private category: string | null;
+  private file: File | null;
 
   constructor({
     id = crypto.randomUUID(),
@@ -47,6 +50,7 @@ export class QuizGenerationTask {
     userId,
     title = null,
     category = null,
+    file = null,
   }: QuizGenerationTaskConstructor) {
     // Removed validation for non-empty textContent to support file uploads
 
@@ -65,6 +69,7 @@ export class QuizGenerationTask {
     this.userId = userId;
     this.title = title;
     this.category = category;
+    this.file = file;
   }
 
   public getId(): string {
@@ -103,6 +108,15 @@ export class QuizGenerationTask {
     return this.userId;
   }
 
+  public getFile(): File | null {
+    return this.file;
+  }
+
+  public setFile(file: File): void {
+    this.file = file;
+    this.updatedAt = new Date();
+  }
+
   public addQuestion(question: Question): void {
     this.questions.push(question);
     this.updatedAt = new Date();
@@ -135,5 +149,9 @@ export class QuizGenerationTask {
 
   public getCategory(): string | null {
     return this.category;
+  }
+
+  public hasFile(): boolean {
+    return this.file !== null;
   }
 }
