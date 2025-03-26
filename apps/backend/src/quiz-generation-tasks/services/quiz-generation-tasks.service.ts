@@ -29,12 +29,16 @@ import { AnswerRepositoryImpl } from '../../repositories/answers/answer.reposito
 import { FileUploadService, OCRService } from '@eclairum/core/interfaces';
 import { FILE_UPLOAD_SERVICE_PROVIDER_KEY } from './s3-file-upload.service';
 import { OCR_SERVICE_PROVIDER_KEY } from './textract-ocr.service';
+import { FileRepositoryImpl } from '../../repositories/files/file.repository';
+import { randomUUID } from 'crypto';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class QuizGenerationTasksService {
   private readonly logger = new Logger(QuizGenerationTasksService.name);
   private readonly mapper: QuizGenerationTaskMapper;
   private readonly useCaseFactory: QuizGenerationTaskUseCaseFactory;
+  private readonly bucketName: string;
 
   constructor(
     private readonly questionRepository: QuestionRepositoryImpl,
@@ -48,6 +52,8 @@ export class QuizGenerationTasksService {
     private readonly fileUploadService: FileUploadService,
     @Inject(OCR_SERVICE_PROVIDER_KEY)
     private readonly ocrService: OCRService,
+    private readonly fileRepository: FileRepositoryImpl,
+    private readonly configService: ConfigService,
   ) {
     this.mapper = new QuizGenerationTaskMapper();
     this.useCaseFactory = new QuizGenerationTaskUseCaseFactory(
@@ -56,26 +62,42 @@ export class QuizGenerationTasksService {
       this.answerRepository,
       this.quizGenerationTaskRepository,
       this.userRepository,
+      this.fileRepository,
       this.fileUploadService,
       this.ocrService,
     );
+    this.bucketName =
+      this.configService.getOrThrow<string>('AWS_S3_BUCKET_NAME');
   }
 
   async createTask(
     createQuizGenerationTaskDto: CreateQuizGenerationTaskDto,
   ): Promise<TaskResponse> {
-    const { text, userId, isFileUpload = false } = createQuizGenerationTaskDto;
+    const {
+      text,
+      userId,
+      isFileUpload = false,
+      fileExtension,
+    } = createQuizGenerationTaskDto;
 
     try {
       return await this.uowService.doTransactional(async () => {
         const createQuizGenerationTaskUseCase =
           this.useCaseFactory.createCreateTaskUseCase();
 
+        // Generate a file path with the UUID and file extension if this is a file upload
+        let filePath: string | undefined;
+        if (isFileUpload && fileExtension) {
+          filePath = `${randomUUID()}.${fileExtension}`;
+        }
+
         const { quizGenerationTask, fileUploadUrl } =
           await createQuizGenerationTaskUseCase.execute({
             userId,
             text,
             isFileUpload,
+            filePath,
+            bucketName: this.bucketName,
           });
 
         return this.mapper.toTaskResponse(

@@ -10,7 +10,7 @@ import { QuestionRepositoryImpl } from '../../repositories/questions/question.re
 import { QuizGenerationTaskRepositoryImpl } from '../../repositories/quiz-generation-tasks/quiz-generation-task.repository';
 import { UserRepositoryImpl } from '../../repositories/users/user.repository';
 import { AnswerRepositoryImpl } from '../../repositories/answers/answer.repository';
-import { FileUploadService } from '@eclairum/core/interfaces';
+import { FileRepository, FileUploadService } from '@eclairum/core/interfaces';
 import { OCRService } from '@eclairum/core/interfaces/ocr-service.interface';
 
 export class QuizGenerationTaskUseCaseFactory {
@@ -20,6 +20,7 @@ export class QuizGenerationTaskUseCaseFactory {
     private readonly answerRepository: AnswerRepositoryImpl,
     private readonly quizGenerationTaskRepository: QuizGenerationTaskRepositoryImpl,
     private readonly userRepository: UserRepositoryImpl,
+    private readonly fileRepository?: FileRepository,
     private readonly fileUploadService?: FileUploadService,
     private readonly ocrService?: OCRService,
   ) {}
@@ -34,6 +35,7 @@ export class QuizGenerationTaskUseCaseFactory {
       this.answerRepository,
       this.quizGenerationTaskRepository,
       this.userRepository,
+      this.fileRepository,
       this.fileUploadService,
     );
   }
@@ -79,10 +81,20 @@ export class QuizGenerationTaskUseCaseFactory {
       throw new Error('OCR service is required to resume a task after upload');
     }
 
+    if (!this.fileRepository) {
+      throw new Error(
+        'File repository is required to resume a task after upload',
+      );
+    }
+
+    // First create the CreateQuizGenerationTaskUseCase that will be used by ResumeQuizGenerationTaskAfterUploadUseCase
+    const createQuizGenerationTaskUseCase = this.createCreateTaskUseCase();
+
+    // Then create the ResumeQuizGenerationTaskAfterUploadUseCase with the correct constructor parameters
     return new ResumeQuizGenerationTaskAfterUploadUseCase(
       this.ocrService,
       this.quizGenerationTaskRepository,
-      this.createCreateTaskUseCase(),
+      createQuizGenerationTaskUseCase,
     );
   }
 }

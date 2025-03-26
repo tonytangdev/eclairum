@@ -7,6 +7,7 @@ import {
   MaxLength,
   MinLength,
   ValidateIf,
+  Matches,
 } from 'class-validator';
 
 /**
@@ -47,4 +48,18 @@ export class CreateQuizGenerationTaskDto {
   @IsBoolean({ message: 'isFileUpload must be a boolean' })
   @IsOptional()
   isFileUpload?: boolean;
+
+  /**
+   * The file extension for the uploaded file (e.g., pdf, doc, txt).
+   * Required if isFileUpload is true.
+   * @example "pdf"
+   */
+  @IsString({ message: 'File extension must be a string' })
+  @ValidateIf((o: CreateQuizGenerationTaskDto) => o.isFileUpload === true)
+  @IsNotEmpty({ message: 'File extension is required when uploading a file' })
+  @Matches(/^[a-zA-Z0-9]+$/, {
+    message: 'File extension should only contain alphanumeric characters',
+  })
+  @IsOptional()
+  fileExtension?: string;
 }

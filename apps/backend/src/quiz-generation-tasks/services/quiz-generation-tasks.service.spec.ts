@@ -14,7 +14,6 @@ import {
 } from '@eclairum/core/errors';
 import { UnitOfWorkService } from '../../unit-of-work/unit-of-work.service';
 import { AnswerRepositoryImpl } from '../../repositories/answers/answer.repository';
-import { FILE_UPLOAD_SERVICE_PROVIDER_KEY } from '@eclairum/core/interfaces';
 
 // Mock core use cases
 jest.mock('@eclairum/core/use-cases', () => ({
@@ -40,6 +39,7 @@ import {
   FetchQuizGenerationTaskForUserUseCase,
   SoftDeleteQuizGenerationTaskForUserUseCase,
 } from '@eclairum/core/use-cases';
+import { FILE_UPLOAD_SERVICE_PROVIDER_KEY } from './s3-file-upload.service';
 
 describe('QuizGenerationTasksService', () => {
   // Define test fixtures and service
