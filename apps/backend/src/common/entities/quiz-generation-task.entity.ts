@@ -8,10 +8,12 @@ import {
   OneToMany,
   ManyToOne,
   JoinColumn,
+  OneToOne,
 } from 'typeorm';
 import { QuizGenerationStatus } from '@eclairum/core/entities';
 import { QuestionEntity } from './question.entity';
 import { UserEntity } from './user.entity';
+import { FileEntity } from './file.entity';
 
 @Entity('quiz_generation_tasks')
 export class QuizGenerationTaskEntity {
@@ -52,4 +54,7 @@ export class QuizGenerationTaskEntity {
 
   @Column({ type: 'text', nullable: true })
   title: string | null;
+
+  @OneToOne(() => FileEntity, (file) => file.quizGenerationTask)
+  file: FileEntity;
 }
