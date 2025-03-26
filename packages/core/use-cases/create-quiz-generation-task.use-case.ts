@@ -67,18 +67,12 @@ export class CreateQuizGenerationTaskUseCase {
       return this.handleDirectTextProcessing(userId, text, existingTask);
     }
 
-    // For file uploads, text is optional (can be empty or serve as description)
-    if (filePath && bucketName) {
-      return this.handleExistingFile(
-        userId,
-        text || "File upload task",
-        filePath,
-        bucketName,
-        existingTask,
-      );
-    }
-
-    return this.handleFileUpload(userId, text || "File upload task");
+    return this.handleFileUpload(
+      userId,
+      text || "File upload task",
+      bucketName,
+      filePath,
+    );
   }
 
   private validateText(text: string): void {
@@ -105,38 +99,24 @@ export class CreateQuizGenerationTaskUseCase {
     return { quizGenerationTask };
   }
 
-  private async handleExistingFile(
-    userId: User["id"],
-    text: string,
-    filePath: string,
-    bucketName: string,
-    existingTask?: QuizGenerationTask,
-  ): Promise<CreateQuizGenerationTaskUseCaseResponse> {
-    this.ensureFileRepositoryExists();
-
-    const quizGenerationTask =
-      existingTask || (await this.createAndSaveTask(userId, text));
-
-    const file = new File({
-      path: filePath,
-      bucketName,
-      quizGenerationTaskId: quizGenerationTask.getId(),
-    });
-
-    await this.saveFile(file);
-    quizGenerationTask.setFile(file);
-    await this.quizStorage.saveTask(quizGenerationTask);
-
-    return { quizGenerationTask };
-  }
-
   private async handleFileUpload(
     userId: User["id"],
     text: string,
+    bucketName?: string,
+    filePath?: string,
   ): Promise<CreateQuizGenerationTaskUseCaseResponse> {
     this.ensureFileUploadServiceExists();
 
     const quizGenerationTask = await this.createAndSaveTask(userId, text);
+
+    const file = new File({
+      path: filePath || "",
+      bucketName: bucketName || "",
+      quizGenerationTaskId: quizGenerationTask.getId(),
+    });
+
+    await this.saveFile(file);
+
     const fileUploadUrl = await this.generateFileUploadUrl(
       quizGenerationTask.getId(),
     );
