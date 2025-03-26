@@ -11,6 +11,8 @@ import { UserAnswerEntity } from '../common/entities/user-answer.entity';
 import { UserAnswerRepositoryImpl } from './user-answers/user-answer.repository';
 import { QuizGenerationTaskEntity } from '../common/entities/quiz-generation-task.entity';
 import { QuizGenerationTaskRepositoryImpl } from './quiz-generation-tasks/quiz-generation-task.repository';
+import { FileEntity } from '../common/entities/file.entity';
+import { FileRepositoryImpl } from './files/file.repository';
 
 @Module({
   imports: [
@@ -20,6 +22,7 @@ import { QuizGenerationTaskRepositoryImpl } from './quiz-generation-tasks/quiz-g
       UserEntity,
       UserAnswerEntity,
       QuizGenerationTaskEntity,
+      FileEntity,
     ]),
     UnitOfWorkModule,
   ],
@@ -29,6 +32,7 @@ import { QuizGenerationTaskRepositoryImpl } from './quiz-generation-tasks/quiz-g
     UserRepositoryImpl,
     UserAnswerRepositoryImpl,
     QuizGenerationTaskRepositoryImpl,
+    FileRepositoryImpl,
   ],
   exports: [
     AnswerRepositoryImpl,
@@ -36,6 +40,7 @@ import { QuizGenerationTaskRepositoryImpl } from './quiz-generation-tasks/quiz-g
     UserRepositoryImpl,
     UserAnswerRepositoryImpl,
     QuizGenerationTaskRepositoryImpl,
+    FileRepositoryImpl,
     UnitOfWorkModule,
   ],
 })
