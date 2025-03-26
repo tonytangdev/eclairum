@@ -127,9 +127,6 @@ export class CreateQuizGenerationTaskUseCase {
     quizGenerationTask.setFile(file);
     await this.quizStorage.saveTask(quizGenerationTask);
 
-    // Note: Actual file processing (OCR) and quiz generation will be handled by
-    // the ResumeQuizGenerationTaskAfterUploadUseCase when the client calls it
-
     return { quizGenerationTask };
   }
 
