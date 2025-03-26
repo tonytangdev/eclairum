@@ -10,17 +10,20 @@ import { QuizGenerationTaskRepository } from "../interfaces/quiz-generation-task
 import { UserRepository } from "../interfaces/user-repository.interface";
 import { TextTooLongError, UserNotFoundError } from "../errors/quiz-errors";
 import { RequiredTextContentError } from "../errors/validation-errors";
-import { User } from "../entities";
+import { User, File } from "../entities";
 import { MAX_TEXT_LENGTH } from "../constants/quiz";
 import { QuizGeneratorService } from "../services/quiz-generator.service";
 import { QuizStorageService } from "../services/quiz-storage.service";
 import { FileUploadService } from "../interfaces/file-upload-service.interface";
+import { FileRepository } from "../interfaces/file-repository.interface";
 
 type CreateQuizGenerationTaskUseCaseRequest = {
   userId: User["id"];
   text: string;
   isFileUpload?: boolean;
   existingTask?: QuizGenerationTask;
+  bucketName?: string;
+  filePath?: string;
 };
 
 type CreateQuizGenerationTaskUseCaseResponse = {
@@ -38,6 +41,7 @@ export class CreateQuizGenerationTaskUseCase {
     readonly answerRepository: AnswerRepository,
     readonly quizGenerationTaskRepository: QuizGenerationTaskRepository,
     private readonly userRepository: UserRepository,
+    private readonly fileRepository?: FileRepository,
     private readonly fileUploadService?: FileUploadService,
   ) {
     this.quizGenerator = new QuizGeneratorService(llmService);
@@ -53,6 +57,8 @@ export class CreateQuizGenerationTaskUseCase {
     text,
     isFileUpload = false,
     existingTask,
+    bucketName,
+    filePath,
   }: CreateQuizGenerationTaskUseCaseRequest): Promise<CreateQuizGenerationTaskUseCaseResponse> {
     await this.validateUser(userId);
 
@@ -62,6 +68,16 @@ export class CreateQuizGenerationTaskUseCase {
     }
 
     // For file uploads, text is optional (can be empty or serve as description)
+    if (filePath && bucketName) {
+      return this.handleExistingFile(
+        userId,
+        text || "File upload task",
+        filePath,
+        bucketName,
+        existingTask,
+      );
+    }
+
     return this.handleFileUpload(userId, text || "File upload task");
   }
 
@@ -89,6 +105,34 @@ export class CreateQuizGenerationTaskUseCase {
     return { quizGenerationTask };
   }
 
+  private async handleExistingFile(
+    userId: User["id"],
+    text: string,
+    filePath: string,
+    bucketName: string,
+    existingTask?: QuizGenerationTask,
+  ): Promise<CreateQuizGenerationTaskUseCaseResponse> {
+    this.ensureFileRepositoryExists();
+
+    const quizGenerationTask =
+      existingTask || (await this.createAndSaveTask(userId, text));
+
+    const file = new File({
+      path: filePath,
+      bucketName,
+      quizGenerationTaskId: quizGenerationTask.getId(),
+    });
+
+    await this.saveFile(file);
+    quizGenerationTask.setFile(file);
+    await this.quizStorage.saveTask(quizGenerationTask);
+
+    // Note: Actual file processing (OCR) and quiz generation will be handled by
+    // the ResumeQuizGenerationTaskAfterUploadUseCase when the client calls it
+
+    return { quizGenerationTask };
+  }
+
   private async handleFileUpload(
     userId: User["id"],
     text: string,
@@ -110,6 +154,17 @@ export class CreateQuizGenerationTaskUseCase {
     const quizGenerationTask = this.createTask(text, userId);
     await this.quizStorage.saveTask(quizGenerationTask);
     return quizGenerationTask;
+  }
+
+  private async saveFile(file: File): Promise<void> {
+    this.ensureFileRepositoryExists();
+    await this.fileRepository!.save(file);
+  }
+
+  private ensureFileRepositoryExists(): void {
+    if (!this.fileRepository) {
+      throw new Error("File repository is not configured");
+    }
   }
 
   private ensureFileUploadServiceExists(): void {
