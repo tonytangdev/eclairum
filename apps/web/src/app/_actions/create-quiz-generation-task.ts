@@ -50,10 +50,12 @@ export type FileUploadResponse = {
  * Creates a quiz generation task with file upload support
  * @param text Initial text description (can be empty for file uploads)
  * @param fileSize Size of the file in bytes, if known client-side
+ * @param fileName Optional file name to extract extension from
  */
 export async function createFileUploadTask(
   text: string = "",
   fileSize?: number,
+  fileName?: string,
 ): Promise<FileUploadResponse> {
   try {
     const { userId } = await auth();
@@ -72,12 +74,24 @@ export async function createFileUploadTask(
       };
     }
 
+    // Extract file extension from fileName if provided
+    let fileExtension: string | undefined;
+    if (fileName) {
+      const parts = fileName.split(".");
+      if (parts.length > 1) {
+        fileExtension = parts[parts.length - 1].toLowerCase();
+      }
+    }
+
     // Specify that this is a file upload task
     const response = await serverApi.post("/quiz-generation-tasks", {
       text,
       userId,
       isFileUpload: true,
+      fileExtension, // Add the file extension to the request
     });
+
+    console.log("File upload task created:", response.data);
 
     return {
       success: true,

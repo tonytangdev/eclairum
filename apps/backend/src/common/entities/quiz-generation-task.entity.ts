@@ -55,6 +55,10 @@ export class QuizGenerationTaskEntity {
   @Column({ type: 'text', nullable: true })
   title: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  fileId: string | null;
+
   @OneToOne(() => FileEntity, (file) => file.quizGenerationTask)
-  file: FileEntity;
+  @JoinColumn({ name: 'fileId' })
+  file: FileEntity | null;
 }

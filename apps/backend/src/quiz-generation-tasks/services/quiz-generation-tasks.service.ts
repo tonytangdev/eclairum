@@ -88,7 +88,7 @@ export class QuizGenerationTasksService {
         // Generate a file path with the UUID and file extension if this is a file upload
         let filePath: string | undefined;
         if (isFileUpload && fileExtension) {
-          filePath = `${randomUUID()}.${fileExtension}`;
+          filePath = `uploads/${randomUUID()}.${fileExtension}`;
         }
 
         const { quizGenerationTask, fileUploadUrl } =

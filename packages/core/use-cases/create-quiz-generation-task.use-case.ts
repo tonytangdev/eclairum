@@ -88,8 +88,8 @@ export class CreateQuizGenerationTaskUseCase {
     text: string,
     existingTask?: QuizGenerationTask,
   ): Promise<CreateQuizGenerationTaskUseCaseResponse> {
-    const quizGenerationTask =
-      existingTask || (await this.createAndSaveTask(userId, text));
+    const quizGenerationTask = existingTask || this.createTask(userId, text);
+    await this.saveTask(quizGenerationTask);
 
     this.processQuizGeneration(quizGenerationTask, text).catch((error) => {
       console.error(`Error during async quiz generation: ${error}`);
@@ -107,14 +107,15 @@ export class CreateQuizGenerationTaskUseCase {
   ): Promise<CreateQuizGenerationTaskUseCaseResponse> {
     this.ensureFileUploadServiceExists();
 
-    const quizGenerationTask = await this.createAndSaveTask(userId, text);
+    const quizGenerationTask = this.createTask(text, userId);
+    const file = this.createFile(
+      filePath!,
+      bucketName!,
+      quizGenerationTask.getId(),
+    );
+    quizGenerationTask.setFile(file);
 
-    const file = new File({
-      path: filePath || "",
-      bucketName: bucketName || "",
-      quizGenerationTaskId: quizGenerationTask.getId(),
-    });
-
+    await this.saveTask(quizGenerationTask);
     await this.saveFile(file);
 
     const fileUploadUrl = await this.generateFileUploadUrl(file);
@@ -122,13 +123,20 @@ export class CreateQuizGenerationTaskUseCase {
     return { quizGenerationTask, fileUploadUrl };
   }
 
-  private async createAndSaveTask(
-    userId: User["id"],
-    text: string,
-  ): Promise<QuizGenerationTask> {
-    const quizGenerationTask = this.createTask(text, userId);
+  private createFile(
+    filePath: string,
+    bucketName: string,
+    quizGenerationTaskId: QuizGenerationTask["id"],
+  ): File {
+    return new File({
+      path: filePath,
+      bucketName: bucketName,
+      quizGenerationTaskId: quizGenerationTaskId,
+    });
+  }
+
+  private async saveTask(quizGenerationTask: QuizGenerationTask) {
     await this.quizStorage.saveTask(quizGenerationTask);
-    return quizGenerationTask;
   }
 
   private async saveFile(file: File): Promise<void> {

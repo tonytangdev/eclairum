@@ -1,17 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FileRepository } from '@eclairum/core/interfaces';
 import { File } from '@eclairum/core/entities';
 import { FileEntity } from '../../common/entities/file.entity';
 import { FileMapper } from './mappers/file.mapper';
+import { UnitOfWorkService } from '../../unit-of-work/unit-of-work.service';
 
 @Injectable()
 export class FileRepositoryImpl implements FileRepository {
-  constructor(
-    @InjectRepository(FileEntity)
-    private readonly fileRepository: Repository<FileEntity>,
-  ) {}
+  constructor(private readonly uowService: UnitOfWorkService) {}
 
   async findById(id: string): Promise<File | null> {
     const fileEntity = await this.findEntityById(id);
@@ -34,11 +31,13 @@ export class FileRepositoryImpl implements FileRepository {
 
   async softDelete(id: string): Promise<void> {
     const now = new Date();
-    await this.fileRepository.update({ id }, { deletedAt: now });
+    const repo = this.getRepository();
+    await repo.update({ id }, { deletedAt: now });
   }
 
   private async findEntityById(id: string): Promise<FileEntity | null> {
-    return await this.fileRepository.findOne({
+    const repo = this.getRepository();
+    return await repo.findOne({
       where: { id },
     });
   }
@@ -46,7 +45,8 @@ export class FileRepositoryImpl implements FileRepository {
   private async findEntityByQuizGenerationTaskId(
     quizGenerationTaskId: string,
   ): Promise<FileEntity | null> {
-    return await this.fileRepository.findOne({
+    const repo = this.getRepository();
+    return await repo.findOne({
       where: { quizGenerationTaskId },
     });
   }
@@ -67,6 +67,11 @@ export class FileRepositoryImpl implements FileRepository {
   }
 
   private async saveFileEntity(entity: FileEntity): Promise<FileEntity> {
-    return await this.fileRepository.save(entity);
+    const repo = this.getRepository();
+    return await repo.save(entity);
+  }
+
+  private getRepository(): Repository<FileEntity> {
+    return this.uowService.getManager().getRepository(FileEntity);
   }
 }

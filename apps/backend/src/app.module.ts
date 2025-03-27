@@ -30,7 +30,7 @@ import { UnitOfWorkModule } from './unit-of-work/unit-of-work.module';
           username: configService.getOrThrow('DATABASE_USERNAME'),
           password: configService.getOrThrow('DATABASE_PASSWORD'),
           database: configService.getOrThrow('DATABASE_NAME'),
-          synchronize: configService.getOrThrow('DATABASE_SYNCHRONIZE'),
+          synchronize: true,
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
           ssl:
             configService.get('DATABASE_SSL') === 'true'

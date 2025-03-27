@@ -186,7 +186,7 @@ export function FlashCardsProvider({ children }: { children: ReactNode }) {
     setFeedback(null);
 
     try {
-      const result = await createFileUploadTask("", file.size);
+      const result = await createFileUploadTask('', file.size, file.name);
 
       if (!result.success || !result.fileUploadUrl || !result.taskId) {
         throw new Error(result.error || "Failed to create upload task");
