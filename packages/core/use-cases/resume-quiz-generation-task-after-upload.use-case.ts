@@ -55,12 +55,8 @@ export class ResumeQuizGenerationTaskAfterUploadUseCase {
     task: QuizGenerationTask,
   ): Promise<void> {
     try {
-      console.log(
-        `Resuming quiz generation task ${task.getId()} for user ${userId} with file ${filePath}`,
-      );
       const extractedText = await this.extractText(filePath);
 
-      console.log(`Extracted text from task ${task.getId()}: ${extractedText}`);
       // Resume quiz generation with the extracted text
       await this.createQuizGenerationTaskUseCase.execute({
         userId,
