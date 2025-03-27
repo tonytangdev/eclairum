@@ -420,6 +420,92 @@ describe('QuizGenerationTasksService', () => {
         }),
       ).rejects.toThrow(error);
     });
+
+    it('should generate correct file path when extension is provided', async () => {
+      // Given a file upload task request with file extension
+      const userId = faker.string.uuid();
+      const text = 'Document to be uploaded';
+      const fileExtension = 'pdf';
+      const createDto = {
+        userId,
+        text,
+        isFileUpload: true,
+        fileExtension,
+      };
+
+      // And a mock task that will be returned
+      const mockTask = createMockTask({
+        userId,
+        status: QuizGenerationStatus.IN_PROGRESS,
+      });
+
+      // And a mock file upload URL
+      const mockFileUploadUrl = 'https://example.com/upload';
+
+      // And the use case will return success
+      createTaskUseCase.execute.mockResolvedValue({
+        quizGenerationTask: mockTask,
+        fileUploadUrl: mockFileUploadUrl,
+      });
+
+      // When creating a file upload task with an extension
+      await service.createTask(createDto);
+
+      // Then the use case should be called with a properly formatted file path
+      expect(createTaskUseCase.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId,
+          text,
+          isFileUpload: true,
+          filePath: expect.stringMatching(/^uploads\/[a-f0-9-]+\.pdf$/),
+          bucketName: 'test-bucket',
+        }),
+      );
+
+      // Verify the UUID format in the file path
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const filePath = createTaskUseCase.execute.mock.calls[0][0].filePath;
+      const uuidPattern =
+        /^uploads\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\.pdf$/;
+      expect(filePath).toMatch(uuidPattern);
+    });
+
+    it('should not generate file path when extension is not provided', async () => {
+      // Given a file upload task request without file extension
+      const userId = faker.string.uuid();
+      const text = 'Document to be uploaded';
+      const createDto = {
+        userId,
+        text,
+        isFileUpload: true,
+        // No fileExtension provided
+      };
+
+      // And a mock task that will be returned
+      const mockTask = createMockTask({
+        userId,
+        status: QuizGenerationStatus.IN_PROGRESS,
+      });
+
+      // And the use case will return success
+      createTaskUseCase.execute.mockResolvedValue({
+        quizGenerationTask: mockTask,
+      });
+
+      // When creating a file upload task without an extension
+      await service.createTask(createDto);
+
+      // Then the use case should be called with undefined filePath
+      expect(createTaskUseCase.execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId,
+          text,
+          isFileUpload: true,
+          filePath: undefined,
+          bucketName: 'test-bucket',
+        }),
+      );
+    });
   });
 
   describe('getTaskById', () => {
