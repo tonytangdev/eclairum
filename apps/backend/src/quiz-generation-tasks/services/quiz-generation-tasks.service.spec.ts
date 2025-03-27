@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Test } from '@nestjs/testing';
 import { Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { QuizGenerationTasksService } from './quiz-generation-tasks.service';
@@ -30,6 +31,9 @@ jest.mock('@eclairum/core/use-cases', () => ({
   SoftDeleteQuizGenerationTaskForUserUseCase: jest.fn(() => ({
     execute: jest.fn(),
   })),
+  ResumeQuizGenerationTaskAfterUploadUseCase: jest.fn(() => ({
+    execute: jest.fn(),
+  })),
 }));
 
 // Import use cases after mocking
@@ -38,8 +42,12 @@ import {
   FetchQuizGenerationTasksForUserUseCase,
   FetchQuizGenerationTaskForUserUseCase,
   SoftDeleteQuizGenerationTaskForUserUseCase,
+  ResumeQuizGenerationTaskAfterUploadUseCase,
 } from '@eclairum/core/use-cases';
 import { FILE_UPLOAD_SERVICE_PROVIDER_KEY } from './s3-file-upload.service';
+import { OCR_SERVICE_PROVIDER_KEY } from './textract-ocr.service';
+import { FileRepositoryImpl } from '../../repositories/files/file.repository';
+import { ConfigService } from '@nestjs/config';
 
 describe('QuizGenerationTasksService', () => {
   // Define test fixtures and service
@@ -48,8 +56,11 @@ describe('QuizGenerationTasksService', () => {
   let fetchTasksUseCase: { execute: jest.Mock };
   let fetchTaskUseCase: { execute: jest.Mock };
   let deleteTaskUseCase: { execute: jest.Mock };
+  let resumeTaskUseCase: { execute: jest.Mock };
   let unitOfWorkService: jest.Mocked<UnitOfWorkService>;
   let mockFileUploadService: { generateUploadUrl: jest.Mock };
+  let mockOcrService: { extractTextFromFile: jest.Mock };
+  let mockConfigService: { getOrThrow: jest.Mock };
 
   // Define interfaces for mock objects
   interface MockAnswer {
@@ -163,9 +174,14 @@ describe('QuizGenerationTasksService', () => {
     fetchTasksUseCase = { execute: jest.fn() };
     fetchTaskUseCase = { execute: jest.fn() };
     deleteTaskUseCase = { execute: jest.fn() };
+    resumeTaskUseCase = { execute: jest.fn() };
 
     // Setup file upload service mock
     mockFileUploadService = { generateUploadUrl: jest.fn() };
+    mockOcrService = { extractTextFromFile: jest.fn() };
+    mockConfigService = {
+      getOrThrow: jest.fn().mockReturnValue('test-bucket'),
+    };
 
     // Setup use case factory mocks
     (CreateQuizGenerationTaskUseCase as jest.Mock).mockReturnValue(
@@ -179,6 +195,9 @@ describe('QuizGenerationTasksService', () => {
     );
     (SoftDeleteQuizGenerationTaskForUserUseCase as jest.Mock).mockReturnValue(
       deleteTaskUseCase,
+    );
+    (ResumeQuizGenerationTaskAfterUploadUseCase as jest.Mock).mockReturnValue(
+      resumeTaskUseCase,
     );
 
     // Setup transaction mock
@@ -195,6 +214,7 @@ describe('QuizGenerationTasksService', () => {
         { provide: QuestionRepositoryImpl, useValue: {} },
         { provide: AnswerRepositoryImpl, useValue: {} },
         { provide: QuizGenerationTaskRepositoryImpl, useValue: {} },
+        { provide: FileRepositoryImpl, useValue: {} },
         {
           provide: LLM_SERVICE_PROVIDER_KEY,
           useValue: { generateQuiz: jest.fn() },
@@ -204,6 +224,14 @@ describe('QuizGenerationTasksService', () => {
         {
           provide: FILE_UPLOAD_SERVICE_PROVIDER_KEY,
           useValue: mockFileUploadService,
+        },
+        {
+          provide: OCR_SERVICE_PROVIDER_KEY,
+          useValue: mockOcrService,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
         },
       ],
     }).compile();
@@ -296,11 +324,13 @@ describe('QuizGenerationTasksService', () => {
         fileUploadUrl: mockFileUploadUrl,
       });
 
-      // And the use case should have been called with isFileUpload=true
+      // And the use case should have been called with isFileUpload=true and bucketName
       expect(createTaskUseCase.execute).toHaveBeenCalledWith({
         userId,
         text,
         isFileUpload: true,
+        filePath: undefined,
+        bucketName: 'test-bucket',
       });
     });
 
@@ -335,11 +365,13 @@ describe('QuizGenerationTasksService', () => {
         }),
       );
 
-      // And the use case should have been called with the empty text
+      // And the use case should have been called with the empty text and bucketName
       expect(createTaskUseCase.execute).toHaveBeenCalledWith({
         userId,
         text: '',
         isFileUpload: true,
+        filePath: undefined,
+        bucketName: 'test-bucket',
       });
     });
 
@@ -755,6 +787,114 @@ describe('QuizGenerationTasksService', () => {
         // Reset the spy
         logSpy.mockClear();
       }
+    });
+  });
+
+  describe('resumeTask', () => {
+    it('should resume a task successfully after file upload', async () => {
+      // Given a task ID and user ID
+      const taskId = faker.string.uuid();
+      const userId = faker.string.uuid();
+
+      // And a mock task that will be returned
+      const mockTask = createMockTask({
+        userId,
+        status: QuizGenerationStatus.COMPLETED,
+        questions: [createMockQuestion(), createMockQuestion()],
+      });
+
+      // And the use case will return success with the task
+      resumeTaskUseCase.execute.mockResolvedValue({
+        success: true,
+        task: mockTask,
+      });
+
+      // When resuming the task
+      const result = await service.resumeTask(taskId, userId);
+
+      // Then the result should indicate success with the task details
+      expect(result).toEqual({
+        success: true,
+        task: expect.objectContaining({
+          id: mockTask.getId(),
+          status: mockTask.getStatus(),
+          textContent: mockTask.getTextContent(),
+          questions: expect.arrayContaining([
+            expect.objectContaining({
+              id: expect.any(String),
+              text: expect.any(String),
+            }),
+          ]),
+        }),
+      });
+
+      // And the use case should be called with correct parameters
+      expect(resumeTaskUseCase.execute).toHaveBeenCalledWith({
+        taskId,
+        userId,
+      });
+    });
+
+    it('should handle domain errors appropriately when resuming a task', async () => {
+      // Given a task ID and user ID
+      const taskId = faker.string.uuid();
+      const userId = faker.string.uuid();
+
+      // Test different error scenarios
+      const errorScenarios = [
+        {
+          error: new TaskNotFoundError(`Task not found: ${taskId}`),
+          expectedError: NotFoundException,
+          expectedMessage: `Task not found: ${taskId}`,
+        },
+        {
+          error: new UnauthorizedTaskAccessError('User not authorized'),
+          expectedError: NotFoundException,
+          expectedMessage: 'Quiz generation task not found',
+        },
+        {
+          error: new UserNotFoundError(`User not found: ${userId}`),
+          expectedError: BadRequestException,
+          expectedMessage: `User with ID '${userId}' not found`,
+        },
+      ];
+
+      // For each error scenario
+      for (const scenario of errorScenarios) {
+        // Given the use case will throw this error
+        resumeTaskUseCase.execute.mockRejectedValueOnce(scenario.error);
+
+        // When resuming the task, Then the appropriate HTTP exception should be thrown
+        const promise = service.resumeTask(taskId, userId);
+        await expect(promise).rejects.toThrow(scenario.expectedError);
+        await expect(promise).rejects.toThrow(scenario.expectedMessage);
+      }
+    });
+
+    it('should log and propagate unknown errors during task resumption', async () => {
+      // Given a task ID and user ID
+      const taskId = faker.string.uuid();
+      const userId = faker.string.uuid();
+
+      // And an unexpected error
+      const unexpectedError = new Error('OCR service unavailable');
+      resumeTaskUseCase.execute.mockRejectedValue(unexpectedError);
+
+      // And we spy on the logger
+      const logSpy = jest.spyOn(Logger.prototype, 'error');
+
+      // When resuming the task, Then the error should be propagated
+      await expect(service.resumeTask(taskId, userId)).rejects.toThrow(
+        unexpectedError,
+      );
+
+      // And the error should be logged
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          `Failed to resume quiz generation task with id ${taskId}`,
+        ),
+        expect.any(String),
+      );
     });
   });
 });
