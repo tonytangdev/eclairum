@@ -16,7 +16,7 @@ import {
   OCR_SERVICE_PROVIDER_KEY,
   TextractOCRService,
 } from './services/textract-ocr.service';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [RepositoriesModule, UnitOfWorkModule, ConfigModule],
@@ -34,7 +34,9 @@ import { ConfigModule } from '@nestjs/config';
     },
     {
       provide: OCR_SERVICE_PROVIDER_KEY,
-      useClass: TextractOCRService,
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) =>
+        new TextractOCRService(configService, {}),
     },
   ],
 })
