@@ -94,6 +94,7 @@ export class QuizGenerationTaskUseCaseFactory {
     return new ResumeQuizGenerationTaskAfterUploadUseCase(
       this.ocrService,
       this.quizGenerationTaskRepository,
+      this.fileRepository,
       createQuizGenerationTaskUseCase,
     );
   }

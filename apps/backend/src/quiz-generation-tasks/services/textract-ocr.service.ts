@@ -7,9 +7,14 @@ import {
   Block,
 } from '@aws-sdk/client-textract';
 import { ConfigService } from '@nestjs/config';
+import { FileRepositoryImpl } from '../../repositories/files/file.repository';
 
 export const OCR_SERVICE_PROVIDER_KEY = 'OCR_SERVICE_PROVIDER_KEY';
 
+/**
+ * OCR service implementation using AWS Textract
+ * Extracts text from files stored in S3 using AWS Textract
+ */
 @Injectable()
 export class TextractOCRService implements OCRService {
   private readonly textractClient: TextractClient;
@@ -42,36 +47,45 @@ export class TextractOCRService implements OCRService {
     });
   }
 
-  async extractTextFromFile(taskId: string): Promise<string> {
+  /**
+   * Extracts text from a file associated with the given task ID
+   * @param filePath The path to the file from which to extract text
+   * @returns The extracted text from the file
+   * @throws Error if no file is found or text extraction fails
+   */
+  async extractTextFromFile(filePath: string): Promise<string> {
     try {
-      this.logger.log(`Starting text extraction for task: ${taskId}`);
-      const s3ObjectName = this.getS3ObjectNameFromTaskId(taskId);
+      this.logger.log(`Starting text extraction for task: ${filePath}`);
 
-      const jobId = await this.startTextDetection(s3ObjectName);
+      const jobId = await this.startTextDetection(filePath);
       this.logger.log(`Textract job started: ${jobId}`);
 
       const extractedText = await this.pollForTextDetectionCompletion(jobId);
-      this.logger.log(`Text extraction completed for task: ${taskId}`);
+      this.logger.log(`Text extraction completed for task: ${filePath}`);
 
       return extractedText;
     } catch (error) {
-      this.logger.error(`Text extraction failed for task ${taskId}`, error);
+      this.logger.error(
+        `Text extraction failed for task ${filePath}`,
+        error instanceof Error ? error.stack : String(error),
+      );
       throw new Error(
-        `Failed to extract text from file: ${(error as Error).message}`,
+        `Failed to extract text from file: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
 
-  private getS3ObjectNameFromTaskId(taskId: string): string {
-    return `uploads/${taskId}/document.pdf`;
-  }
-
-  private async startTextDetection(s3ObjectName: string): Promise<string> {
+  /**
+   * Starts a text detection job in AWS Textract
+   * @param s3ObjectPath The path of the file in S3
+   * @returns The ID of the Textract job
+   */
+  private async startTextDetection(s3ObjectPath: string): Promise<string> {
     const startCommand = new StartDocumentTextDetectionCommand({
       DocumentLocation: {
         S3Object: {
           Bucket: this.bucketName,
-          Name: s3ObjectName,
+          Name: s3ObjectPath,
         },
       },
     });
@@ -85,6 +99,11 @@ export class TextractOCRService implements OCRService {
     return JobId;
   }
 
+  /**
+   * Polls for the completion of a text detection job
+   * @param jobId The ID of the Textract job
+   * @returns The extracted text
+   */
   private async pollForTextDetectionCompletion(jobId: string): Promise<string> {
     let pollAttempts = 0;
 
@@ -107,6 +126,13 @@ export class TextractOCRService implements OCRService {
     throw new Error('Text detection timed out');
   }
 
+  /**
+   * Collects all text blocks from a completed Textract job
+   * @param jobId The ID of the Textract job
+   * @param nextToken Token for pagination
+   * @param initialBlocks Initial set of blocks
+   * @returns The combined extracted text
+   */
   private async collectAllTextBlocks(
     jobId: string,
     nextToken: string | undefined,
@@ -130,6 +156,11 @@ export class TextractOCRService implements OCRService {
     return this.convertBlocksToText(allBlocks);
   }
 
+  /**
+   * Converts Textract blocks to plain text
+   * @param blocks Textract blocks
+   * @returns Plain text
+   */
   private convertBlocksToText(blocks: Block[]): string {
     return blocks
       .filter((block) => block.BlockType === 'LINE')
@@ -137,6 +168,10 @@ export class TextractOCRService implements OCRService {
       .join('\n');
   }
 
+  /**
+   * Utility function to create a delay
+   * @param ms Milliseconds to delay
+   */
   private async delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }

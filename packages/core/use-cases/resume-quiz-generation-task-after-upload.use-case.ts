@@ -1,4 +1,5 @@
 import { OCRService } from "../interfaces/ocr-service.interface";
+import { FileRepository } from "../interfaces/file-repository.interface";
 import { QuizGenerationTaskRepository } from "../interfaces/quiz-generation-task-repository.interface";
 import { CreateQuizGenerationTaskUseCase } from "./create-quiz-generation-task.use-case";
 import {
@@ -9,6 +10,7 @@ import {
   TaskNotFoundError,
   UnauthorizedTaskAccessError,
 } from "../errors/quiz-errors";
+import { File } from "../entities";
 
 interface ResumeQuizGenerationTaskAfterUploadRequest {
   taskId: string;
@@ -27,6 +29,7 @@ export class ResumeQuizGenerationTaskAfterUploadUseCase {
   constructor(
     private readonly ocrService: OCRService,
     private readonly quizGenerationTaskRepository: QuizGenerationTaskRepository,
+    private readonly fileRepository: FileRepository,
     private readonly createQuizGenerationTaskUseCase: CreateQuizGenerationTaskUseCase,
   ) {}
 
@@ -35,9 +38,10 @@ export class ResumeQuizGenerationTaskAfterUploadUseCase {
     userId,
   }: ResumeQuizGenerationTaskAfterUploadRequest): Promise<ResumeQuizGenerationTaskAfterUploadResponse> {
     const task = await this.getAndValidateTask(taskId, userId);
+    const file = await this.getFile(taskId);
 
     // Start processing in background without waiting for it
-    void this.processTaskInBackground(taskId, userId, task);
+    void this.processTaskInBackground(file.getPath(), userId, task);
 
     return {
       success: true,
@@ -46,14 +50,17 @@ export class ResumeQuizGenerationTaskAfterUploadUseCase {
   }
 
   private async processTaskInBackground(
-    taskId: string,
+    filePath: string,
     userId: string,
     task: QuizGenerationTask,
   ): Promise<void> {
     try {
-      const extractedText = await this.extractText(taskId);
+      console.log(
+        `Resuming quiz generation task ${task.getId()} for user ${userId} with file ${filePath}`,
+      );
+      const extractedText = await this.extractText(filePath);
 
-      console.log(`Extracted text from task ${taskId}: ${extractedText}`);
+      console.log(`Extracted text from task ${task.getId()}: ${extractedText}`);
       // Resume quiz generation with the extracted text
       await this.createQuizGenerationTaskUseCase.execute({
         userId,
@@ -84,8 +91,8 @@ export class ResumeQuizGenerationTaskAfterUploadUseCase {
     return task;
   }
 
-  private async extractText(taskId: string): Promise<string> {
-    return this.ocrService.extractTextFromFile(taskId);
+  private async extractText(filePath: string): Promise<string> {
+    return this.ocrService.extractTextFromFile(filePath);
   }
 
   private async handleFailedTask(
@@ -102,5 +109,13 @@ export class ResumeQuizGenerationTaskAfterUploadUseCase {
     } catch (saveError) {
       console.error("Failed to save failed quiz generation task:", saveError);
     }
+  }
+
+  private async getFile(taskId: string): Promise<File> {
+    const file = await this.fileRepository.findByQuizGenerationTaskId(taskId);
+    if (!file) {
+      throw new Error(`No file found for task ID: ${taskId}`);
+    }
+    return file;
   }
 }

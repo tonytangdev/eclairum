@@ -4,9 +4,9 @@
 export interface OCRService {
   /**
    * Extracts text from a file associated with the given taskId
-   * @param taskId The ID of the quiz generation task associated with the uploaded file
+   * @param filePath The path to the file from which to extract text
    * @returns A promise that resolves to the extracted text
    * @throws Error if text extraction fails
    */
-  extractTextFromFile(taskId: string): Promise<string>;
+  extractTextFromFile(filePath: string): Promise<string>;
 }
