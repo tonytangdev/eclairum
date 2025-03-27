@@ -579,7 +579,6 @@ describe("CreateQuizGenerationTaskUseCase", () => {
 
     it("should log errors when quiz processor fails", async () => {
       // Arrange
-      const expectedError = new Error("Simulated quiz generation failure");
       // Create a processor that will fail with specific error
       const mockProcessor = new MockQuizProcessor(false).withErrorMessage(
         "Simulated quiz generation failure",
