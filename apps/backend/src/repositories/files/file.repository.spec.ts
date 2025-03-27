@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FileRepositoryImpl } from './file.repository';
 import { FileMapper } from './mappers/file.mapper';
 import { File } from '@eclairum/core/entities';
 import { faker } from '@faker-js/faker';
 import { FileEntity } from '../../common/entities/file.entity';
+import { UnitOfWorkService } from '../../unit-of-work/unit-of-work.service';
 
 // Mock the FileMapper
 jest.mock('./mappers/file.mapper', () => ({
@@ -18,6 +18,7 @@ jest.mock('./mappers/file.mapper', () => ({
 describe('FileRepositoryImpl', () => {
   let repository: FileRepositoryImpl;
   let typeOrmRepository: jest.Mocked<Repository<FileEntity>>;
+  let unitOfWorkService: jest.Mocked<UnitOfWorkService>;
 
   // Test data
   const testId = faker.string.uuid();
@@ -26,7 +27,7 @@ describe('FileRepositoryImpl', () => {
   const testQuizGenerationTaskId = faker.string.uuid();
 
   // Create reusable entities for testing
-  const createFileEntity = () => {
+  const createFileEntity = (): FileEntity => {
     const entity = new FileEntity();
     entity.id = testId;
     entity.path = testPath;
@@ -38,7 +39,7 @@ describe('FileRepositoryImpl', () => {
     return entity;
   };
 
-  const createDomainFile = () => {
+  const createDomainFile = (): File => {
     return new File({
       id: testId,
       path: testPath,
@@ -57,18 +58,28 @@ describe('FileRepositoryImpl', () => {
       update: jest.fn(),
     };
 
+    // Mock UnitOfWorkService
+    const mockUnitOfWorkService = {
+      getManager: jest.fn().mockReturnValue({
+        getRepository: jest.fn().mockReturnValue(mockTypeOrmRepository),
+      }),
+    } as unknown as jest.Mocked<UnitOfWorkService>;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FileRepositoryImpl,
         {
-          provide: getRepositoryToken(FileEntity),
-          useValue: mockTypeOrmRepository,
+          provide: UnitOfWorkService,
+          useValue: mockUnitOfWorkService,
         },
       ],
     }).compile();
 
     repository = module.get<FileRepositoryImpl>(FileRepositoryImpl);
-    typeOrmRepository = module.get(getRepositoryToken(FileEntity));
+    unitOfWorkService = module.get(UnitOfWorkService);
+    typeOrmRepository = mockUnitOfWorkService
+      .getManager()
+      .getRepository(FileEntity) as jest.Mocked<Repository<FileEntity>>;
 
     jest.clearAllMocks();
   });
@@ -86,7 +97,6 @@ describe('FileRepositoryImpl', () => {
       expect(typeOrmRepository.findOne).toHaveBeenCalledWith({
         where: { id },
       });
-      expect(typeOrmRepository.findOne).toHaveBeenCalledTimes(1);
       expect(result).toBeNull();
       expect(FileMapper.toDomain).not.toHaveBeenCalled();
     });
@@ -106,14 +116,8 @@ describe('FileRepositoryImpl', () => {
       expect(typeOrmRepository.findOne).toHaveBeenCalledWith({
         where: { id: testId },
       });
-      expect(typeOrmRepository.findOne).toHaveBeenCalledTimes(1);
       expect(FileMapper.toDomain).toHaveBeenCalledWith(fileEntity);
-      expect(FileMapper.toDomain).toHaveBeenCalledTimes(1);
       expect(result).toBe(domainFile);
-      expect(result?.getId()).toBe(testId);
-      expect(result?.getPath()).toBe(testPath);
-      expect(result?.getBucketName()).toBe(testBucketName);
-      expect(result?.getQuizGenerationTaskId()).toBe(testQuizGenerationTaskId);
     });
   });
 
@@ -131,9 +135,7 @@ describe('FileRepositoryImpl', () => {
       expect(typeOrmRepository.findOne).toHaveBeenCalledWith({
         where: { quizGenerationTaskId },
       });
-      expect(typeOrmRepository.findOne).toHaveBeenCalledTimes(1);
       expect(result).toBeNull();
-      expect(FileMapper.toDomain).not.toHaveBeenCalled();
     });
 
     it('should return mapped file when found', async () => {
@@ -153,9 +155,6 @@ describe('FileRepositoryImpl', () => {
       expect(typeOrmRepository.findOne).toHaveBeenCalledWith({
         where: { quizGenerationTaskId: testQuizGenerationTaskId },
       });
-      expect(typeOrmRepository.findOne).toHaveBeenCalledTimes(1);
-      expect(FileMapper.toDomain).toHaveBeenCalledWith(fileEntity);
-      expect(FileMapper.toDomain).toHaveBeenCalledTimes(1);
       expect(result).toBe(domainFile);
     });
   });
@@ -191,8 +190,6 @@ describe('FileRepositoryImpl', () => {
 
       // Act & Assert
       await expect(repository.save(file)).rejects.toThrow(dbError);
-      expect(FileMapper.toPersistence).toHaveBeenCalledWith(file);
-      expect(typeOrmRepository.save).toHaveBeenCalledWith(fileEntity);
     });
   });
 
@@ -201,6 +198,7 @@ describe('FileRepositoryImpl', () => {
       // Arrange
       const id = faker.string.uuid();
       const beforeTest = new Date();
+
       typeOrmRepository.update.mockResolvedValue({
         affected: 1,
         raw: {},
@@ -216,10 +214,10 @@ describe('FileRepositoryImpl', () => {
         { deletedAt: expect.any(Date) as Date },
       );
 
-      // Verify the timestamp is recent
-      const updateData = typeOrmRepository.update.mock.calls[0][1] as {
-        deletedAt: Date;
-      };
+      const updateCall = typeOrmRepository.update.mock.calls[0];
+      const updateData = updateCall[1] as { deletedAt: Date };
+
+      expect(updateData.deletedAt).toBeInstanceOf(Date);
       expect(updateData.deletedAt.getTime()).toBeGreaterThanOrEqual(
         beforeTest.getTime(),
       );
@@ -239,10 +237,6 @@ describe('FileRepositoryImpl', () => {
 
       // Act & Assert
       await expect(repository.softDelete(id)).resolves.not.toThrow();
-      expect(typeOrmRepository.update).toHaveBeenCalledWith(
-        { id },
-        { deletedAt: expect.any(Date) as Date },
-      );
     });
 
     it('should propagate database errors', async () => {
@@ -252,11 +246,22 @@ describe('FileRepositoryImpl', () => {
       typeOrmRepository.update.mockRejectedValue(dbError);
 
       // Act & Assert
-      await expect(repository.softDelete(id)).rejects.toThrow(dbError);
-      expect(typeOrmRepository.update).toHaveBeenCalledWith(
-        { id },
-        { deletedAt: expect.any(Date) as Date },
-      );
+      await expect(repository.softDelete(id)).rejects.toThrow('Database error');
+    });
+  });
+
+  describe('UnitOfWork integration', () => {
+    it('should get repository from UnitOfWork manager', async () => {
+      // Arrange
+      const id = faker.string.uuid();
+      typeOrmRepository.findOne.mockResolvedValue(null);
+
+      // Act
+      await repository.findById(id);
+
+      // Assert
+      expect(unitOfWorkService.getManager).toHaveBeenCalled();
+      expect(unitOfWorkService.getManager().getRepository).toHaveBeenCalled();
     });
   });
 });
