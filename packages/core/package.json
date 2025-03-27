@@ -81,7 +81,8 @@
       "/dist/",
       "/index.ts",
       "/constants/file-upload.ts",
-      "/interfaces/file-upload-service.interface.ts"
+      "/interfaces/file-upload-service.interface.ts",
+      "/test/mocks/"
     ],
     "coverageThreshold": {
       "global": {
