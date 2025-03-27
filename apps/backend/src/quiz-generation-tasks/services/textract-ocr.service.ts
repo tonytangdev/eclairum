@@ -119,9 +119,6 @@ export class TextractOCRService implements OCRService {
     let pollAttempts = 0;
 
     while (pollAttempts < this.maxPollAttempts) {
-      console.log(
-        `Polling for job status: ${jobId} (attempt ${pollAttempts + 1})`,
-      );
       const getCommand = new GetDocumentTextDetectionCommand({ JobId: jobId });
       const { JobStatus, NextToken, Blocks } =
         await this.textractClient.send(getCommand);
@@ -133,11 +130,7 @@ export class TextractOCRService implements OCRService {
       }
 
       // Wait before polling again
-      console.log({ pollIntervalMs: this.pollIntervalMs });
       await this.delay(this.pollIntervalMs);
-      console.log(
-        `Waiting for ${this.pollIntervalMs}ms before next poll attempt...`,
-      );
       pollAttempts++;
     }
 
