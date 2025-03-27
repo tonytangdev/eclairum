@@ -141,11 +141,11 @@ export function FlashCardsProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const supportedTypes = ['application/pdf', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const supportedTypes = ['application/pdf', 'image/png', 'image/jpeg'];
     if (!supportedTypes.includes(selectedFile.type)) {
       setFeedback({
         type: "error",
-        message: "Unsupported file type. Please upload PDF, TXT, or DOCX files."
+        message: "Unsupported file type. Please upload PDF, JPEG or PNG files."
       });
       setFile(null);
       return;

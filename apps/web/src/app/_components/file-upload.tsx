@@ -30,8 +30,7 @@ export function FileUpload() {
         ref={fileInputRef}
         onChange={handleFileInputChange}
         className="hidden"
-        // accept=".pdf,.txt,.docx"
-        accept=".pdf"
+        accept=".pdf,.png,.jpg,.jpeg"
       />
 
       {!file ? (
