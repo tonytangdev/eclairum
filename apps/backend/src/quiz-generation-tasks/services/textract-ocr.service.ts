@@ -78,11 +78,9 @@ export class TextractOCRService implements OCRService {
     } catch (error) {
       this.logger.error(
         `Text extraction failed for task ${filePath}`,
-        error instanceof Error ? error.stack : String(error),
+        (error as Error).message,
       );
-      throw new Error(
-        `Failed to extract text from file: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      throw new Error(`Failed to extract text from file: ${String(error)}`);
     }
   }
 

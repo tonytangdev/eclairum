@@ -257,7 +257,7 @@ describe('TextractOCRService', () => {
 
       // Act & Assert
       await expect(service.extractTextFromFile(mockFilePath)).rejects.toThrow(
-        'Failed to extract text from file: Textract text detection job failed',
+        'Failed to extract text from file: Error: Textract text detection job failed',
       );
 
       expect(errorSpy).toHaveBeenCalledWith(
@@ -274,7 +274,7 @@ describe('TextractOCRService', () => {
 
       // Act & Assert
       await expect(service.extractTextFromFile(mockFilePath)).rejects.toThrow(
-        'Failed to extract text from file: Failed to start text detection job',
+        'Failed to extract text from file: Error: Failed to start text detection job',
       );
     });
 
@@ -296,7 +296,7 @@ describe('TextractOCRService', () => {
 
       // Assert
       await expect(extractionPromise).rejects.toThrow(
-        'Failed to extract text from file: Text detection timed out',
+        'Failed to extract text from file: Error: Text detection timed out',
       );
 
       // Verify the correct number of polling attempts
@@ -313,7 +313,7 @@ describe('TextractOCRService', () => {
 
       // Act & Assert
       await expect(service.extractTextFromFile(mockFilePath)).rejects.toThrow(
-        'Failed to extract text from file: AWS client error',
+        'Failed to extract text from file: Error: AWS client error',
       );
     });
 
@@ -343,6 +343,94 @@ describe('TextractOCRService', () => {
 
       // Assert
       expect(extractedText).toBe('First line\nSecond line');
+    });
+
+    it('should handle undefined Blocks and use empty array fallback', async () => {
+      // Arrange
+      // First call: Start text detection
+      mockTextractClient.send.mockImplementationOnce(() =>
+        Promise.resolve({ JobId: mockJobId }),
+      );
+
+      // Second call: Check status, return SUCCEEDED with undefined Blocks
+      mockTextractClient.send.mockImplementationOnce(() =>
+        Promise.resolve({
+          JobStatus: 'SUCCEEDED',
+          Blocks: undefined,
+          NextToken: undefined,
+        }),
+      );
+
+      // Act
+      const extractedText = await service.extractTextFromFile(mockFilePath);
+
+      // Assert
+      expect(extractedText).toBe(''); // Should return empty string since there are no blocks
+      expect(mockTextractClient.send).toHaveBeenCalledTimes(2);
+    });
+
+    it('should handle undefined Blocks during pagination', async () => {
+      // Arrange
+      const firstBlock = { BlockType: 'LINE', Text: 'Page 1 - Line 1' };
+
+      // First call: Start text detection
+      mockTextractClient.send.mockImplementationOnce(() =>
+        Promise.resolve({ JobId: mockJobId }),
+      );
+
+      // Second call: Check status, return first page with NextToken
+      mockTextractClient.send.mockImplementationOnce(() =>
+        Promise.resolve({
+          JobStatus: 'SUCCEEDED',
+          Blocks: [firstBlock],
+          NextToken: 'nextpage',
+        }),
+      );
+
+      // Third call: Get more results using NextToken but return undefined Blocks
+      mockTextractClient.send.mockImplementationOnce(() =>
+        Promise.resolve({
+          Blocks: undefined, // This tests the newBlocks || [] fallback
+          NextToken: undefined,
+        }),
+      );
+
+      // Act
+      const extractedText = await service.extractTextFromFile(mockFilePath);
+
+      // Assert
+      // Should only contain text from the first page since the second page had undefined blocks
+      expect(extractedText).toBe('Page 1 - Line 1');
+      expect(mockTextractClient.send).toHaveBeenCalledTimes(3);
+    });
+
+    it('should handle undefined Text values in blocks and use empty string fallback', async () => {
+      // Arrange
+      // First call: Start text detection
+      mockTextractClient.send.mockImplementationOnce(() =>
+        Promise.resolve({ JobId: mockJobId }),
+      );
+
+      // Second call: Check status with blocks including undefined Text values
+      mockTextractClient.send.mockImplementationOnce(() =>
+        Promise.resolve({
+          JobStatus: 'SUCCEEDED',
+          Blocks: [
+            { BlockType: 'LINE', Text: 'First line' },
+            { BlockType: 'LINE', Text: undefined }, // This tests the Text || '' fallback
+            { BlockType: 'LINE', Text: 'Third line' },
+          ],
+          NextToken: undefined,
+        }),
+      );
+
+      // Act
+      const extractedText = await service.extractTextFromFile(mockFilePath);
+
+      // Assert
+      // Should include empty line for the block with undefined Text
+      expect(extractedText).toBe('First line\n\nThird line');
+      expect(mockTextractClient.send).toHaveBeenCalledTimes(2);
     });
   });
 });
