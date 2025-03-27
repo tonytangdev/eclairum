@@ -44,7 +44,7 @@ export function FileUpload() {
         >
           <Upload className="h-10 w-10 text-muted-foreground mb-2" />
           <p className="text-muted-foreground mb-1">Drag and drop a file here or click to browse</p>
-          <p className="text-xs text-muted-foreground">PDF (max {MAX_FILE_SIZE / (1024 * 1024)}MB)</p>
+          <p className="text-xs text-muted-foreground">PDF, JPEG, PNG (max {MAX_FILE_SIZE / (1024 * 1024)}MB)</p>
         </div>
       ) : (
         <div className="border rounded-lg p-4 space-y-4">
