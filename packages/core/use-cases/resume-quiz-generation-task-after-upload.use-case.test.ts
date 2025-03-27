@@ -29,6 +29,7 @@ describe("ResumeQuizGenerationTaskAfterUploadUseCase", () => {
   const taskId = faker.string.uuid();
   const fileId = faker.string.uuid();
   const extractedText = faker.lorem.paragraphs(3);
+  const filePath = faker.system.filePath();
 
   // Mock implementation for task and file
   let mockTask: jest.Mocked<QuizGenerationTask>;
@@ -49,6 +50,7 @@ describe("ResumeQuizGenerationTaskAfterUploadUseCase", () => {
     // Create our mock file
     mockFile = {
       getId: jest.fn().mockReturnValue(fileId),
+      getPath: jest.fn().mockReturnValue(filePath),
     } as unknown as jest.Mocked<File>;
 
     // Set up our mocks
@@ -127,13 +129,14 @@ describe("ResumeQuizGenerationTaskAfterUploadUseCase", () => {
 
     it("should trigger background processing", async () => {
       // Arrange
-      const processSpy = jest.spyOn(global, "setTimeout");
+      const processSpy = jest.spyOn(useCase as any, "processTaskInBackground");
 
       // Act
       await useCase.execute({ taskId, userId });
 
       // Assert
       expect(processSpy).toHaveBeenCalled();
+      expect(processSpy).toHaveBeenCalledWith(filePath, userId, mockTask);
 
       // Cleanup
       processSpy.mockRestore();
