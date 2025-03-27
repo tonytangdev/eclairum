@@ -160,7 +160,7 @@ describe('S3FileUploadService', () => {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const lastCallArgs = (
           PutObjectCommand as unknown as jest.Mock
-        ).mock.calls.at(-1);
+        ).mock.calls.at(-1) as unknown as [object];
         const lastCallOptions = lastCallArgs[0] as {
           Bucket: string;
           Key: string;
