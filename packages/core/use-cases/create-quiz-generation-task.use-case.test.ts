@@ -12,10 +12,19 @@ import { LLMService } from "../interfaces/llm-service.interface";
 import { FileUploadService } from "../interfaces/file-upload-service.interface";
 import { QuizGeneratorService } from "../services/quiz-generator.service";
 import { QuizStorageService } from "../services/quiz-storage.service";
+import { QuizProcessor } from "../interfaces/quiz-processor.interface";
+import { DefaultQuizProcessor } from "../services/quiz-processor.service";
+import { MockQuizProcessor } from "../test/mocks/mock-quiz-processor";
+import { QuestionRepository } from "../interfaces/question-repository.interface";
+import { AnswerRepository } from "../interfaces/answer-repository.interface";
+import { QuizGenerationTaskRepository } from "../interfaces/quiz-generation-task-repository.interface";
+import { UserRepository } from "../interfaces/user-repository.interface";
+import { FileRepository } from "../interfaces/file-repository.interface";
 
 // Mock the services that are created inside the use case
 jest.mock("../services/quiz-generator.service");
 jest.mock("../services/quiz-storage.service");
+jest.mock("../services/quiz-processor.service");
 
 describe("CreateQuizGenerationTaskUseCase", () => {
   // Use fake timers to control asynchronous processes
@@ -26,7 +35,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     generateQuiz: jest.fn(),
   };
 
-  const mockQuestionRepository = {
+  const mockQuestionRepository: jest.Mocked<QuestionRepository> = {
     saveQuestions: jest.fn(),
     findById: jest.fn(),
     findByUserId: jest.fn(),
@@ -35,7 +44,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     softDeleteByTaskId: jest.fn(),
   };
 
-  const mockAnswerRepository = {
+  const mockAnswerRepository: jest.Mocked<AnswerRepository> = {
     saveAnswers: jest.fn(),
     findByQuestionId: jest.fn(),
     findById: jest.fn(),
@@ -43,23 +52,22 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     save: jest.fn(),
   };
 
-  const mockQuizGenerationTaskRepository = {
-    saveTask: jest.fn(),
-    findById: jest.fn(),
-    findByUserId: jest.fn(),
-    findByUserIdPaginated: jest.fn(),
-    findAll: jest.fn(),
-    softDelete: jest.fn(),
-    save: jest.fn(),
-  };
+  const mockQuizGenerationTaskRepository: jest.Mocked<QuizGenerationTaskRepository> =
+    {
+      saveTask: jest.fn(),
+      findById: jest.fn(),
+      findByUserId: jest.fn(),
+      findByUserIdPaginated: jest.fn(),
+      softDelete: jest.fn(),
+    };
 
-  const mockUserRepository = {
+  const mockUserRepository: jest.Mocked<UserRepository> = {
     findByEmail: jest.fn(),
     findById: jest.fn(),
     save: jest.fn(),
   };
 
-  const mockFileRepository = {
+  const mockFileRepository: jest.Mocked<FileRepository> = {
     findById: jest.fn(),
     findByQuizGenerationTaskId: jest.fn(),
     save: jest.fn(),
@@ -140,12 +148,9 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     it("should create a quiz generation task with provided text", async () => {
       // Arrange
       // Mock the processQuizGeneration method to prevent it from executing during the test
-      jest
-        .spyOn(
-          CreateQuizGenerationTaskUseCase.prototype as any,
-          "processQuizGeneration",
-        )
-        .mockImplementation(() => Promise.resolve());
+      const mockQuizProcessor: jest.Mocked<QuizProcessor> = {
+        processQuizGeneration: jest.fn().mockResolvedValue(undefined),
+      };
 
       const useCase = new CreateQuizGenerationTaskUseCase(
         mockLLMService,
@@ -153,6 +158,9 @@ describe("CreateQuizGenerationTaskUseCase", () => {
         mockAnswerRepository,
         mockQuizGenerationTaskRepository,
         mockUserRepository,
+        undefined,
+        undefined,
+        mockQuizProcessor,
       );
 
       const userId = faker.string.uuid();
@@ -170,12 +178,16 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       );
       expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
       expect(mockQuizStorageService.saveTask).toHaveBeenCalledWith(
-        expect.any(QuizGenerationTask),
+        expect.any(QuizGenerationTask as unknown as jest.Constructor),
       );
       expect(result.fileUploadUrl).toBeUndefined();
+      expect(mockQuizProcessor.processQuizGeneration).toHaveBeenCalledWith(
+        expect.any(QuizGenerationTask as unknown as jest.Constructor),
+        text,
+      );
     });
 
-    it("should throw RequiredTextContentError if text is empty", async () => {
+    it("should throw RequiredTextContentError when text is empty", async () => {
       // Arrange
       const useCase = new CreateQuizGenerationTaskUseCase(
         mockLLMService,
@@ -195,7 +207,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       expect(mockQuizStorageService.saveTask).not.toHaveBeenCalled();
     });
 
-    it("should throw TextTooLongError if text exceeds max length", async () => {
+    it("should throw TextTooLongError when text exceeds max length", async () => {
       // Arrange
       const useCase = new CreateQuizGenerationTaskUseCase(
         mockLLMService,
@@ -224,7 +236,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       expect(mockQuizStorageService.saveTask).not.toHaveBeenCalled();
     });
 
-    it("should throw UserNotFoundError if user doesn't exist", async () => {
+    it("should throw UserNotFoundError when user doesn't exist", async () => {
       // Arrange
       const useCase = new CreateQuizGenerationTaskUseCase(
         mockLLMService,
@@ -459,6 +471,160 @@ describe("CreateQuizGenerationTaskUseCase", () => {
         `uploads/${taskId}/file`,
       );
       expect(mockFileRepository.save).toHaveBeenCalled();
+    });
+  });
+
+  describe("Quiz Processing with dependency injection", () => {
+    it("should accept a custom quiz processor through constructor", async () => {
+      // Arrange
+      const mockQuizProcessor: jest.Mocked<QuizProcessor> = {
+        processQuizGeneration: jest.fn().mockResolvedValue(undefined),
+      };
+
+      const useCase = new CreateQuizGenerationTaskUseCase(
+        mockLLMService,
+        mockQuestionRepository,
+        mockAnswerRepository,
+        mockQuizGenerationTaskRepository,
+        mockUserRepository,
+        undefined,
+        undefined,
+        mockQuizProcessor,
+      );
+
+      const userId = faker.string.uuid();
+      const text = faker.lorem.paragraph();
+
+      // Act
+      await useCase.execute({ userId, text });
+
+      // Assert
+      expect(mockQuizProcessor.processQuizGeneration).toHaveBeenCalledTimes(1);
+      expect(mockQuizProcessor.processQuizGeneration).toHaveBeenCalledWith(
+        expect.any(QuizGenerationTask as unknown as jest.Constructor),
+        text,
+      );
+    });
+
+    it("should use DefaultQuizProcessor when no processor is provided", async () => {
+      // Arrange
+      const mockDefaultQuizProcessor = {
+        processQuizGeneration: jest.fn().mockResolvedValue(undefined),
+      };
+
+      // Mock DefaultQuizProcessor constructor to return our mock
+      (DefaultQuizProcessor as jest.Mock).mockImplementation(
+        () => mockDefaultQuizProcessor,
+      );
+
+      const useCase = new CreateQuizGenerationTaskUseCase(
+        mockLLMService,
+        mockQuestionRepository,
+        mockAnswerRepository,
+        mockQuizGenerationTaskRepository,
+        mockUserRepository,
+      );
+
+      const userId = faker.string.uuid();
+      const text = faker.lorem.paragraph();
+
+      // Act
+      await useCase.execute({ userId, text });
+
+      // Assert
+      expect(DefaultQuizProcessor).toHaveBeenCalledWith(
+        mockQuizGeneratorService,
+        mockQuizStorageService,
+      );
+      expect(
+        mockDefaultQuizProcessor.processQuizGeneration,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        mockDefaultQuizProcessor.processQuizGeneration,
+      ).toHaveBeenCalledWith(
+        expect.any(QuizGenerationTask as unknown as jest.Constructor),
+        text,
+      );
+    });
+
+    it("should use MockQuizProcessor for testing scenarios", async () => {
+      // Arrange
+      const mockProcessor = new MockQuizProcessor(true, 0);
+      const processSpy = jest.spyOn(mockProcessor, "processQuizGeneration");
+
+      const useCase = new CreateQuizGenerationTaskUseCase(
+        mockLLMService,
+        mockQuestionRepository,
+        mockAnswerRepository,
+        mockQuizGenerationTaskRepository,
+        mockUserRepository,
+        undefined,
+        undefined,
+        mockProcessor,
+      );
+
+      const userId = faker.string.uuid();
+      const text = faker.lorem.paragraph();
+
+      // Act
+      await useCase.execute({ userId, text });
+
+      // Assert
+      expect(processSpy).toHaveBeenCalledTimes(1);
+      expect(processSpy).toHaveBeenCalledWith(
+        expect.any(QuizGenerationTask as unknown as jest.Constructor),
+        text,
+      );
+    });
+
+    it("should log errors when quiz processor fails", async () => {
+      // Arrange
+      const expectedError = new Error("Simulated quiz generation failure");
+      // Create a processor that will fail with specific error
+      const mockProcessor = new MockQuizProcessor(false).withErrorMessage(
+        "Simulated quiz generation failure",
+      );
+
+      // Spy on the processor to verify it was called
+      const processSpy = jest.spyOn(mockProcessor, "processQuizGeneration");
+
+      // Spy on console.error to verify error logging
+      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
+
+      const useCase = new CreateQuizGenerationTaskUseCase(
+        mockLLMService,
+        mockQuestionRepository,
+        mockAnswerRepository,
+        mockQuizGenerationTaskRepository,
+        mockUserRepository,
+        undefined,
+        undefined,
+        mockProcessor,
+      );
+
+      const userId = faker.string.uuid();
+      const text = faker.lorem.paragraph();
+
+      // Act
+      const result = await useCase.execute({ userId, text });
+
+      // Assert
+      // 1. Verify the task was created and returned
+      expect(result.quizGenerationTask).toBeDefined();
+      expect(result.quizGenerationTask.getUserId()).toBe(userId);
+      expect(result.quizGenerationTask.getTextContent()).toBe(text);
+
+      // 2. Verify the processor was called with the task and text
+      expect(processSpy).toHaveBeenCalledWith(result.quizGenerationTask, text);
+
+      // Wait for all async operations to complete
+      await jest.runAllTimersAsync();
+
+      // 3. Verify the error was logged properly
+      expect(consoleSpy).toHaveBeenCalledWith(expect.any(String));
+
+      // Clean up
+      consoleSpy.mockRestore();
     });
   });
 });

@@ -2,7 +2,6 @@ import {
   QuizGenerationStatus,
   QuizGenerationTask,
 } from "../entities/quiz-generation-task";
-import { Question } from "../entities/question";
 import { LLMService } from "../interfaces/llm-service.interface";
 import { QuestionRepository } from "../interfaces/question-repository.interface";
 import { AnswerRepository } from "../interfaces/answer-repository.interface";
@@ -15,6 +14,8 @@ import { QuizGeneratorService } from "../services/quiz-generator.service";
 import { QuizStorageService } from "../services/quiz-storage.service";
 import { FileUploadService } from "../interfaces/file-upload-service.interface";
 import { FileRepository } from "../interfaces/file-repository.interface";
+import { QuizProcessor } from "../interfaces/quiz-processor.interface";
+import { DefaultQuizProcessor } from "../services/quiz-processor.service";
 
 type CreateQuizGenerationTaskUseCaseRequest = {
   userId: User["id"];
@@ -33,6 +34,7 @@ type CreateQuizGenerationTaskUseCaseResponse = {
 export class CreateQuizGenerationTaskUseCase {
   private readonly quizGenerator: QuizGeneratorService;
   private readonly quizStorage: QuizStorageService;
+  private readonly quizProcessor: QuizProcessor;
 
   constructor(
     readonly llmService: LLMService,
@@ -42,6 +44,7 @@ export class CreateQuizGenerationTaskUseCase {
     private readonly userRepository: UserRepository,
     private readonly fileRepository?: FileRepository,
     private readonly fileUploadService?: FileUploadService,
+    quizProcessor?: QuizProcessor,
   ) {
     this.quizGenerator = new QuizGeneratorService(llmService);
     this.quizStorage = new QuizStorageService(
@@ -49,6 +52,10 @@ export class CreateQuizGenerationTaskUseCase {
       answerRepository,
       quizGenerationTaskRepository,
     );
+    // Use provided processor or create the default one
+    this.quizProcessor =
+      quizProcessor ||
+      new DefaultQuizProcessor(this.quizGenerator, this.quizStorage);
   }
 
   async execute({
@@ -88,10 +95,12 @@ export class CreateQuizGenerationTaskUseCase {
     const quizGenerationTask = existingTask || this.createTask(text, userId);
     await this.saveTask(quizGenerationTask);
 
-    this.processQuizGeneration(quizGenerationTask, text).catch((error) => {
-      console.error(`Error during async quiz generation: ${error}`);
-      console.error((error as Error).stack);
-    });
+    this.quizProcessor
+      .processQuizGeneration(quizGenerationTask, text)
+      .catch((error) => {
+        console.error(`Error during async quiz generation: ${error}`);
+        console.error((error as Error).stack);
+      });
 
     return { quizGenerationTask };
   }
@@ -176,54 +185,5 @@ export class CreateQuizGenerationTaskUseCase {
       status: QuizGenerationStatus.IN_PROGRESS,
       userId,
     });
-  }
-
-  private addQuestionsToTask(
-    task: QuizGenerationTask,
-    questions: Question[],
-  ): void {
-    questions.forEach((question) => task.addQuestion(question));
-  }
-
-  private async processQuizGeneration(
-    quizGenerationTask: QuizGenerationTask,
-    text: string,
-  ): Promise<void> {
-    try {
-      const { questions, title } =
-        await this.quizGenerator.generateQuestionsAndTitle(
-          quizGenerationTask.getId(),
-          text,
-        );
-
-      this.setTitleForTask(quizGenerationTask, title);
-      this.addQuestionsToTask(quizGenerationTask, questions);
-      quizGenerationTask.updateStatus(QuizGenerationStatus.COMPLETED);
-      await this.quizStorage.saveQuizData(quizGenerationTask, questions);
-    } catch (error) {
-      await this.handleFailedTask(quizGenerationTask, error);
-    }
-  }
-
-  private setTitleForTask(
-    quizGenerationTask: QuizGenerationTask,
-    title: string,
-  ): void {
-    quizGenerationTask.setTitle(title);
-  }
-
-  private async handleFailedTask(
-    quizGenerationTask: QuizGenerationTask,
-    error: unknown,
-  ): Promise<void> {
-    quizGenerationTask.updateStatus(QuizGenerationStatus.FAILED);
-
-    try {
-      await this.quizStorage.saveFailedTask(quizGenerationTask);
-    } catch (saveError) {
-      console.error("Failed to save failed quiz generation task:", saveError);
-    }
-
-    throw error;
   }
 }
