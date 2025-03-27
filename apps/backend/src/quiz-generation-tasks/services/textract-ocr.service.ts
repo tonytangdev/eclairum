@@ -11,6 +11,16 @@ import { ConfigService } from '@nestjs/config';
 export const OCR_SERVICE_PROVIDER_KEY = 'OCR_SERVICE_PROVIDER_KEY';
 
 /**
+ * Configuration options for TextractOCRService
+ */
+export interface TextractOCRServiceOptions {
+  /** Interval in milliseconds between polling attempts (default: 10000) */
+  pollIntervalMs?: number;
+  /** Maximum number of polling attempts before timeout (default: 20) */
+  maxPollAttempts?: number;
+}
+
+/**
  * OCR service implementation using AWS Textract
  * Extracts text from files stored in S3 using AWS Textract
  */
@@ -18,11 +28,14 @@ export const OCR_SERVICE_PROVIDER_KEY = 'OCR_SERVICE_PROVIDER_KEY';
 export class TextractOCRService implements OCRService {
   private readonly textractClient: TextractClient;
   private readonly logger = new Logger(TextractOCRService.name);
-  private readonly pollIntervalMs = 10000; // 10 seconds
-  private readonly maxPollAttempts = 20; // 60 seconds at 5 second intervals
+  private readonly pollIntervalMs: number;
+  private readonly maxPollAttempts: number;
   private readonly bucketName: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    options?: TextractOCRServiceOptions,
+  ) {
     const region = this.configService.get<string>('AWS_REGION') || 'eu-west-3';
     const accessKeyId = this.configService.get<string>('AWS_ACCESS_KEY_ID');
     const secretAccessKey = this.configService.get<string>(
@@ -36,6 +49,9 @@ export class TextractOCRService implements OCRService {
     if (!this.bucketName) {
       throw new Error('AWS_S3_BUCKET environment variable is required');
     }
+
+    this.pollIntervalMs = options?.pollIntervalMs ?? 10000; // 10 seconds by default
+    this.maxPollAttempts = options?.maxPollAttempts ?? 20; // 20 attempts by default
 
     this.textractClient = new TextractClient({
       region,
@@ -54,13 +70,9 @@ export class TextractOCRService implements OCRService {
    */
   async extractTextFromFile(filePath: string): Promise<string> {
     try {
-      this.logger.log(`Starting text extraction for task: ${filePath}`);
-
       const jobId = await this.startTextDetection(filePath);
-      this.logger.log(`Textract job started: ${jobId}`);
 
       const extractedText = await this.pollForTextDetectionCompletion(jobId);
-      this.logger.log(`Text extraction completed for task: ${filePath}`);
 
       return extractedText;
     } catch (error) {
@@ -107,6 +119,9 @@ export class TextractOCRService implements OCRService {
     let pollAttempts = 0;
 
     while (pollAttempts < this.maxPollAttempts) {
+      console.log(
+        `Polling for job status: ${jobId} (attempt ${pollAttempts + 1})`,
+      );
       const getCommand = new GetDocumentTextDetectionCommand({ JobId: jobId });
       const { JobStatus, NextToken, Blocks } =
         await this.textractClient.send(getCommand);
@@ -118,7 +133,11 @@ export class TextractOCRService implements OCRService {
       }
 
       // Wait before polling again
+      console.log({ pollIntervalMs: this.pollIntervalMs });
       await this.delay(this.pollIntervalMs);
+      console.log(
+        `Waiting for ${this.pollIntervalMs}ms before next poll attempt...`,
+      );
       pollAttempts++;
     }
 
