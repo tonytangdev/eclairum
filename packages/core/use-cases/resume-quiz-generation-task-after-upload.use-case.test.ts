@@ -160,6 +160,66 @@ describe("ResumeQuizGenerationTaskAfterUploadUseCase", () => {
       expect(result.success).toBe(true);
       expect(result.task).toBe(mockTask);
     });
+
+    it("should handle errors when saving failed task", async () => {
+      // Arrange
+      jest.spyOn(console, "error").mockImplementation();
+
+      // Setup OCR service to fail
+      const ocrError = new Error("OCR processing failed");
+      mockOCRService.extractTextFromFile.mockRejectedValueOnce(ocrError);
+
+      // Setup saveTask to throw an error when attempting to save the failed task
+      const saveError = new Error("Error saving failed task");
+      mockQuizGenerationTaskRepository.saveTask.mockRejectedValueOnce(
+        saveError,
+      );
+
+      // Act - Call the public method that will eventually trigger the error handling path
+      await useCase.execute({ taskId, userId });
+
+      // We need to advance any timers/promises to ensure background processing completes
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // Assert
+      expect(mockTask.updateStatus).toHaveBeenCalledWith(
+        QuizGenerationStatus.FAILED,
+      );
+      expect(mockQuizGenerationTaskRepository.saveTask).toHaveBeenCalledWith(
+        mockTask,
+      );
+      expect(console.error).toHaveBeenCalledWith(
+        "Failed to save failed quiz generation task:",
+        saveError,
+      );
+    });
+
+    it("should handle OCR extraction errors in background processing", async () => {
+      // Arrange
+      jest.spyOn(console, "error").mockImplementation();
+
+      // Setup OCR service to fail
+      const ocrError = new Error("OCR processing failed");
+      mockOCRService.extractTextFromFile.mockRejectedValueOnce(ocrError);
+
+      // Act
+      await useCase.execute({ taskId, userId });
+
+      // Wait for background processing to complete
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // Assert
+      expect(mockOCRService.extractTextFromFile).toHaveBeenCalledWith(filePath);
+      expect(mockTask.updateStatus).toHaveBeenCalledWith(
+        QuizGenerationStatus.FAILED,
+      );
+      expect(mockQuizGenerationTaskRepository.saveTask).toHaveBeenCalledWith(
+        mockTask,
+      );
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringMatching(/Failed to resume task/),
+      );
+    });
   });
 
   describe("File repository integration", () => {
@@ -172,5 +232,10 @@ describe("ResumeQuizGenerationTaskAfterUploadUseCase", () => {
         mockFileRepository.findByQuizGenerationTaskId,
       ).toHaveBeenCalledWith(taskId);
     });
+  });
+
+  afterEach(() => {
+    // Clean up any mocks of console methods
+    jest.restoreAllMocks();
   });
 });
