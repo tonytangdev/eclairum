@@ -147,27 +147,55 @@ describe('S3FileUploadService', () => {
         { path: 'file.gif', expectedType: 'image/gif' },
         { path: 'file.unknown', expectedType: 'application/octet-stream' },
         { path: 'file', expectedType: 'application/octet-stream' },
+        { path: 'noextension', expectedType: 'application/octet-stream' },
+        { path: '.hiddenfile', expectedType: 'application/octet-stream' }, // Tests a hidden file with no actual extension
+        {
+          path: 'path/with/no/extension',
+          expectedType: 'application/octet-stream',
+        },
+        { path: 'path/with/.', expectedType: 'application/octet-stream' }, // Tests a path with just a dot
       ];
 
       (getSignedUrl as jest.Mock).mockResolvedValue(mockSignedUrl);
 
       // Test each file extension
       for (const testCase of testCases) {
+        // Reset mocks for each test case
+        jest.clearAllMocks();
+
         // Act
         await service.generateUploadUrl(bucketName, testCase.path);
 
         // Assert last call to PutObjectCommand had correct ContentType
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        const lastCallArgs = (
-          PutObjectCommand as unknown as jest.Mock
-        ).mock.calls.at(-1) as unknown as [object];
-        const lastCallOptions = lastCallArgs[0] as {
-          Bucket: string;
-          Key: string;
-          ContentType: string;
-        };
+        expect(PutObjectCommand).toHaveBeenCalledWith(
+          expect.objectContaining({
+            Bucket: bucketName,
+            Key: testCase.path,
+            ContentType: testCase.expectedType,
+          }),
+        );
+      }
+    });
 
-        expect(lastCallOptions.ContentType).toBe(testCase.expectedType);
+    // Add a specific test for the extension extraction logic
+    it('should return application/octet-stream when file has no extension', async () => {
+      // Create a service with exposed private method for testing
+      const serviceWithExposedMethod = service as unknown as {
+        getContentType: (filePath: string) => string;
+      };
+
+      // Test cases specifically for extension extraction
+      const testCases = [
+        { path: 'filename', expected: 'application/octet-stream' },
+        { path: '.', expected: 'application/octet-stream' },
+        { path: '', expected: 'application/octet-stream' },
+        { path: 'path/to/file/', expected: 'application/octet-stream' },
+      ];
+
+      for (const testCase of testCases) {
+        // Access the private method directly for testing
+        const result = serviceWithExposedMethod.getContentType(testCase.path);
+        expect(result).toBe(testCase.expected);
       }
     });
 
