@@ -8,10 +8,9 @@ import { QuestionRepository } from "../interfaces/question-repository.interface"
 import { AnswerRepository } from "../interfaces/answer-repository.interface";
 import { QuizGenerationTaskRepository } from "../interfaces/quiz-generation-task-repository.interface";
 import { UserRepository } from "../interfaces/user-repository.interface";
-import { TextTooLongError, UserNotFoundError } from "../errors/quiz-errors";
+import { UserNotFoundError } from "../errors/quiz-errors";
 import { RequiredTextContentError } from "../errors/validation-errors";
 import { User, File } from "../entities";
-import { MAX_TEXT_LENGTH } from "../constants/quiz";
 import { QuizGeneratorService } from "../services/quiz-generator.service";
 import { QuizStorageService } from "../services/quiz-storage.service";
 import { FileUploadService } from "../interfaces/file-upload-service.interface";
@@ -79,8 +78,6 @@ export class CreateQuizGenerationTaskUseCase {
     if (!text?.trim()) {
       throw new RequiredTextContentError();
     }
-
-    this.validateTextLength(text);
   }
 
   private async handleDirectTextProcessing(
@@ -163,14 +160,6 @@ export class CreateQuizGenerationTaskUseCase {
       file.getBucketName(),
       file.getPath(),
     );
-  }
-
-  private validateTextLength(text: string): void {
-    if (text.length > MAX_TEXT_LENGTH) {
-      throw new TextTooLongError(
-        `Text exceeds the maximum length of ${MAX_TEXT_LENGTH} characters`,
-      );
-    }
   }
 
   private async validateUser(userId: User["id"]): Promise<void> {

@@ -7,7 +7,6 @@ import {
   Block,
 } from '@aws-sdk/client-textract';
 import { ConfigService } from '@nestjs/config';
-import { FileRepositoryImpl } from '../../repositories/files/file.repository';
 
 export const OCR_SERVICE_PROVIDER_KEY = 'OCR_SERVICE_PROVIDER_KEY';
 
@@ -19,8 +18,8 @@ export const OCR_SERVICE_PROVIDER_KEY = 'OCR_SERVICE_PROVIDER_KEY';
 export class TextractOCRService implements OCRService {
   private readonly textractClient: TextractClient;
   private readonly logger = new Logger(TextractOCRService.name);
-  private readonly pollIntervalMs = 5000;
-  private readonly maxPollAttempts = 12; // 60 seconds at 5 second intervals
+  private readonly pollIntervalMs = 10000; // 10 seconds
+  private readonly maxPollAttempts = 20; // 60 seconds at 5 second intervals
   private readonly bucketName: string;
 
   constructor(private readonly configService: ConfigService) {

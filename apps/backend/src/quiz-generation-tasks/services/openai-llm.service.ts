@@ -38,9 +38,7 @@ export class OpenAILLMService implements LLMService {
     try {
       this.logger.log(`Generating quiz from text of length: ${text.length}`);
 
-      // 1 question per 200 characters
-      // maximum 50 questions
-      const count = Math.min(Math.ceil(text.length / 200), 50);
+      const count = Math.min(Math.ceil(text.length / 200));
 
       // Use the parse method with zodResponseFormat
       const completion = await this.openai.beta.chat.completions.parse({
