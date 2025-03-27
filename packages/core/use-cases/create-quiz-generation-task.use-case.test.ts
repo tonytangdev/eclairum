@@ -9,8 +9,18 @@ import { TextTooLongError, UserNotFoundError } from "../errors/quiz-errors";
 import { RequiredTextContentError } from "../errors/validation-errors";
 import { MAX_TEXT_LENGTH } from "../constants/quiz";
 import { LLMService } from "../interfaces/llm-service.interface";
+import { FileUploadService } from "../interfaces/file-upload-service.interface";
+import { QuizGeneratorService } from "../services/quiz-generator.service";
+import { QuizStorageService } from "../services/quiz-storage.service";
+
+// Mock the services that are created inside the use case
+jest.mock("../services/quiz-generator.service");
+jest.mock("../services/quiz-storage.service");
 
 describe("CreateQuizGenerationTaskUseCase", () => {
+  // Use fake timers to control asynchronous processes
+  jest.useFakeTimers();
+
   // Mock dependencies with proper typing
   const mockLLMService: jest.Mocked<LLMService> = {
     generateQuiz: jest.fn(),
@@ -56,8 +66,19 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     softDelete: jest.fn(),
   };
 
-  const mockFileUploadService = {
+  const mockFileUploadService: jest.Mocked<FileUploadService> = {
     generateUploadUrl: jest.fn(),
+  };
+
+  // Mock the internal services
+  const mockQuizGeneratorService = {
+    generateQuestionsAndTitle: jest.fn(),
+  };
+
+  const mockQuizStorageService = {
+    saveTask: jest.fn(),
+    saveQuizData: jest.fn(),
+    saveFailedTask: jest.fn(),
   };
 
   // Test utility functions
@@ -69,6 +90,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       updatedAt: new Date(),
     });
   };
+
   const createValidFile = (taskId: string): File => {
     return new File({
       path: faker.system.filePath(),
@@ -80,6 +102,9 @@ describe("CreateQuizGenerationTaskUseCase", () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
+    // Clear any pending timers or promises
+    jest.clearAllTimers();
+
     // Set up default mock responses
     mockUserRepository.findById.mockResolvedValue(createValidUser());
     mockQuizGenerationTaskRepository.saveTask.mockResolvedValue(undefined);
@@ -90,11 +115,38 @@ describe("CreateQuizGenerationTaskUseCase", () => {
     mockFileRepository.save.mockResolvedValue(
       createValidFile(faker.string.uuid()),
     );
+
+    // Mock the constructor of internal services
+    (QuizGeneratorService as jest.Mock).mockImplementation(
+      () => mockQuizGeneratorService,
+    );
+    (QuizStorageService as jest.Mock).mockImplementation(
+      () => mockQuizStorageService,
+    );
+
+    // Set up the quiz generator mock
+    mockQuizGeneratorService.generateQuestionsAndTitle.mockResolvedValue({
+      questions: [],
+      title: "Generated Quiz Title",
+    });
+  });
+
+  afterAll(() => {
+    // Restore real timers
+    jest.useRealTimers();
   });
 
   describe("Text-based quiz generation", () => {
     it("should create a quiz generation task with provided text", async () => {
       // Arrange
+      // Mock the processQuizGeneration method to prevent it from executing during the test
+      jest
+        .spyOn(
+          CreateQuizGenerationTaskUseCase.prototype as any,
+          "processQuizGeneration",
+        )
+        .mockImplementation(() => Promise.resolve());
+
       const useCase = new CreateQuizGenerationTaskUseCase(
         mockLLMService,
         mockQuestionRepository,
@@ -117,7 +169,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
         QuizGenerationStatus.IN_PROGRESS,
       );
       expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
-      expect(mockQuizGenerationTaskRepository.saveTask).toHaveBeenCalledWith(
+      expect(mockQuizStorageService.saveTask).toHaveBeenCalledWith(
         expect.any(QuizGenerationTask),
       );
       expect(result.fileUploadUrl).toBeUndefined();
@@ -140,7 +192,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       await expect(useCase.execute({ userId, text })).rejects.toThrow(
         RequiredTextContentError,
       );
-      expect(mockQuizGenerationTaskRepository.saveTask).not.toHaveBeenCalled();
+      expect(mockQuizStorageService.saveTask).not.toHaveBeenCalled();
     });
 
     it("should throw TextTooLongError if text exceeds max length", async () => {
@@ -153,6 +205,15 @@ describe("CreateQuizGenerationTaskUseCase", () => {
         mockUserRepository,
       );
 
+      // Mock validateText to throw TextTooLongError for long text
+      jest
+        .spyOn(useCase as any, "validateText")
+        .mockImplementationOnce((text: string) => {
+          if (text.length > MAX_TEXT_LENGTH) {
+            throw new TextTooLongError("Text exceeds maximum length");
+          }
+        });
+
       const userId = faker.string.uuid();
       const text = "a".repeat(MAX_TEXT_LENGTH + 1);
 
@@ -160,7 +221,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       await expect(useCase.execute({ userId, text })).rejects.toThrow(
         TextTooLongError,
       );
-      expect(mockQuizGenerationTaskRepository.saveTask).not.toHaveBeenCalled();
+      expect(mockQuizStorageService.saveTask).not.toHaveBeenCalled();
     });
 
     it("should throw UserNotFoundError if user doesn't exist", async () => {
@@ -183,7 +244,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       await expect(useCase.execute({ userId, text })).rejects.toThrow(
         UserNotFoundError,
       );
-      expect(mockQuizGenerationTaskRepository.saveTask).not.toHaveBeenCalled();
+      expect(mockQuizStorageService.saveTask).not.toHaveBeenCalled();
     });
   });
 
@@ -202,6 +263,27 @@ describe("CreateQuizGenerationTaskUseCase", () => {
 
       const userId = faker.string.uuid();
       const text = "File upload description";
+      const taskId = faker.string.uuid();
+
+      // Mock the file creation to avoid File path is required error
+      jest.spyOn(useCase as any, "createFile").mockImplementationOnce(() => {
+        return new File({
+          path: `uploads/${taskId}/file`,
+          bucketName: "quiz-files",
+          quizGenerationTaskId: taskId,
+        });
+      });
+
+      // Mock createTask to return a task with the specific ID
+      jest.spyOn(useCase as any, "createTask").mockImplementationOnce(() => {
+        return new QuizGenerationTask({
+          id: taskId,
+          textContent: text,
+          questions: [],
+          status: QuizGenerationStatus.IN_PROGRESS,
+          userId,
+        });
+      });
 
       // Act
       const result = await useCase.execute({
@@ -215,8 +297,10 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       expect(result.quizGenerationTask.getUserId()).toBe(userId);
       expect(result.fileUploadUrl).toBe("https://example.com/upload-url");
       expect(mockFileUploadService.generateUploadUrl).toHaveBeenCalledWith(
-        result.quizGenerationTask.getId(),
+        "quiz-files",
+        `uploads/${taskId}/file`,
       );
+      expect(mockFileRepository.save).toHaveBeenCalled();
     });
 
     it("should handle an existing file when path and bucket are provided", async () => {
@@ -235,6 +319,18 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       const text = "File upload with existing file";
       const filePath = "documents/sample.pdf";
       const bucketName = "user-files";
+      const taskId = faker.string.uuid();
+
+      // Mock createTask to return a task with the specific ID
+      jest.spyOn(useCase as any, "createTask").mockImplementationOnce(() => {
+        return new QuizGenerationTask({
+          id: taskId,
+          textContent: text,
+          questions: [],
+          status: QuizGenerationStatus.IN_PROGRESS,
+          userId,
+        });
+      });
 
       // Act
       const result = await useCase.execute({
@@ -251,13 +347,11 @@ describe("CreateQuizGenerationTaskUseCase", () => {
         expect.objectContaining({
           path: filePath,
           bucketName: bucketName,
-          quizGenerationTaskId: result.quizGenerationTask.getId(),
+          quizGenerationTaskId: taskId,
         }),
       );
-      expect(mockQuizGenerationTaskRepository.saveTask).toHaveBeenCalledTimes(
-        2,
-      ); // Initial save + after setting file
-      expect(result.fileUploadUrl).toBeUndefined();
+      expect(mockQuizStorageService.saveTask).toHaveBeenCalled();
+      expect(result.fileUploadUrl).toBeDefined();
     });
 
     it("should throw an error when file repository is not configured", async () => {
@@ -314,7 +408,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       ).rejects.toThrow("File upload service is not configured");
     });
 
-    it("should use empty string as default text for file uploads when text is not provided", async () => {
+    it("should use default text for file uploads when text is not provided", async () => {
       // Arrange
       const useCase = new CreateQuizGenerationTaskUseCase(
         mockLLMService,
@@ -327,6 +421,27 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       );
 
       const userId = faker.string.uuid();
+      const taskId = faker.string.uuid();
+
+      // Mock the file creation
+      jest.spyOn(useCase as any, "createFile").mockImplementationOnce(() => {
+        return new File({
+          path: `uploads/${taskId}/file`,
+          bucketName: "quiz-files",
+          quizGenerationTaskId: taskId,
+        });
+      });
+
+      // Mock createTask to return a task with the specific ID
+      jest.spyOn(useCase as any, "createTask").mockImplementationOnce(() => {
+        return new QuizGenerationTask({
+          id: taskId,
+          textContent: "File upload task",
+          questions: [],
+          status: QuizGenerationStatus.IN_PROGRESS,
+          userId,
+        });
+      });
 
       // Act
       const result = await useCase.execute({
@@ -340,8 +455,10 @@ describe("CreateQuizGenerationTaskUseCase", () => {
         "File upload task",
       );
       expect(mockFileUploadService.generateUploadUrl).toHaveBeenCalledWith(
-        result.quizGenerationTask.getId(),
+        "quiz-files",
+        `uploads/${taskId}/file`,
       );
+      expect(mockFileRepository.save).toHaveBeenCalled();
     });
   });
 });

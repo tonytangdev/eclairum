@@ -85,7 +85,7 @@ export class CreateQuizGenerationTaskUseCase {
     text: string,
     existingTask?: QuizGenerationTask,
   ): Promise<CreateQuizGenerationTaskUseCaseResponse> {
-    const quizGenerationTask = existingTask || this.createTask(userId, text);
+    const quizGenerationTask = existingTask || this.createTask(text, userId);
     await this.saveTask(quizGenerationTask);
 
     this.processQuizGeneration(quizGenerationTask, text).catch((error) => {
