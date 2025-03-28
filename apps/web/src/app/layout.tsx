@@ -14,6 +14,7 @@ import {
   UserButton,
 } from '@clerk/nextjs'
 import { Toaster } from "@/components/ui/sonner"
+import { NotificationBell } from "@/components/notification-bell"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -44,7 +45,10 @@ export default function RootLayout({
                 </SignInButton>
               </SignedOut>
               <SignedIn>
+                {/* <div className="flex items-center justify-center gap-4"> */}
+                <NotificationBell />
                 <UserButton />
+                {/* </div> */}
               </SignedIn>
             </header>
             <SidebarProvider>
