@@ -383,6 +383,47 @@ describe('QuizGenerationTaskMapper', () => {
       });
     });
 
+    it('should handle null answers gracefully', () => {
+      // Given a task entity with null answer arrays
+      const entity = createTaskEntity({ questionCount: 2 });
+      entity.questions.forEach((q) => {
+        q.answers = null as unknown as AnswerEntity[];
+      });
+
+      // When mapping to a domain model
+      const domainTask = QuizGenerationTaskMapper.toDomain(entity);
+
+      // Then each question should have an empty answers array
+      const questions = domainTask.getQuestions();
+      questions.forEach((question) => {
+        expect(question.getAnswers()).toEqual([]);
+      });
+    });
+
+    it('should handle undefined questions gracefully', () => {
+      // Given a task entity with undefined questions array
+      const entity = createTaskEntity();
+      entity.questions = undefined as unknown as QuestionEntity[];
+
+      // When mapping to a domain model
+      const domainTask = QuizGenerationTaskMapper.toDomain(entity);
+
+      // Then the result should have an empty questions array
+      expect(domainTask.getQuestions()).toEqual([]);
+    });
+
+    it('should handle null questions gracefully', () => {
+      // Given a task entity with null questions array
+      const entity = createTaskEntity();
+      entity.questions = null as unknown as QuestionEntity[];
+
+      // When mapping to a domain model
+      const domainTask = QuizGenerationTaskMapper.toDomain(entity);
+
+      // Then the result should have an empty questions array
+      expect(domainTask.getQuestions()).toEqual([]);
+    });
+
     it('should handle null date fields', () => {
       // Given a task entity with null dates
       const entity = createTaskEntity();

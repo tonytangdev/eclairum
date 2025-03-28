@@ -46,16 +46,15 @@ export class QuizGenerationTaskMapper {
           new Question({
             id: questionEntity.id,
             content: questionEntity.content,
-            answers:
-              (questionEntity.answers ?? []).map(
-                (answerEntity) =>
-                  new Answer({
-                    id: answerEntity.id,
-                    content: answerEntity.content,
-                    isCorrect: answerEntity.isCorrect,
-                    questionId: questionEntity.id,
-                  }),
-              ) || [],
+            answers: (questionEntity.answers ?? []).map(
+              (answerEntity) =>
+                new Answer({
+                  id: answerEntity.id,
+                  content: answerEntity.content,
+                  isCorrect: answerEntity.isCorrect,
+                  questionId: questionEntity.id,
+                }),
+            ),
             quizGenerationTaskId: entity.id,
           }),
       ),
