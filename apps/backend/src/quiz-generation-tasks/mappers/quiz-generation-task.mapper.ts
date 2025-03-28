@@ -64,7 +64,7 @@ export class QuizGenerationTaskMapper {
       title: task.getTitle(),
       createdAt: task.getCreatedAt(),
       updatedAt: task.getUpdatedAt(),
-      questionsCount: task.getQuestions().length ?? 0,
+      questionsCount: task.getQuestions().length,
     };
   }
 }
