@@ -5,7 +5,6 @@ import Link from "next/link"
 import { BookOpen, Eye, MoreHorizontal, PlayCircle } from "lucide-react"
 import { StatusBadge } from "./status-badge"
 import { TaskSummaryResponse } from "@eclairum/backend/dtos"
-import { formatDate } from "@/lib/dates"
 
 
 interface TasksTableProps {
