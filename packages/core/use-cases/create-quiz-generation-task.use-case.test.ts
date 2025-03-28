@@ -59,6 +59,7 @@ describe("CreateQuizGenerationTaskUseCase", () => {
       findByUserId: jest.fn(),
       findByUserIdPaginated: jest.fn(),
       softDelete: jest.fn(),
+      findByUserIdAndStatuses: jest.fn(),
     };
 
   const mockUserRepository: jest.Mocked<UserRepository> = {

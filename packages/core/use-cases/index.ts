@@ -9,3 +9,4 @@ export * from "./user-adds-question.use-case";
 export * from "./user-edits-question.use-case";
 export * from "./user-edits-answer.use-case";
 export * from "./resume-quiz-generation-task-after-upload.use-case";
+export * from "./fetch-ongoing-quiz-generation-tasks.use-case";
