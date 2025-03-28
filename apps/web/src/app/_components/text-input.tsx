@@ -2,6 +2,7 @@
 
 import { useFlashCards } from "./flash-cards-context";
 import { Textarea } from "@/components/ui/textarea";
+import { formatNumber } from "@/lib/numbers";
 import { MAX_TEXT_LENGTH } from "@eclairum/core/constants";
 
 export function TextInput() {
@@ -16,7 +17,7 @@ export function TextInput() {
         onChange={handleTextChange}
       />
       <div className={`text-xs flex justify-end ${isOverLimit ? "text-red-500" : "text-muted-foreground"}`}>
-        {characterCount}/{MAX_TEXT_LENGTH} characters
+        {formatNumber(characterCount)}/{formatNumber(MAX_TEXT_LENGTH)} characters
       </div>
     </div>
   );
