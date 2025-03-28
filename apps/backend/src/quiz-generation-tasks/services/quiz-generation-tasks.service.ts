@@ -172,7 +172,9 @@ export class QuizGenerationTasksService {
 
       const { tasks } = await fetchOngoingTasksUseCase.execute({ userId });
 
-      return tasks.map((task) => this.mapper.toTaskSummaryResponse(task));
+      const data = tasks.map((task) => this.mapper.toTaskSummaryResponse(task));
+
+      return data;
     } catch (error) {
       this.handleFetchTasksError(error, userId);
       throw error;

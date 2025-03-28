@@ -15,7 +15,7 @@ export class QuizGenerationTaskMapper {
     fileUploadUrl?: string,
   ): TaskResponse {
     const taskId = task.getId();
-    const questionsCount = task.getQuestions().length;
+    const questionsCount = (task.getQuestions() ?? []).length;
 
     return {
       taskId,
@@ -64,7 +64,7 @@ export class QuizGenerationTaskMapper {
       title: task.getTitle(),
       createdAt: task.getCreatedAt(),
       updatedAt: task.getUpdatedAt(),
-      questionsCount: task.getQuestions().length,
+      questionsCount: task.getQuestions()?.length ?? 0,
     };
   }
 }
