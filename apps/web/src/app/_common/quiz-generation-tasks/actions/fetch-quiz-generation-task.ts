@@ -3,7 +3,7 @@
 import { serverApi } from "@/lib/api";
 import { auth } from "@clerk/nextjs/server";
 import { TaskDetailResponse } from "@eclairum/backend/dtos";
-import { mapTaskResponseToQuiz } from "../types";
+import { mapTaskResponseToQuiz } from "../../../flash-cards/[id]/types";
 
 export async function fetchQuizGenerationTask(taskId: string) {
   try {
