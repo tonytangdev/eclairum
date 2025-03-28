@@ -21,8 +21,6 @@ export function TasksTable({ tasks }: TasksTableProps) {
             <TableHead>Title</TableHead>
             <TableHead className="hidden md:table-cell">Status</TableHead>
             <TableHead className="hidden md:table-cell">Questions</TableHead>
-            <TableHead className="hidden md:table-cell">Created</TableHead>
-            <TableHead className="hidden md:table-cell">Updated</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -34,8 +32,6 @@ export function TasksTable({ tasks }: TasksTableProps) {
                 <StatusBadge status={task.status} />
               </TableCell>
               <TableCell className="hidden md:table-cell">{task.questionsCount}</TableCell>
-              <TableCell className="hidden md:table-cell">{formatDate(task.createdAt)}</TableCell>
-              <TableCell className="hidden md:table-cell">{formatDate(task.updatedAt)}</TableCell>
               <TableCell className="text-right">
                 <TaskActions taskId={task.id} />
               </TableCell>
