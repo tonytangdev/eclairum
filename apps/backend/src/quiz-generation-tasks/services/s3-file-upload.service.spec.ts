@@ -178,7 +178,7 @@ describe('S3FileUploadService', () => {
     });
 
     // Add a specific test for the extension extraction logic
-    it('should return application/octet-stream when file has no extension', async () => {
+    it('should return application/octet-stream when file has no extension', () => {
       // Create a service with exposed private method for testing
       const serviceWithExposedMethod = service as unknown as {
         getContentType: (filePath: string) => string;

@@ -1,5 +1,8 @@
 import { User } from "../entities";
-import { QuizGenerationTask } from "../entities/quiz-generation-task";
+import {
+  QuizGenerationTask,
+  QuizGenerationStatus,
+} from "../entities/quiz-generation-task";
 import {
   PaginationParams,
   PaginatedResult,
@@ -13,6 +16,17 @@ export interface QuizGenerationTaskRepository {
     userId: string,
     pagination: PaginationParams,
   ): Promise<PaginatedResult<QuizGenerationTask>>;
+
+  /**
+   * Find quiz generation tasks with specific statuses for a user
+   * @param userId The user ID
+   * @param statuses Array of quiz generation statuses to filter by
+   * @returns Promise resolving to an array of matching quiz generation tasks
+   */
+  findByUserIdAndStatuses(
+    userId: string,
+    statuses: QuizGenerationStatus[],
+  ): Promise<QuizGenerationTask[]>;
 
   /**
    * Soft deletes a quiz generation task by ID

@@ -2,7 +2,7 @@ import { AlertCircle, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import QuizDetailsClient from "./_components/QuizDetailsClient"
-import { fetchQuizGenerationTask } from "./_actions/fetch-quiz-generation-task";
+import { fetchQuizGenerationTask } from "../../_common/quiz-generation-tasks/actions/fetch-quiz-generation-task";
 
 export default async function QuizDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

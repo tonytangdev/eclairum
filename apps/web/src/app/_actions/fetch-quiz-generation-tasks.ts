@@ -43,3 +43,27 @@ export async function fetchQuizGenerationTasks(
     throw new Error("Failed to fetch quiz generation tasks");
   }
 }
+
+export async function fetchOnGoingQuizGenerationTasks() {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      throw new Error("Authentication required");
+    }
+
+    const { data } = await serverApi.get<PaginatedTasksResponse>(
+      "quiz-generation-tasks/ongoing",
+      {
+        params: { userId },
+      },
+    );
+
+    return data;
+  } catch (error) {
+    console.error(
+      "Error fetching ongoing quiz generation tasks:",
+      JSON.stringify(error),
+    );
+    throw new Error("Failed to fetch ongoing quiz generation tasks");
+  }
+}

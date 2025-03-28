@@ -4,8 +4,8 @@ import {
   QuizGenerationStatus,
 } from "../entities/quiz-generation-task";
 import { Question } from "../entities/question";
-import { QuizGeneratorService } from "./quiz-generator.service";
 import { QuizStorageService } from "./quiz-storage.service";
+import { QuizGenerator } from "../interfaces/quiz-generator.interface";
 
 /**
  * Default implementation of QuizProcessor interface
@@ -13,7 +13,7 @@ import { QuizStorageService } from "./quiz-storage.service";
  */
 export class DefaultQuizProcessor implements QuizProcessor {
   constructor(
-    private readonly quizGenerator: QuizGeneratorService,
+    private readonly quizGenerator: QuizGenerator,
     private readonly quizStorage: QuizStorageService,
   ) {}
 

@@ -10,8 +10,9 @@ import {
   LLMServiceError,
   NoQuestionsGeneratedError,
 } from "../errors/quiz-errors";
+import { QuizGenerator } from "../interfaces/quiz-generator.interface";
 
-export class QuizGeneratorService {
+export class QuizGeneratorService implements QuizGenerator {
   constructor(private readonly llmService: LLMService) {}
 
   async generateQuestionsAndTitle(

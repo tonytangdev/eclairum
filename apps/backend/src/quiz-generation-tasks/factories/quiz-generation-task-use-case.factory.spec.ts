@@ -5,6 +5,7 @@ import {
   FetchQuizGenerationTasksForUserUseCase,
   SoftDeleteQuizGenerationTaskForUserUseCase,
   ResumeQuizGenerationTaskAfterUploadUseCase,
+  FetchOngoingQuizGenerationTasksUseCase,
 } from '@eclairum/core/use-cases';
 import { LLMService } from '@eclairum/core/interfaces/llm-service.interface';
 import { QuestionRepositoryImpl } from '../../repositories/questions/question.repository';
@@ -173,6 +174,17 @@ describe('QuizGenerationTaskUseCaseFactory', () => {
     });
   });
 
+  describe('createFetchOngoingTasksUseCase', () => {
+    it('should create a use case that can fetch ongoing quiz generation tasks for a user', () => {
+      // Given
+      const useCase = factory.createFetchOngoingTasksUseCase();
+
+      // When/Then
+      expect(useCase).toBeInstanceOf(FetchOngoingQuizGenerationTasksUseCase);
+      expect(typeof useCase.execute).toBe('function');
+    });
+  });
+
   describe('factory initialization', () => {
     it('should create a factory with required dependencies', () => {
       // Given
@@ -199,6 +211,9 @@ describe('QuizGenerationTaskUseCaseFactory', () => {
       );
       expect(minimalFactory.createDeleteTaskUseCase()).toBeInstanceOf(
         SoftDeleteQuizGenerationTaskForUserUseCase,
+      );
+      expect(minimalFactory.createFetchOngoingTasksUseCase()).toBeInstanceOf(
+        FetchOngoingQuizGenerationTasksUseCase,
       );
     });
   });

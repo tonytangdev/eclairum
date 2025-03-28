@@ -16,6 +16,7 @@ import { FileUploadService } from "../interfaces/file-upload-service.interface";
 import { FileRepository } from "../interfaces/file-repository.interface";
 import { QuizProcessor } from "../interfaces/quiz-processor.interface";
 import { DefaultQuizProcessor } from "../services/quiz-processor.service";
+import { QuizGenerator } from "../interfaces/quiz-generator.interface";
 
 type CreateQuizGenerationTaskUseCaseRequest = {
   userId: User["id"];
@@ -32,7 +33,7 @@ type CreateQuizGenerationTaskUseCaseResponse = {
 };
 
 export class CreateQuizGenerationTaskUseCase {
-  private readonly quizGenerator: QuizGeneratorService;
+  private readonly quizGenerator: QuizGenerator;
   private readonly quizStorage: QuizStorageService;
   private readonly quizProcessor: QuizProcessor;
 
@@ -45,8 +46,9 @@ export class CreateQuizGenerationTaskUseCase {
     private readonly fileRepository?: FileRepository,
     private readonly fileUploadService?: FileUploadService,
     quizProcessor?: QuizProcessor,
+    quizGenerator?: QuizGenerator,
   ) {
-    this.quizGenerator = new QuizGeneratorService(llmService);
+    this.quizGenerator = quizGenerator ?? new QuizGeneratorService(llmService);
     this.quizStorage = new QuizStorageService(
       questionRepository,
       answerRepository,

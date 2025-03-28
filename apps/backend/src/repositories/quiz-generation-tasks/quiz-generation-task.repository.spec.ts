@@ -503,6 +503,129 @@ describe('QuizGenerationTaskRepositoryImpl', () => {
     });
   });
 
+  describe('findByUserIdAndStatuses', () => {
+    it('should return only tasks that match the specified user ID and statuses', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const statuses = [
+        QuizGenerationStatus.PENDING,
+        QuizGenerationStatus.IN_PROGRESS,
+      ];
+
+      const pendingTask = createMockTask({
+        userId,
+        status: QuizGenerationStatus.PENDING,
+      });
+
+      const inProgressTask = createMockTask({
+        userId,
+        status: QuizGenerationStatus.IN_PROGRESS,
+      });
+
+      const tasks = [pendingTask, inProgressTask];
+      const entities = tasks.map((task) => createMockEntity(task));
+
+      mockRepository.find.mockResolvedValueOnce(entities);
+      QuizGenerationTaskMapper.toDomainList = jest
+        .fn()
+        .mockReturnValueOnce(tasks);
+
+      // Act
+      const result = await repository.findByUserIdAndStatuses(userId, statuses);
+
+      // Assert
+      expect(result).toBe(tasks);
+      expect(result.length).toBe(2);
+    });
+
+    it('should return all user tasks when status list is empty', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const statuses: QuizGenerationStatus[] = [];
+
+      const allUserTasks = [
+        createMockTask({ userId, status: QuizGenerationStatus.PENDING }),
+        createMockTask({ userId, status: QuizGenerationStatus.COMPLETED }),
+      ];
+
+      const entities = allUserTasks.map((task) => createMockEntity(task));
+
+      mockRepository.find.mockResolvedValueOnce(entities);
+      QuizGenerationTaskMapper.toDomainList = jest
+        .fn()
+        .mockReturnValueOnce(allUserTasks);
+
+      // Act
+      const result = await repository.findByUserIdAndStatuses(userId, statuses);
+
+      // Assert
+      expect(result).toBe(allUserTasks);
+      expect(result.length).toBe(2);
+    });
+
+    it('should return empty array when no tasks match the criteria', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const statuses = [QuizGenerationStatus.PENDING];
+
+      mockRepository.find.mockResolvedValueOnce([]);
+      QuizGenerationTaskMapper.toDomainList = jest.fn().mockReturnValueOnce([]);
+
+      // Act
+      const result = await repository.findByUserIdAndStatuses(userId, statuses);
+
+      // Assert
+      expect(result).toEqual([]);
+    });
+
+    it('should return tasks with all requested statuses', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const statuses = [
+        QuizGenerationStatus.PENDING,
+        QuizGenerationStatus.IN_PROGRESS,
+        QuizGenerationStatus.FAILED,
+      ];
+
+      const tasks = [
+        createMockTask({ userId, status: QuizGenerationStatus.PENDING }),
+        createMockTask({ userId, status: QuizGenerationStatus.IN_PROGRESS }),
+        createMockTask({ userId, status: QuizGenerationStatus.FAILED }),
+      ];
+
+      const entities = tasks.map((task) => createMockEntity(task));
+
+      mockRepository.find.mockResolvedValueOnce(entities);
+      QuizGenerationTaskMapper.toDomainList = jest
+        .fn()
+        .mockReturnValueOnce(tasks);
+
+      // Act
+      const result = await repository.findByUserIdAndStatuses(userId, statuses);
+
+      // Assert
+      expect(result.length).toBe(3);
+      // Verify we have tasks with each of the requested statuses
+      const resultStatuses = result.map((task) => task.getStatus());
+      expect(resultStatuses).toContain(QuizGenerationStatus.PENDING);
+      expect(resultStatuses).toContain(QuizGenerationStatus.IN_PROGRESS);
+      expect(resultStatuses).toContain(QuizGenerationStatus.FAILED);
+    });
+
+    it('should fail when database operation fails', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const statuses = [QuizGenerationStatus.PENDING];
+      const dbError = new Error('Database error during find');
+      mockRepository.find.mockRejectedValueOnce(dbError);
+
+      // Act & Assert
+      await expect(
+        repository.findByUserIdAndStatuses(userId, statuses),
+      ).rejects.toThrow(dbError);
+    });
+  });
+
   describe('softDelete', () => {
     it('should update the deletedAt field for the specified task', async () => {
       // Arrange

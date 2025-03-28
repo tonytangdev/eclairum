@@ -5,15 +5,9 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { Footer } from "@/components/footer"
-import { CustomSignInButton } from "@/components/auth/sign-in-button"
-import {
-  ClerkProvider,
-  SignInButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-} from '@clerk/nextjs'
+import { ClerkProvider, SignedIn } from '@clerk/nextjs'
 import { Toaster } from "@/components/ui/sonner"
+import { AuthHeader } from "./_components/auth-header"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -38,14 +32,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <header className="flex justify-end items-center p-4 gap-4 h-16">
-              <SignedOut>
-                <SignInButton mode="modal">
-                  <CustomSignInButton />
-                </SignInButton>
-              </SignedOut>
-              <SignedIn>
-                <UserButton />
-              </SignedIn>
+              <AuthHeader />
             </header>
             <SidebarProvider>
               <div className="flex flex-1 overflow-hidden">
