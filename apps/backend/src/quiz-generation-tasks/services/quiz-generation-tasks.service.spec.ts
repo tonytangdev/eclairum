@@ -34,6 +34,9 @@ jest.mock('@eclairum/core/use-cases', () => ({
   ResumeQuizGenerationTaskAfterUploadUseCase: jest.fn(() => ({
     execute: jest.fn(),
   })),
+  FetchOngoingQuizGenerationTasksUseCase: jest.fn(() => ({
+    execute: jest.fn(),
+  })),
 }));
 
 // Import use cases after mocking
@@ -43,6 +46,7 @@ import {
   FetchQuizGenerationTaskForUserUseCase,
   SoftDeleteQuizGenerationTaskForUserUseCase,
   ResumeQuizGenerationTaskAfterUploadUseCase,
+  FetchOngoingQuizGenerationTasksUseCase,
 } from '@eclairum/core/use-cases';
 import { FILE_UPLOAD_SERVICE_PROVIDER_KEY } from './s3-file-upload.service';
 import { OCR_SERVICE_PROVIDER_KEY } from './textract-ocr.service';
@@ -57,6 +61,7 @@ describe('QuizGenerationTasksService', () => {
   let fetchTaskUseCase: { execute: jest.Mock };
   let deleteTaskUseCase: { execute: jest.Mock };
   let resumeTaskUseCase: { execute: jest.Mock };
+  let fetchOngoingTasksUseCase: { execute: jest.Mock };
   let unitOfWorkService: jest.Mocked<UnitOfWorkService>;
   let mockFileUploadService: { generateUploadUrl: jest.Mock };
   let mockOcrService: { extractTextFromFile: jest.Mock };
@@ -175,6 +180,7 @@ describe('QuizGenerationTasksService', () => {
     fetchTaskUseCase = { execute: jest.fn() };
     deleteTaskUseCase = { execute: jest.fn() };
     resumeTaskUseCase = { execute: jest.fn() };
+    fetchOngoingTasksUseCase = { execute: jest.fn() };
 
     // Setup file upload service mock
     mockFileUploadService = { generateUploadUrl: jest.fn() };
@@ -198,6 +204,9 @@ describe('QuizGenerationTasksService', () => {
     );
     (ResumeQuizGenerationTaskAfterUploadUseCase as jest.Mock).mockReturnValue(
       resumeTaskUseCase,
+    );
+    (FetchOngoingQuizGenerationTasksUseCase as jest.Mock).mockReturnValue(
+      fetchOngoingTasksUseCase,
     );
 
     // Setup transaction mock
@@ -979,6 +988,115 @@ describe('QuizGenerationTasksService', () => {
         expect.stringContaining(
           `Failed to resume quiz generation task with id ${taskId}`,
         ),
+        expect.any(String),
+      );
+    });
+  });
+
+  describe('fetchOngoingTasksByUserId', () => {
+    it('should return only ongoing tasks (PENDING or IN_PROGRESS) for a user', async () => {
+      // Given a user with ongoing tasks
+      const userId = faker.string.uuid();
+
+      // Create mock tasks with different statuses
+      const mockPendingTask = createMockTask({
+        status: QuizGenerationStatus.PENDING,
+        questions: [createMockQuestion()],
+      });
+
+      const mockInProgressTask = createMockTask({
+        status: QuizGenerationStatus.IN_PROGRESS,
+        questions: [createMockQuestion(), createMockQuestion()],
+      });
+
+      const mockOngoingTasks = [mockPendingTask, mockInProgressTask];
+
+      // And the use case will return these ongoing tasks
+      fetchOngoingTasksUseCase.execute.mockResolvedValue({
+        tasks: mockOngoingTasks,
+      });
+
+      // When fetching ongoing tasks
+      const result = await service.fetchOngoingTasksByUserId(userId);
+
+      // Then the result should contain only the ongoing tasks with correct structure
+      expect(result).toHaveLength(2);
+      expect(result).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: mockPendingTask.getId(),
+            status: QuizGenerationStatus.PENDING,
+            questionsCount: 1,
+          }),
+          expect.objectContaining({
+            id: mockInProgressTask.getId(),
+            status: QuizGenerationStatus.IN_PROGRESS,
+            questionsCount: 2,
+          }),
+        ]),
+      );
+
+      // And the use case should be called with the correct userId
+      expect(fetchOngoingTasksUseCase.execute).toHaveBeenCalledWith({ userId });
+    });
+
+    it('should return empty array when user has no ongoing tasks', async () => {
+      // Given a user with no ongoing tasks
+      const userId = faker.string.uuid();
+
+      // And the use case will return an empty array
+      fetchOngoingTasksUseCase.execute.mockResolvedValue({ tasks: [] });
+
+      // When fetching ongoing tasks
+      const result = await service.fetchOngoingTasksByUserId(userId);
+
+      // Then the result should be an empty array
+      expect(result).toEqual([]);
+
+      // And the use case should be called with the correct userId
+      expect(fetchOngoingTasksUseCase.execute).toHaveBeenCalledWith({ userId });
+    });
+
+    it('should convert UserNotFoundError to BadRequestException', async () => {
+      // Given a non-existent user
+      const userId = faker.string.uuid();
+
+      // And the use case will throw a UserNotFoundError
+      fetchOngoingTasksUseCase.execute.mockRejectedValue(
+        new UserNotFoundError(`User not found: ${userId}`),
+      );
+
+      // When fetching ongoing tasks
+      // Then the error should be converted to BadRequestException
+      await expect(service.fetchOngoingTasksByUserId(userId)).rejects.toThrow(
+        BadRequestException,
+      );
+
+      await expect(service.fetchOngoingTasksByUserId(userId)).rejects.toThrow(
+        `User with ID '${userId}' not found`,
+      );
+    });
+
+    it('should log and propagate unknown errors', async () => {
+      // Given a user ID
+      const userId = faker.string.uuid();
+
+      // And an unexpected error
+      const unexpectedError = new Error('Database connection error');
+      fetchOngoingTasksUseCase.execute.mockRejectedValue(unexpectedError);
+
+      // And we spy on the logger
+      const logSpy = jest.spyOn(Logger.prototype, 'error');
+
+      // When fetching ongoing tasks
+      // Then the error should be propagated
+      await expect(service.fetchOngoingTasksByUserId(userId)).rejects.toThrow(
+        unexpectedError,
+      );
+
+      // And the error should be logged
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to fetch quiz generation tasks'),
         expect.any(String),
       );
     });

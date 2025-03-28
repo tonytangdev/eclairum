@@ -6,7 +6,10 @@ import { CreateQuizGenerationTaskDto } from './dto/create-quiz-generation-task.d
 import { FetchQuizGenerationTasksDto } from './dto/fetch-quiz-generation-tasks.dto';
 import { QuizGenerationStatus } from '@eclairum/core/entities';
 import { faker } from '@faker-js/faker';
-import { TaskResponse } from './dto/fetch-quiz-generation-tasks.response.dto';
+import {
+  TaskResponse,
+  TaskSummaryResponse,
+} from './dto/fetch-quiz-generation-tasks.response.dto';
 import { ResumeQuizGenerationTaskDto } from './dto/resume-quiz-generation-task.dto';
 import { TaskDetailResponse } from './dto/fetch-quiz-generation-task.response.dto';
 
@@ -20,6 +23,7 @@ describe('QuizGenerationTasksController', () => {
     getTaskById: jest.Mock;
     deleteTask: jest.Mock;
     resumeTask: jest.Mock;
+    fetchOngoingTasksByUserId: jest.Mock;
   };
 
   // Test data generators
@@ -42,6 +46,18 @@ describe('QuizGenerationTasksController', () => {
     questionsCount,
     message: `Quiz generation task created with ${questionsCount} questions`,
     generatedAt: new Date(),
+  });
+
+  const generateTaskSummary = (
+    status: QuizGenerationStatus,
+    questionsCount = 0,
+  ): TaskSummaryResponse => ({
+    id: faker.string.uuid(),
+    status,
+    title: faker.lorem.sentence(),
+    createdAt: faker.date.recent(),
+    updatedAt: faker.date.recent(),
+    questionsCount,
   });
 
   const generatePaginatedResponse = (userId: string, itemsCount = 1) => ({
@@ -71,6 +87,7 @@ describe('QuizGenerationTasksController', () => {
       getTaskById: jest.fn(),
       deleteTask: jest.fn(),
       resumeTask: jest.fn(),
+      fetchOngoingTasksByUserId: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -119,7 +136,7 @@ describe('QuizGenerationTasksController', () => {
       ).rejects.toThrow(errorMessage);
     });
 
-    it('should use HTTP 202 Accepted status code', () => {
+    it('should use HTTP 201 Created status code', () => {
       // Given/When
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const httpCodeMetadata = Reflect.getMetadata(
@@ -128,7 +145,7 @@ describe('QuizGenerationTasksController', () => {
       );
 
       // Then
-      expect(httpCodeMetadata).toBe(HttpStatus.ACCEPTED);
+      expect(httpCodeMetadata).toBe(HttpStatus.CREATED);
     });
   });
 
@@ -188,6 +205,72 @@ describe('QuizGenerationTasksController', () => {
       const httpCodeMetadata = Reflect.getMetadata(
         '__httpCode__',
         controller.fetchQuizGenerationTasks,
+      );
+
+      // Then
+      expect(httpCodeMetadata).toBe(HttpStatus.OK);
+    });
+  });
+
+  describe('fetchOngoingQuizGenerationTasks', () => {
+    it('should return ongoing quiz generation tasks for a user', async () => {
+      // Given
+      const userId = generateUserId();
+      const pendingTask = generateTaskSummary(QuizGenerationStatus.PENDING);
+      const inProgressTask = generateTaskSummary(
+        QuizGenerationStatus.IN_PROGRESS,
+        2,
+      );
+      const expectedTasks = [pendingTask, inProgressTask];
+
+      serviceMock.fetchOngoingTasksByUserId.mockResolvedValue(expectedTasks);
+
+      // When
+      const result = await controller.fetchOngoingQuizGenerationTasks(userId);
+
+      // Then
+      expect(serviceMock.fetchOngoingTasksByUserId).toHaveBeenCalledWith(
+        userId,
+      );
+      expect(result).toEqual(expectedTasks);
+      expect(result).toHaveLength(2);
+    });
+
+    it('should return an empty array when user has no ongoing tasks', async () => {
+      // Given
+      const userId = generateUserId();
+      serviceMock.fetchOngoingTasksByUserId.mockResolvedValue([]);
+
+      // When
+      const result = await controller.fetchOngoingQuizGenerationTasks(userId);
+
+      // Then
+      expect(serviceMock.fetchOngoingTasksByUserId).toHaveBeenCalledWith(
+        userId,
+      );
+      expect(result).toEqual([]);
+    });
+
+    it('should propagate errors from the service', async () => {
+      // Given
+      const userId = generateUserId();
+      const errorMessage = 'Failed to fetch ongoing tasks';
+      serviceMock.fetchOngoingTasksByUserId.mockRejectedValue(
+        new Error(errorMessage),
+      );
+
+      // When/Then
+      await expect(
+        controller.fetchOngoingQuizGenerationTasks(userId),
+      ).rejects.toThrow(errorMessage);
+    });
+
+    it('should use HTTP 200 OK status code', () => {
+      // Given/When
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const httpCodeMetadata = Reflect.getMetadata(
+        '__httpCode__',
+        controller.fetchOngoingQuizGenerationTasks,
       );
 
       // Then

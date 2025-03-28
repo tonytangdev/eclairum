@@ -15,6 +15,7 @@ import { FetchQuizGenerationTasksDto } from '../dto/fetch-quiz-generation-tasks.
 import {
   PaginatedTasksResponse,
   TaskResponse,
+  TaskSummaryResponse,
 } from '../dto/fetch-quiz-generation-tasks.response.dto';
 import { TaskDetailResponse } from '../dto/fetch-quiz-generation-task.response.dto';
 import {
@@ -153,6 +154,27 @@ export class QuizGenerationTasksService {
       };
     } catch (error) {
       this.handleFetchTasksError(error, fetchQuizGenerationTasksDto.userId);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches only ongoing quiz generation tasks (PENDING or IN_PROGRESS) for a user
+   * @param userId The ID of the user
+   * @returns An array of task summary responses for ongoing tasks
+   */
+  async fetchOngoingTasksByUserId(
+    userId: string,
+  ): Promise<TaskSummaryResponse[]> {
+    try {
+      const fetchOngoingTasksUseCase =
+        this.useCaseFactory.createFetchOngoingTasksUseCase();
+
+      const { tasks } = await fetchOngoingTasksUseCase.execute({ userId });
+
+      return tasks.map((task) => this.mapper.toTaskSummaryResponse(task));
+    } catch (error) {
+      this.handleFetchTasksError(error, userId);
       throw error;
     }
   }

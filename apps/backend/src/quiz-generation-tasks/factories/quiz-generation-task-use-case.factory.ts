@@ -4,6 +4,7 @@ import {
   FetchQuizGenerationTasksForUserUseCase,
   SoftDeleteQuizGenerationTaskForUserUseCase,
   ResumeQuizGenerationTaskAfterUploadUseCase,
+  FetchOngoingQuizGenerationTasksUseCase,
 } from '@eclairum/core/use-cases';
 import { LLMService } from '@eclairum/core/interfaces/llm-service.interface';
 import { QuestionRepositoryImpl } from '../../repositories/questions/question.repository';
@@ -96,6 +97,17 @@ export class QuizGenerationTaskUseCaseFactory {
       this.quizGenerationTaskRepository,
       this.fileRepository,
       createQuizGenerationTaskUseCase,
+    );
+  }
+
+  /**
+   * Creates a use case for fetching ongoing quiz generation tasks
+   * @returns An instance of FetchOngoingQuizGenerationTasksUseCase
+   */
+  createFetchOngoingTasksUseCase(): FetchOngoingQuizGenerationTasksUseCase {
+    return new FetchOngoingQuizGenerationTasksUseCase(
+      this.userRepository,
+      this.quizGenerationTaskRepository,
     );
   }
 }
