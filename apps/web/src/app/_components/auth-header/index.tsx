@@ -1,5 +1,5 @@
 import SignedIn from "./signed-in";
-import SignedOut from "./Signed-out";
+import SignedOut from "./signed-out";
 
 
 
