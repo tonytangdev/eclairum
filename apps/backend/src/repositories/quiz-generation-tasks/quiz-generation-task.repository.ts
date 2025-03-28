@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { Repository } from 'typeorm';
-import { QuizGenerationTask } from '@eclairum/core/entities';
+import { Repository, In } from 'typeorm';
+import {
+  QuizGenerationTask,
+  QuizGenerationStatus,
+} from '@eclairum/core/entities';
 import { QuizGenerationTaskRepository } from '@eclairum/core/interfaces';
 import { QuizGenerationTaskMapper } from './mappers/quiz-generation-task.mapper';
 import {
@@ -114,6 +117,29 @@ export class QuizGenerationTaskRepositoryImpl
         totalPages,
       },
     };
+  }
+
+  /**
+   * Find quiz generation tasks with specific statuses for a user
+   * @param userId The user ID
+   * @param statuses Array of quiz generation statuses to filter by
+   * @returns Promise resolving to an array of matching quiz generation tasks
+   */
+  async findByUserIdAndStatuses(
+    userId: string,
+    statuses: QuizGenerationStatus[],
+  ): Promise<QuizGenerationTask[]> {
+    const repo = this.getRepository();
+
+    const entities = await repo.find({
+      where: {
+        userId,
+        ...(statuses.length > 0 ? { status: In(statuses) } : {}),
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    return QuizGenerationTaskMapper.toDomainList(entities);
   }
 
   async findAll(): Promise<QuizGenerationTask[]> {
