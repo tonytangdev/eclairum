@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
-import { FeatureLimitation, LimitationType } from "../feature-limitation";
-import { InvalidFeatureLimitationError } from "../../errors/feature-limitation-errors";
+import { FeatureLimitation, LimitationType } from "./feature-limitation";
+import { InvalidFeatureLimitationError } from "../errors/feature-limitation-errors";
 
 describe("FeatureLimitation", () => {
   // Helper function to create a valid feature limitation

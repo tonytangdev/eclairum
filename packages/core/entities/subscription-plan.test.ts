@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
-import { SubscriptionPlan } from "../subscription-plan";
-import { Feature } from "../feature";
+import { SubscriptionPlan } from "./subscription-plan";
+import { Feature } from "./feature";
 
 describe("SubscriptionPlan", () => {
   const createMockFeature = (): Feature => {
