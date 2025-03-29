@@ -341,7 +341,6 @@ describe("PlanFeature", () => {
 
       // Temporarily extend the LimitType enum with a new value
       const originalLimitTypeValues = Object.values(LimitType);
-      const extendedLimitType = { ...LimitType, NEW_TYPE: "new_type" };
 
       // Mock Object.values to return our extended enum
       const originalObjectValues = Object.values;
