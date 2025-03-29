@@ -11,6 +11,16 @@ describe("Plan", () => {
     billingInterval: BillingInterval.MONTHLY,
   });
 
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date());
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.clearAllMocks();
+  });
+
   describe("constructor", () => {
     it("should create a plan with minimum required properties", () => {
       // Arrange
