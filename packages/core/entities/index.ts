@@ -6,3 +6,4 @@ export * from "./user-answer";
 export * from "./file";
 export * from "./plan";
 export * from "./feature";
+export * from "./subscription";
