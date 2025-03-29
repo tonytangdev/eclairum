@@ -11,6 +11,16 @@ describe("File", () => {
     updatedAt: new Date(),
   });
 
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date());
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.clearAllMocks();
+  });
+
   describe("constructor", () => {
     it("should create a File instance with valid parameters", () => {
       // Arrange
