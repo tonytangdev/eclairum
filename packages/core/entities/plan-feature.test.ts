@@ -348,6 +348,7 @@ describe("PlanFeature", () => {
         if (obj === LimitType) {
           return [...originalLimitTypeValues, "new_type"];
         }
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         return originalObjectValues(obj);
       });
 
