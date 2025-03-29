@@ -8,3 +8,4 @@ export * from "./plan";
 export * from "./feature";
 export * from "./subscription";
 export * from "./payment";
+export * from "./feature-usage";
