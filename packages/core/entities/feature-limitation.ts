@@ -1,4 +1,5 @@
 import { InvalidFeatureLimitationError } from "../errors/feature-limitation-errors";
+import { Feature } from "./feature";
 
 /**
  * Represents the types of limitations that can be applied to a feature
@@ -11,7 +12,7 @@ export enum LimitationType {
 
 interface FeatureLimitationConstructor {
   id?: string;
-  featureId: string;
+  featureId: Feature["id"];
   subscriptionPlanId: string;
   limitationType: LimitationType;
   maxUsage?: number | null;
