@@ -21,3 +21,11 @@ export class RequiredTextContentError extends ValidationError {
     Object.setPrototypeOf(this, RequiredTextContentError.prototype);
   }
 }
+
+export class RequiredFieldError extends ValidationError {
+  constructor(fieldName: string, entityName: string) {
+    super(`${fieldName} is required for ${entityName}`);
+    this.name = "RequiredFieldError";
+    Object.setPrototypeOf(this, RequiredFieldError.prototype);
+  }
+}
