@@ -1,5 +1,7 @@
 import Stripe from "stripe";
 
+console.error("SERVER_API_URL", process.env);
+
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
 if (!stripeSecretKey) {
