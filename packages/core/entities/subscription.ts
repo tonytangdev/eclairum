@@ -68,6 +68,16 @@ export class Subscription implements SubscriptionProps {
     return new Subscription(props);
   }
 
+  /**
+   * Reconstructs a Subscription object from its properties, typically used
+   * when loading from a data store.
+   * @param props The complete properties of an existing subscription.
+   * @returns A Subscription instance.
+   */
+  public static reconstitute(props: SubscriptionProps): Subscription {
+    return new Subscription(props);
+  }
+
   public updateStatus(status: SubscriptionStatus): void {
     this.status = status;
     this.updatedAt = new Date();

@@ -4,7 +4,9 @@ import {
   PrimaryColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
+import { SubscriptionEntity } from './subscription.entity';
 
 @Entity('users')
 export class UserEntity {
@@ -19,6 +21,9 @@ export class UserEntity {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @OneToMany(() => SubscriptionEntity, (subscription) => subscription.user)
+  subscriptions: SubscriptionEntity[];
 
   @Column({ nullable: true, type: 'timestamp' })
   deletedAt: Date | null;
