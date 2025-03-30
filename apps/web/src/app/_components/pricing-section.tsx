@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { createCheckoutSession } from "@/app/actions/stripe";
 import { Check } from "lucide-react";
 
 export function PricingSection() {
@@ -69,7 +70,11 @@ export function PricingSection() {
             </ul>
           </CardContent>
           <CardFooter>
-            <Button className="w-full">Upgrade Now</Button>
+            <form action={createCheckoutSession} className="w-full">
+              <Button className="w-full" type="submit">
+                Upgrade Now
+              </Button>
+            </form>
           </CardFooter>
         </Card>
       </div>
