@@ -6,171 +6,195 @@ import { serverApi } from "@/lib/api";
 import { CreateSubscriptionDto } from "@eclairum/backend/dtos";
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+const relevantEvent: Stripe.WebhookEndpointCreateParams.EnabledEvent =
+  "checkout.session.completed";
 
-export async function POST(req: Request) {
+// --- Helper Functions ---
+
+/**
+ * Verifies the Stripe webhook signature and constructs the event.
+ * @param body Raw request body text
+ * @param signature Stripe-Signature header value
+ * @returns The verified Stripe event object
+ * @throws Error if webhook secret is missing, signature is missing, or verification fails
+ */
+const verifyStripeEvent = (
+  body: string,
+  signature: string | null,
+): Stripe.Event => {
   if (!webhookSecret) {
-    console.error("STRIPE_WEBHOOK_SECRET environment variable is not set.");
-    return NextResponse.json(
-      { error: "Webhook secret not configured." },
-      { status: 500 },
-    );
+    throw new Error("Webhook error: STRIPE_WEBHOOK_SECRET is not set.");
   }
-
-  const body = await req.text();
-
-  // Await headers() before calling .get()
-  const headersList = await headers();
-  const signature = headersList.get("stripe-signature");
-
   if (!signature) {
-    console.error("Missing stripe-signature header.");
-    return NextResponse.json({ error: "Missing signature." }, { status: 400 });
+    throw new Error("Webhook error: Missing stripe-signature header.");
   }
-
-  let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    return stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : "Unknown error";
-    console.error(`Webhook signature verification failed: ${errorMessage}`);
-    return NextResponse.json(
-      { error: `Webhook error: ${errorMessage}` },
-      { status: 400 },
+    const message = err instanceof Error ? err.message : "Unknown error";
+    // Log the detailed verification error
+    console.error(`Webhook signature verification failed: ${message}`, err);
+    throw new Error(`Webhook signature verification failed: ${message}`);
+  }
+};
+
+interface ValidatedSessionData {
+  userId: string;
+  stripeCustomerId: string;
+  stripeSubscriptionId: string;
+  priceId: string;
+}
+
+/**
+ * Handles the logic for a successfully paid checkout session.
+ * Retrieves full session details, validates data, and calls the backend API.
+ * @param sessionFromEvent The checkout session object from the webhook event
+ * @throws Error if session retrieval fails, required data is missing/invalid, or backend call fails
+ */
+const handleCheckoutSessionCompleted = async (
+  sessionFromEvent: Stripe.Checkout.Session,
+): Promise<void> => {
+  const sessionId = sessionFromEvent.id;
+
+  let session: Stripe.Checkout.Session;
+  try {
+    session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ["line_items"],
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error(
+      `Webhook Error: Failed to retrieve session ${sessionId}: ${message}`,
+      err,
+    );
+    // Throwing allows the main handler to catch and return an appropriate status
+    throw new Error(`Failed to retrieve session details for ${sessionId}`);
+  }
+
+  // Double-check payment status
+  if (session.payment_status !== "paid") {
+    console.warn(
+      `Webhook Warning: ${relevantEvent} received for session ${sessionId}, but payment_status is ${session.payment_status}. Skipping backend call.`,
+    );
+    return; // Exit gracefully, no action needed
+  }
+
+  // Extract and validate necessary data
+  const userId = session.metadata?.userId;
+  const stripeCustomerId = session.customer;
+  const stripeSubscriptionId = session.subscription;
+  let priceId: string | undefined;
+  if (session.line_items?.data?.length) {
+    priceId = session.line_items.data[0].price?.id;
+  }
+
+  if (!userId) {
+    throw new Error(
+      `Webhook Validation Error: Missing userId in metadata for session ${sessionId}`,
+    );
+  }
+  if (typeof stripeCustomerId !== "string") {
+    throw new Error(
+      `Webhook Validation Error: Invalid or missing stripeCustomerId for session ${sessionId}`,
+    );
+  }
+  if (typeof stripeSubscriptionId !== "string") {
+    throw new Error(
+      `Webhook Validation Error: Invalid or missing stripeSubscriptionId for session ${sessionId}`,
+    );
+  }
+  if (typeof priceId !== "string") {
+    throw new Error(
+      `Webhook Validation Error: Invalid or missing priceId in line_items for session ${sessionId}`,
     );
   }
 
-  // Handle the checkout.session.completed event
-  if (event.type === "checkout.session.completed") {
-    const sessionFromEvent = event.data.object as Stripe.Checkout.Session;
-    const sessionId = sessionFromEvent.id;
+  const validatedData: ValidatedSessionData = {
+    userId,
+    stripeCustomerId,
+    stripeSubscriptionId,
+    priceId,
+  };
 
-    try {
-      // Retrieve the session with expanded line_items
-      const session = await stripe.checkout.sessions.retrieve(sessionId, {
-        expand: ["line_items"],
-      });
+  console.log(
+    `Webhook Processed: ${relevantEvent} for session: ${sessionId}, User ID: ${validatedData.userId}, Price ID: ${validatedData.priceId}`,
+  );
 
-      console.log(JSON.stringify(session, null, 2));
+  // WARNING: Ensure CreateSubscriptionDto at '@eclairum/backend/dtos'
+  // matches the fields being assigned below. Type errors may occur otherwise.
+  const createSubscriptionDto: CreateSubscriptionDto = {
+    userId: validatedData.userId,
+    priceId: validatedData.priceId,
+    // stripeCustomerId: validatedData.stripeCustomerId, // Uncomment if DTO expects these
+    // stripeSubscriptionId: validatedData.stripeSubscriptionId, // Uncomment if DTO expects these
+  };
 
-      // Check if the payment status is 'paid'
-      if (session.payment_status === "paid") {
-        const userId = session.metadata?.userId;
-        // customer and subscription IDs should be available directly
-        const stripeCustomerId = session.customer;
-        const stripeSubscriptionId = session.subscription;
+  try {
+    await serverApi.post("/subscriptions", createSubscriptionDto);
+    console.log(
+      `Successfully called backend /subscriptions for user ${validatedData.userId}`,
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error(
+      `Webhook Error: Failed to call backend /subscriptions for user ${validatedData.userId}, session ${sessionId}: ${message}`,
+      err,
+    );
+    // Throw to indicate the webhook processing failed at the backend step
+    throw new Error("Backend API call failed");
+  }
+};
 
-        // Extract priceId from the expanded line items
-        let priceId: string | undefined;
-        if (session.line_items?.data?.length) {
-          // Assuming the first line item contains the relevant price
-          priceId = session.line_items.data[0].price?.id;
-        }
+// --- Main POST Handler ---
 
-        // Validate required data
-        if (!userId) {
-          console.error(
-            `Webhook Error: Missing userId in metadata for session ${sessionId}`,
-          );
-          // Still return 200 to Stripe, but log the error.
-          // Consider more robust error handling or alerting based on requirements.
-          return NextResponse.json({
-            received: true,
-            acknowledged: false,
-            error: "Missing userId",
-          });
-        }
-        if (typeof stripeCustomerId !== "string") {
-          console.error(
-            `Webhook Error: Invalid or missing stripeCustomerId for session ${sessionId}`,
-          );
-          return NextResponse.json({
-            received: true,
-            acknowledged: false,
-            error: "Missing or invalid stripeCustomerId",
-          });
-        }
-        if (typeof stripeSubscriptionId !== "string") {
-          console.error(
-            `Webhook Error: Invalid or missing stripeSubscriptionId for session ${sessionId}`,
-          );
-          return NextResponse.json({
-            received: true,
-            acknowledged: false,
-            error: "Missing or invalid stripeSubscriptionId",
-          });
-        }
-        if (typeof priceId !== "string") {
-          console.error(
-            `Webhook Error: Invalid or missing priceId in line_items for session ${sessionId}`,
-          );
-          return NextResponse.json({
-            received: true,
-            acknowledged: false,
-            error: "Missing or invalid priceId",
-          });
-        }
+export async function POST(req: Request) {
+  let event: Stripe.Event;
+  try {
+    const body = await req.text();
+    const headersList = await headers();
+    const signature = headersList.get("stripe-signature");
+    event = verifyStripeEvent(body, signature);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error(`Webhook signature verification failed: ${message}`);
+    // Return 400 for signature/secret issues
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 
-        console.log(
-          `🎣 Webhook received & session retrieved: checkout.session.completed for session: ${sessionId}, User ID: ${userId}, Customer ID: ${stripeCustomerId}, Subscription ID: ${stripeSubscriptionId}, Price ID: ${priceId}`,
-        );
-
-        // Prepare data for backend
-        // WARNING: Ensure CreateSubscriptionDto at '@eclairum/backend/dtos'
-        // matches the fields being assigned below (userId, priceId, etc.)
-        const createSubscriptionDto: CreateSubscriptionDto = {
-          userId,
-          priceId,
-        };
-
-        // Call the backend service
-        try {
-          await serverApi.post("/subscriptions", createSubscriptionDto);
-          console.log(
-            `Successfully called backend /subscriptions for user ${userId}`,
-          );
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
-          console.error(
-            `Webhook Error: Failed to call backend /subscriptions for user ${userId}, session ${sessionId}: ${errorMessage}`,
-            error, // Log the full error object for more details
-          );
-          // Still return 200 to Stripe, but log the critical failure.
-          // Implement retry logic or alerting if necessary.
-          return NextResponse.json({
-            received: true,
-            acknowledged: false,
-            error: "Backend API call failed",
-          });
-        }
-      } else {
-        console.warn(
-          `Webhook Warning: checkout.session.completed received for session ${session.id}, but payment_status is ${session.payment_status}`,
-        );
+  try {
+    switch (event.type) {
+      case relevantEvent: {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await handleCheckoutSessionCompleted(session);
+        break;
       }
-    } catch (retrieveError) {
-      const errorMessage =
-        retrieveError instanceof Error
-          ? retrieveError.message
-          : "Unknown error";
-      console.error(
-        `Webhook Error: Failed to retrieve session ${sessionId}: ${errorMessage}`,
-      );
-      // Decide how to handle this - return error or just log?
-      // Returning 500 as we couldn't process the event fully.
-      return NextResponse.json(
-        { error: "Failed to retrieve session details" },
-        { status: 500 },
-      );
+      // TODO: Add cases for other relevant events (e.g., subscription updates/deletions)
+      // case 'customer.subscription.updated':
+      //   // handleSubscriptionUpdate(event.data.object as Stripe.Subscription);
+      //   break;
+      // case 'customer.subscription.deleted':
+      //   // handleSubscriptionDeletion(event.data.object as Stripe.Subscription);
+      //   break;
+      default:
+        console.log(`Unhandled webhook event type: ${event.type}`);
     }
-  }
-  // TODO: Handle other event types if needed, e.g., 'invoice.paid' for renewals,
-  // 'customer.subscription.deleted' for cancellations, etc.
-  else {
-    console.log(`Unhandled webhook event type: ${event.type}`);
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Internal server error";
+    console.error(
+      `Webhook Error processing event ${event.id} (type: ${event.type}): ${message}`,
+      err,
+    );
+    // For internal processing errors (retrieval, validation, backend call),
+    // return 200 to prevent Stripe retries for potentially unrecoverable errors,
+    // while indicating our internal failure via the response body.
+    return NextResponse.json(
+      { received: true, acknowledged: false, error: message },
+      { status: 200 }, // Or 500 if you prefer Stripe retries for these issues
+    );
   }
 
-  // Return a 200 response to acknowledge receipt of the event
+  // Acknowledge successful receipt and handling (or graceful skip)
   return NextResponse.json({ received: true, acknowledged: true });
 }
