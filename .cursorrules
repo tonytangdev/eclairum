@@ -16,11 +16,8 @@ Minimize function parameters (0-2 is ideal)
 Avoid flag parameters
 Don't use side effects
 3. Comments
-Good code is self-documenting
 Comments should explain "why," not "what"
-Keep comments updated with code changes
-Don't comment out code (use version control)
-Use comments for legal information and warnings
+Don't over-comment. The code should be self-documenting.
 4. Formatting
 Follow consistent formatting rules
 Use vertical spacing to separate concepts
