@@ -11,6 +11,7 @@ import { UserAnswersModule } from './user-answers/user-answers.module';
 import { APP_GUARD } from '@nestjs/core';
 import { ApiKeyGuard } from './common/guards/api-key.guard';
 import { UnitOfWorkModule } from './unit-of-work/unit-of-work.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { UnitOfWorkModule } from './unit-of-work/unit-of-work.module';
     AnswersModule,
     UserAnswersModule,
     UnitOfWorkModule,
+    SubscriptionsModule,
   ],
   controllers: [AppController],
   providers: [
