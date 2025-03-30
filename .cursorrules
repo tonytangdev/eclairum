@@ -1,0 +1,161 @@
+# Instructions
+
+- Always apply clean code principles
+
+1. Meaningful Names
+Use intention-revealing names
+Choose descriptive and unambiguous identifiers
+Make meaningful distinctions
+Use pronounceable and searchable names
+Avoid encodings and mental mapping
+2. Functions
+Keep functions small (ideally under 20 lines)
+Functions should do one thing only
+Use descriptive function names
+Minimize function parameters (0-2 is ideal)
+Avoid flag parameters
+Don't use side effects
+3. Comments
+Good code is self-documenting
+Comments should explain "why," not "what"
+Keep comments updated with code changes
+Don't comment out code (use version control)
+Use comments for legal information and warnings
+4. Formatting
+Follow consistent formatting rules
+Use vertical spacing to separate concepts
+Related code should be vertically dense
+Keep lines reasonably short
+Use standard indentation
+5. Objects and Data Structures
+Hide implementation details
+Prefer polymorphism to conditionals
+Encapsulate data and behavior together
+6. Error Handling
+Use exceptions rather than return codes
+Create informative error messages
+Don't return or pass null
+7. SOLID Principles
+Single Responsibility Principle
+Open/Closed Principle
+Liskov Substitution Principle
+Interface Segregation Principle
+Dependency Inversion Principle
+8. Testing
+Write tests first (TDD when possible)
+Make tests readable
+Tests should be fast, independent, and repeatable
+9. DRY (Don't Repeat Yourself)
+Avoid code duplication
+Extract shared functionality
+10. KISS (Keep It Simple, Stupid)
+Simplicity over complexity
+Solve the problem at hand, not imagined ones
+11. YAGNI (You Aren't Gonna Need It)
+Don't add functionality until needed
+12. Separation of Concerns
+Different parts of code should handle distinct responsibilities
+13. Code Refactoring
+Continuously improve code structure
+Apply the "Boy Scout Rule" - leave code better than you found it
+
+- The any type is forbidden
+- Always use the strict mode in TypeScript
+- The project uses pnpm as package manager
+- The project uses pnpm workspaces
+- Use the `await` keyword only when calling async functions
+
+The project is a mono-repo with the following structure:
+./
+├── packages
+│   ├── core
+│   ├── eslint-config
+│   ├── ngrok
+│   ├── typescript-config
+├── apps
+│   ├── backend
+│   ├── web
+
+## Testing
+
+Act as a senior developer and write tests for the code you write. Use the following guidelines:
+
+- Always create tests using jest and @faker-js
+- Use the AAA pattern (Arrange, Act, Assert)
+- Use the Given-When-Then pattern
+- Test the behavior, not the implementation
+- Use mocks and spies when needed
+- Use snapshot testing when needed
+
+### Testing with Jest
+
+- Use `describe` to group related tests
+- Use `it` to define individual tests
+- When mocking, do not allow "any"
+- Be careful about private fields
+- When using jest.expectAny, cast to the expected type :
+  
+  ```typescript
+  expect(jest.expectAny(Date) as Date);
+  expect(jest.expectAny(String) as string);
+  ```
+
+## Core
+
+The core package contains the business logic of the project. It should not have any dependencies on the other packages.
+
+## Backend
+
+The backend app is a NestJS application.
+
+## Web
+
+The web app is a NextJS 15 application.
+
+- Use Shadcn components
+- Use TailwindCSS
+
+## Copilot Commit Message Instructions
+
+### Commit Message Format
+
+```bash
+<type>(<project> - <scope>): <subject>
+<BLANK LINE>
+<body>
+<BLANK LINE>
+<footer>
+```
+
+#### Type
+
+The type of commit message. It can be one of the following:
+
+- **feat**: A new feature
+- **fix**: A bug fix
+- **docs**: Documentation only changes
+- **style**: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
+- **refactor**: A code change that neither fixes a bug nor adds a feature
+- **perf**: A code change that improves performance
+- **test**: Adding missing tests
+- **chore**: Changes to the build process or auxiliary tools and libraries such as documentation generation
+
+#### Project Scope
+
+The project scope can be one of the following:
+
+- **core**: Core functionality
+- **web**: Web application
+- **backend**: Backend application
+
+#### Scope
+
+The scope of the commit message. It can be anything specifying the place of the commit change.
+
+#### Subject
+
+The subject contains succinct description of the change:
+
+- Use the imperative, present tense: "change" not "changed" nor "changes"
+- Don't capitalize first letter
+- No dot (.) at the end
