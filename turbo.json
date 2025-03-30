@@ -2,15 +2,7 @@
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
   "globalDependencies": [
-    "SERVER_API_URL",
-    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
-    "CLERK_SECRET_KEY",
-    "SIGNING_SECRET",
-    "SERVER_API_KEY",
-    "STRIPE_SECRET_KEY",
-    "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
-    "STRIPE_PREMIUM_PRICE_ID",
-    "NEXT_PUBLIC_APP_URL"
+    ".env"
   ],
   "tasks": {
     "build": {
