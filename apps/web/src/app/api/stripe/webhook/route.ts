@@ -72,6 +72,8 @@ export async function POST(req: Request) {
     console.log(`Unhandled webhook event type: ${event.type}`);
   }
 
+  console.log("test");
+
   // Return a 200 response to acknowledge receipt of the event
   return NextResponse.json({ received: true });
 }
