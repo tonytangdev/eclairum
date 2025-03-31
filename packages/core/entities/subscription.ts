@@ -106,5 +106,13 @@ export class Subscription implements SubscriptionProps {
     this.updatedAt = new Date();
   }
 
+  public getId(): string {
+    return this.id;
+  }
+
+  public getUserId(): string {
+    return this.userId;
+  }
+
   // Add other methods as needed, e.g., for handling plan changes
 }

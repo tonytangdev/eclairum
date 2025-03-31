@@ -24,8 +24,7 @@ const mockSubscriptionRepository: jest.Mocked<SubscriptionRepository> = {
 };
 
 const mockPaymentGateway: jest.Mocked<PaymentGateway> = {
-  findOrCreateCustomer: jest.fn(),
-  createSubscription: jest.fn(),
+  findCustomerByUserId: jest.fn(),
   getSubscription: jest.fn(),
 };
 
@@ -94,7 +93,7 @@ describe("SyncSubscriptionUseCase", () => {
       const stripeCustomerId = `cus_${faker.string.alphanumeric(14)}`;
       const input = { userId: user.getId(), stripeSubscriptionId };
 
-      const mockGatewayCustomer: CreateCustomerOutput = {
+      const mockGatewayCustomer = {
         customerId: stripeCustomerId,
       };
       const mockGatewaySubscription: GetSubscriptionOutput = {
@@ -119,7 +118,7 @@ describe("SyncSubscriptionUseCase", () => {
       });
 
       mockUserRepository.findById.mockResolvedValue(user);
-      mockPaymentGateway.findOrCreateCustomer.mockResolvedValue(
+      mockPaymentGateway.findCustomerByUserId.mockResolvedValue(
         mockGatewayCustomer,
       );
       mockPaymentGateway.getSubscription.mockResolvedValue(
@@ -140,11 +139,9 @@ describe("SyncSubscriptionUseCase", () => {
 
       // Then
       expect(mockUserRepository.findById).toHaveBeenCalledWith(user.getId());
-      expect(mockPaymentGateway.findOrCreateCustomer).toHaveBeenCalledWith({
-        email: user.getEmail(),
-        name: user.getEmail().split("@")[0],
-        userId: user.getId(),
-      });
+      expect(mockPaymentGateway.findCustomerByUserId).toHaveBeenCalledWith(
+        user.getId(),
+      );
       expect(mockPaymentGateway.getSubscription).toHaveBeenCalledWith(
         stripeSubscriptionId,
       );
@@ -168,6 +165,48 @@ describe("SyncSubscriptionUseCase", () => {
       expect(result).toEqual(expectedCreatedSubscription);
 
       createSpy.mockRestore(); // Clean up spy
+    });
+
+    it("should use provided stripeCustomerId when available", async () => {
+      // Given
+      const user = createMockUser();
+      const stripeSubscriptionId = `sub_${faker.string.alphanumeric(14)}`;
+      const stripeCustomerId = `cus_${faker.string.alphanumeric(14)}`;
+      const input = {
+        userId: user.getId(),
+        stripeSubscriptionId,
+        stripeCustomerId, // Provide the customer ID
+      };
+
+      const mockGatewaySubscription: GetSubscriptionOutput = {
+        subscriptionId: stripeSubscriptionId,
+        status: "active",
+        currentPeriodStart: faker.date.past(),
+        currentPeriodEnd: faker.date.future(),
+        priceId: `price_${faker.string.alphanumeric(14)}`,
+        cancelAtPeriodEnd: false,
+        customerId: stripeCustomerId,
+      };
+
+      mockUserRepository.findById.mockResolvedValue(user);
+      mockPaymentGateway.getSubscription.mockResolvedValue(
+        mockGatewaySubscription,
+      );
+      mockSubscriptionRepository.findByStripeSubscriptionId.mockResolvedValue(
+        null,
+      );
+      mockSubscriptionRepository.save.mockImplementation((sub) =>
+        Promise.resolve(sub),
+      );
+
+      // When
+      await syncSubscriptionUseCase.execute(input);
+
+      // Then
+      expect(mockPaymentGateway.findCustomerByUserId).not.toHaveBeenCalled();
+      expect(mockPaymentGateway.getSubscription).toHaveBeenCalledWith(
+        stripeSubscriptionId,
+      );
     });
 
     // Add tests for specific status mappings
@@ -217,7 +256,7 @@ describe("SyncSubscriptionUseCase", () => {
         };
 
         mockUserRepository.findById.mockResolvedValue(user);
-        mockPaymentGateway.findOrCreateCustomer.mockResolvedValue(
+        mockPaymentGateway.findCustomerByUserId.mockResolvedValue(
           mockGatewayCustomer,
         );
         mockPaymentGateway.getSubscription.mockResolvedValue(
@@ -264,7 +303,7 @@ describe("SyncSubscriptionUseCase", () => {
       const stripeCustomerId = existingSubscription.stripeCustomerId;
       const input = { userId: user.getId(), stripeSubscriptionId };
 
-      const mockGatewayCustomer: CreateCustomerOutput = {
+      const mockGatewayCustomer = {
         customerId: stripeCustomerId,
       };
       const mockGatewaySubscription: GetSubscriptionOutput = {
@@ -278,17 +317,15 @@ describe("SyncSubscriptionUseCase", () => {
       };
 
       mockUserRepository.findById.mockResolvedValue(user);
-      mockPaymentGateway.findOrCreateCustomer.mockResolvedValue(
+      mockPaymentGateway.findCustomerByUserId.mockResolvedValue(
         mockGatewayCustomer,
       );
       mockPaymentGateway.getSubscription.mockResolvedValue(
         mockGatewaySubscription,
       );
-      // Return the existing subscription
       mockSubscriptionRepository.findByStripeSubscriptionId.mockResolvedValue(
         existingSubscription,
       );
-      // Mock save to return the same instance (or a new one if save returns updated)
       mockSubscriptionRepository.save.mockResolvedValue(existingSubscription);
 
       // Spy on Subscription.create to ensure it's NOT called
@@ -299,14 +336,16 @@ describe("SyncSubscriptionUseCase", () => {
 
       // Then
       expect(mockUserRepository.findById).toHaveBeenCalledWith(user.getId());
-      expect(mockPaymentGateway.findOrCreateCustomer).toHaveBeenCalledTimes(1);
+      expect(mockPaymentGateway.findCustomerByUserId).toHaveBeenCalledWith(
+        user.getId(),
+      );
       expect(mockPaymentGateway.getSubscription).toHaveBeenCalledWith(
         stripeSubscriptionId,
       );
       expect(
         mockSubscriptionRepository.findByStripeSubscriptionId,
       ).toHaveBeenCalledWith(stripeSubscriptionId);
-      expect(createSpy).not.toHaveBeenCalled(); // Ensure create was NOT called
+      expect(createSpy).not.toHaveBeenCalled();
 
       // Check that update methods were called on the existing instance
       expect(existingSubscription.updateStatus).toHaveBeenCalledWith(
@@ -321,7 +360,7 @@ describe("SyncSubscriptionUseCase", () => {
       );
       expect(mockSubscriptionRepository.save).toHaveBeenCalledWith(
         existingSubscription,
-      ); // Saved the updated existing instance
+      );
       expect(result).toBe(existingSubscription);
 
       createSpy.mockRestore();
@@ -372,7 +411,7 @@ describe("SyncSubscriptionUseCase", () => {
       };
 
       mockUserRepository.findById.mockResolvedValue(user);
-      mockPaymentGateway.findOrCreateCustomer.mockResolvedValue(
+      mockPaymentGateway.findCustomerByUserId.mockResolvedValue(
         mockGatewayCustomer,
       );
       mockPaymentGateway.getSubscription.mockResolvedValue(
@@ -380,7 +419,7 @@ describe("SyncSubscriptionUseCase", () => {
       );
 
       // When & Then
-      const expectedErrorMessage = `Subscription ${stripeSubscriptionId} does not belong to the specified user.`;
+      const expectedErrorMessage = `Subscription ${stripeSubscriptionId} does not belong to the specified user or the expected customer.`;
       await expect(syncSubscriptionUseCase.execute(input)).rejects.toThrow(
         expectedErrorMessage,
       );
@@ -388,7 +427,7 @@ describe("SyncSubscriptionUseCase", () => {
       // Check console.error was called with the single formatted string
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         expect.stringContaining(
-          `Subscription mismatch: User ${user.getId()} tried to sync Stripe subscription ${stripeSubscriptionId} which belongs to Stripe customer ${wrongStripeCustomerId}, but the user is linked to ${correctStripeCustomerId}.`,
+          `Subscription mismatch: User ${user.getId()} tried to sync Stripe subscription ${stripeSubscriptionId} which belongs to Stripe customer ${wrongStripeCustomerId}, but the user should be linked to ${correctStripeCustomerId}.`,
         ),
       );
 
@@ -429,7 +468,7 @@ describe("SyncSubscriptionUseCase", () => {
       };
 
       mockUserRepository.findById.mockResolvedValue(user); // Mock user found
-      mockPaymentGateway.findOrCreateCustomer.mockResolvedValue(
+      mockPaymentGateway.findCustomerByUserId.mockResolvedValue(
         mockGatewayCustomer,
       ); // Mock customer found/created
       mockPaymentGateway.getSubscription.mockResolvedValue(
@@ -446,6 +485,23 @@ describe("SyncSubscriptionUseCase", () => {
       // When & Then
       await expect(syncSubscriptionUseCase.execute(input)).rejects.toThrow(
         repoError, // Now we expect the repoError
+      );
+    });
+  });
+
+  describe("when customer is not found", () => {
+    it("should throw an error when no customer exists", async () => {
+      // Given
+      const user = createMockUser();
+      const stripeSubscriptionId = `sub_${faker.string.alphanumeric(14)}`;
+      const input = { userId: user.getId(), stripeSubscriptionId };
+
+      mockUserRepository.findById.mockResolvedValue(user);
+      mockPaymentGateway.findCustomerByUserId.mockResolvedValue(null);
+
+      // When & Then
+      await expect(syncSubscriptionUseCase.execute(input)).rejects.toThrow(
+        `No Stripe Customer ID found for user ${user.getId()}.`,
       );
     });
   });

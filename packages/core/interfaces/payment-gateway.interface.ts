@@ -29,16 +29,20 @@ export type GetSubscriptionOutput = {
 };
 
 export interface PaymentGateway {
-  findOrCreateCustomer(
-    input: CreateCustomerInput,
-  ): Promise<CreateCustomerOutput>;
-
   /**
    * Fetches details of an existing subscription from the payment gateway.
    * @param stripeSubscriptionId - The ID of the subscription in the gateway.
    * @returns The details of the existing subscription.
    */
   getSubscription(stripeSubscriptionId: string): Promise<GetSubscriptionOutput>;
+
+  /**
+   * Finds an existing customer in the payment gateway using our internal user ID.
+   * Does NOT create a customer if one is not found.
+   * @param userId - Our internal user ID stored in the customer's metadata.
+   * @returns The customer ID if found, otherwise null.
+   */
+  findCustomerByUserId(userId: string): Promise<{ customerId: string } | null>;
 
   // Add other relevant methods, e.g., handleWebhookEvent, cancelSubscription
 }

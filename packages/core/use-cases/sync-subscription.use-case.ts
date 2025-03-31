@@ -8,7 +8,8 @@ import { type UserRepository } from "../interfaces/user-repository.interface";
  */
 export interface SyncSubscriptionInput {
   userId: string;
-  stripeSubscriptionId: string; // We now need the existing Stripe subscription ID
+  stripeSubscriptionId: string; // The existing Stripe subscription ID
+  stripeCustomerId?: string; // The Stripe customer ID (optional, but preferred if known, e.g., from webhook)
 }
 
 // Output remains the created/synchronized Subscription entity
@@ -18,7 +19,6 @@ export type SyncSubscriptionOutput = Subscription;
  * Use case to synchronize an existing Stripe subscription with the local database.
  */
 export class SyncSubscriptionUseCase {
-  // Renamed class for clarity
   constructor(
     private readonly userRepository: UserRepository,
     private readonly subscriptionRepository: SubscriptionRepository,
@@ -32,15 +32,40 @@ export class SyncSubscriptionUseCase {
       throw new Error(`User with ID ${input.userId} not found.`);
     }
 
-    // 2. Ensure customer exists in Stripe and get their Stripe Customer ID
-    // This links our user to a Stripe customer if not already done.
-    const customerName = user.getEmail().split("@")[0];
-    const { customerId: expectedStripeCustomerId } =
-      await this.paymentGateway.findOrCreateCustomer({
-        email: user.getEmail(),
-        name: customerName,
-        userId: user.getId(),
-      });
+    let expectedStripeCustomerId: string;
+
+    // 2. Determine the expected Stripe Customer ID
+    if (input.stripeCustomerId) {
+      // Use the customer ID provided from the input (e.g., webhook)
+      expectedStripeCustomerId = input.stripeCustomerId;
+      console.log(
+        `Using provided Stripe Customer ID: ${expectedStripeCustomerId} for user ${input.userId}`,
+      );
+      // Optional: Ensure metadata is set on this customer
+      // You might want a separate gateway method like `updateCustomerMetadata`
+      // or rely on findOrCreateCustomer's creation logic if it were called.
+      // For simplicity here, we'll assume the metadata might be missing
+      // but prioritize using the correct customer ID.
+      // Consider calling findOrCreateCustomer just to ensure metadata if needed:
+      // await this.paymentGateway.findOrCreateCustomer({ userId: user.getId(), email: user.getEmail(), name: user.getName() });
+    } else {
+      // Fallback: Find or create customer if ID wasn't provided
+      console.warn(
+        `Stripe Customer ID not provided for user ${input.userId}. Falling back to findOrCreateCustomer.`,
+      );
+      const customerResult = await this.paymentGateway.findCustomerByUserId(
+        user.getId(),
+      );
+
+      if (!customerResult) {
+        console.error(`No Stripe Customer ID found for user ${input.userId}.`);
+        throw new Error(
+          `No Stripe Customer ID found for user ${input.userId}.`,
+        );
+      }
+
+      expectedStripeCustomerId = customerResult.customerId;
+    }
 
     // 3. Fetch the existing subscription details from Stripe
     const gatewaySubscription = await this.paymentGateway.getSubscription(
@@ -51,10 +76,10 @@ export class SyncSubscriptionUseCase {
     if (gatewaySubscription.customerId !== expectedStripeCustomerId) {
       // Log details for security/debugging
       console.error(
-        `Subscription mismatch: User ${input.userId} tried to sync Stripe subscription ${input.stripeSubscriptionId} which belongs to Stripe customer ${gatewaySubscription.customerId}, but the user is linked to ${expectedStripeCustomerId}.`,
+        `Subscription mismatch: User ${input.userId} tried to sync Stripe subscription ${input.stripeSubscriptionId} which belongs to Stripe customer ${gatewaySubscription.customerId}, but the user should be linked to ${expectedStripeCustomerId}.`,
       );
       throw new Error(
-        `Subscription ${input.stripeSubscriptionId} does not belong to the specified user.`,
+        `Subscription ${input.stripeSubscriptionId} does not belong to the specified user or the expected customer.`,
       );
     }
 
@@ -63,17 +88,13 @@ export class SyncSubscriptionUseCase {
       gatewaySubscription.status,
     );
 
-    // 6. Create or Update? For now, let's assume creating if not found by stripeId.
-    // A more robust implementation might check if a record with this stripeSubscriptionId
-    // already exists and update it instead.
+    // 6. Create or Update
     let subscription =
       await this.subscriptionRepository.findByStripeSubscriptionId(
         gatewaySubscription.subscriptionId,
       );
 
     if (subscription) {
-      // Optionally update existing record fields if needed
-      // For example, update status, period dates etc. based on gatewaySubscription
       subscription.updateStatus(status);
       subscription.updateBillingPeriod(
         gatewaySubscription.currentPeriodStart,
@@ -82,7 +103,6 @@ export class SyncSubscriptionUseCase {
       subscription.updatePrice(gatewaySubscription.priceId);
       // Add other updates as necessary
     } else {
-      // Create new subscription entity if it doesn't exist locally
       subscription = Subscription.create({
         userId: user.getId(),
         stripeCustomerId: gatewaySubscription.customerId, // Use customerId from fetched subscription
@@ -92,7 +112,7 @@ export class SyncSubscriptionUseCase {
         currentPeriodStart: gatewaySubscription.currentPeriodStart,
         currentPeriodEnd: gatewaySubscription.currentPeriodEnd,
         cancelAtPeriodEnd: gatewaySubscription.cancelAtPeriodEnd,
-        canceledAt: null, // Assume not canceled unless status indicates otherwise
+        canceledAt: null,
       });
     }
 
@@ -104,7 +124,6 @@ export class SyncSubscriptionUseCase {
     return savedSubscription;
   }
 
-  // Helper function remains the same
   private mapGatewayStatusToSubscriptionStatus(
     gatewayStatus: string,
   ): SubscriptionStatus {
