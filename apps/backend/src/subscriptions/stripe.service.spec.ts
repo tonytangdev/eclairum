@@ -314,6 +314,19 @@ describe('StripeService', () => {
         InternalServerErrorException,
       );
     });
+
+    it('should throw InternalServerErrorException on unexpected non-Error throwable', async () => {
+      // Arrange: Reject with something that is not an instance of Error
+      const unexpectedThrowable = { message: 'Something truly unexpected' };
+      sharedStripeMockInstance.subscriptions.retrieve.mockRejectedValueOnce(
+        unexpectedThrowable,
+      );
+
+      // Act & Assert: Verify the service throws the generic InternalServerErrorException
+      await expect(service.getSubscription(subscriptionId)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+    });
   });
 
   describe('findCustomerByUserId', () => {

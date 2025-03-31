@@ -61,9 +61,8 @@ export class StripeService implements PaymentGateway {
       this.logger.log(`Created new customer: ${customer.id}`);
       return { customerId: customer.id };
     } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      const errorStack = error instanceof Error ? error.stack : undefined;
+      const errorMessage = (error as Error).message;
+      const errorStack = (error as Error).stack;
       this.logger.error(
         `Error finding/creating customer for user ${input.userId}: ${errorMessage}`,
         errorStack,
@@ -128,13 +127,8 @@ export class StripeService implements PaymentGateway {
         throw new InternalServerErrorException(
           `Stripe error: ${error.message}`,
         );
-      } else if (error instanceof Error) {
-        throw new InternalServerErrorException(error.message);
-      } else {
-        throw new InternalServerErrorException(
-          'An unexpected error occurred while fetching subscription.',
-        );
       }
+      throw new InternalServerErrorException((error as Error).message);
     }
   }
 
@@ -158,9 +152,8 @@ export class StripeService implements PaymentGateway {
       return null;
     } catch (error: unknown) {
       // Log the error safely
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      const errorStack = error instanceof Error ? error.stack : undefined;
+      const errorMessage = (error as Error).message;
+      const errorStack = (error as Error).stack;
       this.logger.error(
         `Error finding customer by user ID ${userId}: ${errorMessage}`,
         errorStack,
