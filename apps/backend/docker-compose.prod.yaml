@@ -17,6 +17,7 @@ services:
       DATABASE_SYNCHRONIZE: ${DATABASE_SYNCHRONIZE:-false}
       # Additional parameter for Supabase SSL
       DATABASE_SSL: ${DATABASE_SSL:-true}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       # Set typeorm logging to true for debugging
       TYPEORM_LOGGING: 'true'
       # Force IPv4 DNS resolution
