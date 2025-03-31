@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { stripe } from "@/lib/stripe";
 import { auth } from "@clerk/nextjs/server";
 import { serverApi } from "@/lib/api";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
+import { Subscription } from "@eclairum/core/entities";
 
 const premiumPriceId = process.env.STRIPE_PREMIUM_PRICE_ID;
 const appUrl = process.env.NEXT_PUBLIC_APP_URL;
@@ -31,6 +32,63 @@ async function getOrCreateStripeCustomer(
     }
     console.error("Error fetching Stripe customer ID:", error);
     throw error;
+  }
+}
+
+/**
+ * Server action to fetch the current user's subscription.
+ * Requires the user to be authenticated.
+ * @returns {Promise<Subscription | null>} The user's subscription details or null.
+ */
+export async function getUserSubscription(): Promise<Subscription | null> {
+  try {
+    const session = await auth();
+    const userId = session?.userId; // Standard access pattern
+
+    if (!userId) {
+      console.log("getUserSubscription: User not authenticated.");
+      return null; // Not logged in
+    }
+
+    console.log(
+      `getUserSubscription: Fetching subscription for user ${userId}`,
+    );
+
+    // Make API call to backend
+    const response = await serverApi.get<Subscription | null>(
+      `/subscriptions/user/${userId}`,
+    );
+
+    console.log(
+      `getUserSubscription: API response status ${response.status} for user ${userId}`,
+    );
+
+    // Axios returns data in response.data
+    return response.data;
+  } catch (error: unknown) {
+    // Check if it's an Axios error
+    if (axios.isAxiosError(error)) {
+      const axiosError = error as AxiosError;
+      // Handle potential 404 (User/Subscription not found) gracefully by returning null
+      if (axiosError.response?.status === 404) {
+        console.log(
+          `getUserSubscription: Subscription or user not found (404) for user.`,
+        );
+        return null;
+      }
+      // Log other Axios errors
+      console.error(
+        "getUserSubscription: Axios error fetching subscription:",
+        axiosError.response?.data || axiosError.message,
+      );
+    } else {
+      // Log non-Axios errors
+      console.error(
+        "getUserSubscription: Non-Axios error fetching subscription:",
+        error,
+      );
+    }
+    return null; // Return null on errors for robustness in UI
   }
 }
 

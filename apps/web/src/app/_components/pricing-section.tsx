@@ -1,9 +1,24 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { createCheckoutSession } from "@/app/actions/stripe";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { createCheckoutSession, getUserSubscription } from "@/app/actions/stripe";
 import { Check } from "lucide-react";
+import { SubscriptionStatus } from "@eclairum/core/entities";
 
-export function PricingSection() {
+export async function PricingSection() {
+  const subscription = await getUserSubscription();
+
+  const isActivePremium =
+    subscription?.status === SubscriptionStatus.ACTIVE ||
+    subscription?.status === SubscriptionStatus.TRIALING;
+  const currentPlan = isActivePremium ? "Premium" : "Free";
+
   return (
     <section className="space-y-8">
       <div className="text-center space-y-2">
@@ -36,13 +51,20 @@ export function PricingSection() {
             </ul>
           </CardContent>
           <CardFooter>
-            <Button variant="outline" className="w-full">
-              Current Plan
+            <Button
+              variant="outline"
+              className="w-full"
+              disabled={currentPlan === "Free"}
+            >
+              {currentPlan === "Free"
+                ? "Current Plan"
+                : "Your Plan (Free)"
+              }
             </Button>
           </CardFooter>
         </Card>
 
-        <Card className="flex flex-col border-primary">
+        <Card className={`flex flex-col ${currentPlan === 'Premium' ? 'border-primary' : ''}`}>
           <CardHeader>
             <CardTitle>Premium Plan</CardTitle>
             <CardDescription>For serious learners</CardDescription>
@@ -71,8 +93,12 @@ export function PricingSection() {
           </CardContent>
           <CardFooter>
             <form action={createCheckoutSession} className="w-full">
-              <Button className="w-full" type="submit">
-                Upgrade Now
+              <Button
+                className="w-full"
+                type="submit"
+                disabled={currentPlan === "Premium"}
+              >
+                {currentPlan === "Premium" ? "Current Plan" : "Upgrade Now"}
               </Button>
             </form>
           </CardFooter>
