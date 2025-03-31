@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import {
   SyncSubscriptionUseCase,
   SyncSubscriptionOutput,
+  FetchUserSubscriptionUseCase,
 } from '@eclairum/core/use-cases';
 import { SyncSubscriptionDto } from './dto/sync-subscription.dto';
 import { StripeService } from './stripe.service';
@@ -45,8 +46,44 @@ export class SubscriptionsService {
       const errorMessage = (error as Error).message;
       this.logger.error(
         `Failed to sync subscription for user ${dto.userId}: ${errorMessage}`,
-        (error as Error).message,
+        (error as Error).stack,
         { dto },
+      );
+      throw error;
+    }
+  }
+
+  async fetchForUser(userId: string): Promise<Subscription | null> {
+    this.logger.log(`Fetching subscription for user: ${userId}`);
+
+    try {
+      const fetchUseCase = new FetchUserSubscriptionUseCase(
+        this.userRepository,
+        this.subscriptionRepository,
+      );
+
+      const subscription = await fetchUseCase.execute({ userId });
+
+      if (subscription) {
+        this.logger.log(
+          `Subscription found for user ${userId}: ID ${subscription.getId()}`,
+        );
+      } else {
+        this.logger.log(`No active subscription found for user ${userId}.`);
+      }
+      return subscription;
+    } catch (error: unknown) {
+      const typedError = error as Error;
+      if (typedError.message.includes('User with ID')) {
+        this.logger.warn(
+          `User not found when fetching subscription: ${userId}`,
+        );
+        throw new NotFoundException(`User with ID ${userId} not found.`);
+      }
+
+      this.logger.error(
+        `Failed to fetch subscription for user ${userId}: ${typedError.message}`,
+        typedError.stack,
       );
       throw error;
     }
