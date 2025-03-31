@@ -34,6 +34,7 @@ export class SubscriptionsService {
       const subscription: Subscription = await syncUseCase.execute({
         userId: dto.userId,
         stripeSubscriptionId: dto.stripeSubscriptionId,
+        stripeCustomerId: dto.stripeCustomerId,
       });
 
       this.logger.log(
@@ -41,11 +42,10 @@ export class SubscriptionsService {
       );
       return subscription;
     } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = (error as Error).message;
       this.logger.error(
         `Failed to sync subscription for user ${dto.userId}: ${errorMessage}`,
-        error instanceof Error ? error.stack : undefined,
+        (error as Error).message,
         { dto },
       );
       throw error;
