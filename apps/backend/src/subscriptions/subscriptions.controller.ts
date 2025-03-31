@@ -1,6 +1,6 @@
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { SubscriptionsService } from './subscriptions.service';
-import { CreateSubscriptionDto } from './dto/create-subscription.dto';
+import { SyncSubscriptionDto } from './dto/sync-subscription.dto';
 
 @Controller('subscriptions')
 export class SubscriptionsController {
@@ -8,9 +8,7 @@ export class SubscriptionsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(
-    @Body() createSubscriptionDto: CreateSubscriptionDto,
-  ): Promise<void> {
-    await this.subscriptionsService.create(createSubscriptionDto);
+  async sync(@Body() syncSubscriptionDto: SyncSubscriptionDto): Promise<void> {
+    await this.subscriptionsService.sync(syncSubscriptionDto);
   }
 }

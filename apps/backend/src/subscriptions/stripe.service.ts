@@ -7,10 +7,10 @@ import {
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import {
-  CreateCustomerInput,
-  CreateCustomerOutput,
   GetSubscriptionOutput,
   PaymentGateway,
+  CreateCustomerInput,
+  CreateCustomerOutput,
 } from '@eclairum/core/interfaces'; // Reverted import path - ensure core exports these
 
 @Injectable()
@@ -34,25 +34,22 @@ export class StripeService implements PaymentGateway {
   async findOrCreateCustomer(
     input: CreateCustomerInput,
   ): Promise<CreateCustomerOutput> {
-    this.logger.log(
-      `Finding or creating customer for user ID: ${input.userId}`,
-    );
+    this.logger.log(`Finding or creating customer for user: ${input.userId}`);
     try {
+      // First try to find existing customer
       const existingCustomers = await this.stripe.customers.search({
         query: `metadata['userId']:'${input.userId}'`,
         limit: 1,
       });
 
       if (existingCustomers.data.length > 0) {
-        this.logger.log(
-          `Found existing customer: ${existingCustomers.data[0].id}`,
-        );
-        return { customerId: existingCustomers.data[0].id };
+        const customerId = existingCustomers.data[0].id;
+        this.logger.log(`Found existing customer: ${customerId}`);
+        return { customerId };
       }
 
-      this.logger.log(
-        `Customer not found, creating new one for ${input.email}`,
-      );
+      // If no customer found, create a new one
+      this.logger.log(`Creating new customer for user: ${input.userId}`);
       const customer = await this.stripe.customers.create({
         email: input.email,
         name: input.name,
@@ -60,34 +57,20 @@ export class StripeService implements PaymentGateway {
           userId: input.userId,
         },
       });
-      this.logger.log(`Customer created: ${customer.id}`);
+
+      this.logger.log(`Created new customer: ${customer.id}`);
       return { customerId: customer.id };
     } catch (error: unknown) {
-      // Log context first
-      this.logger.error('Context for findOrCreateCustomer error:', { input });
-      // Then log the error safely
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
       this.logger.error(
-        `Error in findOrCreateCustomer: ${errorMessage}`,
+        `Error finding/creating customer for user ${input.userId}: ${errorMessage}`,
         errorStack,
       );
-
-      if (error instanceof Stripe.errors.StripeError) {
-        this.logger.error(
-          `Stripe error code: ${error.code}, message: ${error.message}`,
-        );
-        throw new InternalServerErrorException(
-          `Stripe error: ${error.message}`,
-        );
-      } else if (error instanceof Error) {
-        throw new InternalServerErrorException(error.message);
-      } else {
-        throw new InternalServerErrorException(
-          'An unexpected error occurred while finding or creating customer.',
-        );
-      }
+      throw new InternalServerErrorException(
+        'An unexpected error occurred while finding/creating customer.',
+      );
     }
   }
 
@@ -152,6 +135,41 @@ export class StripeService implements PaymentGateway {
           'An unexpected error occurred while fetching subscription.',
         );
       }
+    }
+  }
+
+  async findCustomerByUserId(
+    userId: string,
+  ): Promise<{ customerId: string } | null> {
+    this.logger.log(`Finding customer by internal user ID: ${userId}`);
+    try {
+      const existingCustomers = await this.stripe.customers.search({
+        query: `metadata['userId']:'${userId}'`,
+        limit: 1,
+      });
+
+      if (existingCustomers.data.length > 0) {
+        const customerId = existingCustomers.data[0].id;
+        this.logger.log(`Found customer: ${customerId}`);
+        return { customerId };
+      }
+
+      this.logger.log(`Customer not found for user ID: ${userId}`);
+      return null;
+    } catch (error: unknown) {
+      // Log the error safely
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(
+        `Error finding customer by user ID ${userId}: ${errorMessage}`,
+        errorStack,
+      );
+      // Don't throw specific exceptions here, let the caller handle null
+      // Re-throwing might obscure the fact that the customer simply wasn't found
+      throw new InternalServerErrorException(
+        'An unexpected error occurred while finding customer by user ID.',
+      );
     }
   }
 }
