@@ -1,9 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { CreateSubscriptionDto } from './dto/create-subscription.dto';
+import { StripeService } from './stripe.service';
+import { CreateSubscriptionDto } from '../dtos';
 
 @Injectable()
 export class SubscriptionsService {
   private readonly logger = new Logger(SubscriptionsService.name);
+
+  constructor(private readonly paymentGateway: StripeService) {}
 
   async create(createSubscriptionDto: CreateSubscriptionDto): Promise<void> {
     this.logger.log(
@@ -11,18 +14,11 @@ export class SubscriptionsService {
         createSubscriptionDto,
       )}`,
     );
-    // TODO: Implement actual subscription creation logic here.
-    // This would involve:
-    // 1. Verifying the data (optional, could be done via validation pipes)
-    // 2. Finding the user by createSubscriptionDto.userId in your database
-    // 3. Storing the stripeCustomerId and stripeSubscriptionId associated with the user
-    // 4. Updating the user's subscription status/plan in your database
 
-    // Simulate async database operation
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    this.logger.log(
-      `Subscription processed for user ${createSubscriptionDto.userId}`,
-    );
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve();
+      }, 100);
+    });
   }
 }

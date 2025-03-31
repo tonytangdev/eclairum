@@ -15,18 +15,10 @@ export interface CreateCustomerOutput {
 }
 
 /**
- * Represents the input for creating a subscription in the payment gateway.
+ * Represents the output after fetching an existing subscription.
+ * Often similar/identical to CreateSubscriptionOutput.
  */
-export interface CreateSubscriptionInput {
-  customerId: string;
-  priceId: string;
-  metadata?: Record<string, string | number | null>;
-}
-
-/**
- * Represents the output after creating a subscription.
- */
-export interface CreateSubscriptionOutput {
+export type GetSubscriptionOutput = {
   subscriptionId: string;
   status: string;
   currentPeriodStart: Date;
@@ -34,21 +26,12 @@ export interface CreateSubscriptionOutput {
   priceId: string;
   cancelAtPeriodEnd: boolean;
   customerId: string;
-}
-
-/**
- * Represents the output after fetching an existing subscription.
- * Often similar/identical to CreateSubscriptionOutput.
- */
-export type GetSubscriptionOutput = CreateSubscriptionOutput;
+};
 
 export interface PaymentGateway {
   findOrCreateCustomer(
     input: CreateCustomerInput,
   ): Promise<CreateCustomerOutput>;
-  createSubscription(
-    input: CreateSubscriptionInput,
-  ): Promise<CreateSubscriptionOutput>;
 
   /**
    * Fetches details of an existing subscription from the payment gateway.
