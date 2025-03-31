@@ -7,7 +7,11 @@ import { CreateUserUseCase } from '@eclairum/core/use-cases';
 import { CreateUserDto } from './dto/create-user.dto';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { faker } from '@faker-js/faker';
-import { User } from '@eclairum/core/entities';
+import {
+  User,
+  Subscription,
+  SubscriptionStatus,
+} from '@eclairum/core/entities';
 
 // Define a type for the mocked module if needed, or use Record<string, unknown>
 const mockCreateUserUseCaseExecute = jest.fn<any, any>();
@@ -46,6 +50,45 @@ describe('UsersService', () => {
     };
     const user = new User(defaultProps);
     return user;
+  };
+
+  // Define properties expected by Subscription.reconstitute
+  interface SubscriptionReconstituteProps {
+    id: string;
+    userId: string;
+    stripeSubscriptionId: string;
+    stripeCustomerId: string;
+    stripePriceId: string;
+    status: SubscriptionStatus;
+    currentPeriodStart: Date;
+    currentPeriodEnd: Date;
+    cancelAtPeriodEnd: boolean;
+    canceledAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }
+
+  // Helper to create mock domain Subscription using reconstitute
+  const createMockCoreSubscription = (
+    override: Partial<SubscriptionReconstituteProps> = {},
+  ): Subscription => {
+    const defaultProps: SubscriptionReconstituteProps = {
+      id: faker.string.uuid(),
+      userId: faker.string.uuid(),
+      stripeSubscriptionId: `sub_${faker.string.alphanumeric(14)}`,
+      stripeCustomerId: `cus_${faker.string.alphanumeric(14)}`,
+      stripePriceId: `price_${faker.string.alphanumeric(14)}`,
+      status: faker.helpers.objectValue(SubscriptionStatus),
+      currentPeriodStart: faker.date.past(),
+      currentPeriodEnd: faker.date.future(),
+      cancelAtPeriodEnd: false,
+      canceledAt: null,
+      createdAt: faker.date.past(),
+      updatedAt: faker.date.recent(),
+      ...override, // Apply overrides here
+    };
+    // Use reconstitute with the defined properties
+    return Subscription.reconstitute(defaultProps);
   };
 
   beforeEach(async () => {
@@ -163,7 +206,66 @@ describe('UsersService', () => {
     });
   });
 
-  // describe('getStripeCustomerId') // Add tests if needed
+  describe('getStripeCustomerId', () => {
+    it('should return stripeCustomerId if user and subscription are found', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const mockUser = createMockCoreUser({ id: userId });
+      const expectedStripeCustomerId = `cus_${faker.string.alphanumeric(14)}`;
+      const mockSubscription = createMockCoreSubscription({
+        userId: userId,
+        stripeCustomerId: expectedStripeCustomerId,
+      });
+
+      mockUserRepository.findById.mockResolvedValue(mockUser);
+      mockSubscriptionRepository.findByUserId.mockResolvedValue(
+        mockSubscription,
+      );
+
+      // Act
+      const result = await service.getStripeCustomerId(userId);
+
+      // Assert
+      expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
+      expect(mockSubscriptionRepository.findByUserId).toHaveBeenCalledWith(
+        userId,
+      );
+      expect(result).toEqual({ stripeCustomerId: expectedStripeCustomerId });
+    });
+
+    it('should throw NotFoundException if user is not found', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      mockUserRepository.findById.mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(service.getStripeCustomerId(userId)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.getStripeCustomerId(userId)).rejects.toThrow(
+        `User with ID ${userId} not found`,
+      );
+      expect(mockSubscriptionRepository.findByUserId).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException if subscription is not found', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const mockUser = createMockCoreUser({ id: userId });
+
+      mockUserRepository.findById.mockResolvedValue(mockUser);
+      mockSubscriptionRepository.findByUserId.mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(service.getStripeCustomerId(userId)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.getStripeCustomerId(userId)).rejects.toThrow(
+        `No subscription found for user ${userId}`,
+      );
+      expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
+    });
+  });
 
   describe('createStripeCustomer', () => {
     it('should find user and call stripeService.findOrCreateCustomer', async () => {

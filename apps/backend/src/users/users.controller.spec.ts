@@ -10,6 +10,8 @@ describe('UsersController', () => {
 
   const mockUsersService = {
     createUser: jest.fn(),
+    getStripeCustomerId: jest.fn(),
+    createStripeCustomer: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -68,6 +70,73 @@ describe('UsersController', () => {
 
       // Assert
       expect(result).toEqual(expectedUser);
+    });
+  });
+
+  describe('getStripeCustomerId', () => {
+    it('should call usersService.getStripeCustomerId with the correct userId', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const expectedCustomerId = `cus_${faker.string.alphanumeric(14)}`;
+      mockUsersService.getStripeCustomerId.mockResolvedValue({
+        stripeCustomerId: expectedCustomerId,
+      });
+
+      // Act
+      const result = await controller.getStripeCustomerId(userId);
+
+      // Assert
+      expect(service.getStripeCustomerId).toHaveBeenCalledWith(userId);
+      expect(service.getStripeCustomerId).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({ stripeCustomerId: expectedCustomerId });
+    });
+
+    it('should return the customer ID object provided by the service', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const customerId = `cus_${faker.string.alphanumeric(14)}`;
+      mockUsersService.getStripeCustomerId.mockResolvedValue({
+        stripeCustomerId: customerId,
+      });
+
+      // Act
+      const result = await controller.getStripeCustomerId(userId);
+
+      // Assert
+      expect(result).toEqual({ stripeCustomerId: customerId });
+    });
+  });
+
+  describe('createStripeCustomer', () => {
+    it('should call usersService.createStripeCustomer with the correct userId', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const expectedCustomer = {
+        id: `cus_${faker.string.alphanumeric(14)}`,
+        // Add other relevant customer properties if the service returns them
+      };
+      mockUsersService.createStripeCustomer.mockResolvedValue(expectedCustomer);
+
+      // Act
+      const result = await controller.createStripeCustomer(userId);
+
+      // Assert
+      expect(service.createStripeCustomer).toHaveBeenCalledWith(userId);
+      expect(service.createStripeCustomer).toHaveBeenCalledTimes(1);
+      expect(result).toEqual(expectedCustomer);
+    });
+
+    it('should return the customer object provided by the service', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const customer = { id: `cus_${faker.string.alphanumeric(14)}` };
+      mockUsersService.createStripeCustomer.mockResolvedValue(customer);
+
+      // Act
+      const result = await controller.createStripeCustomer(userId);
+
+      // Assert
+      expect(result).toEqual(customer);
     });
   });
 });
