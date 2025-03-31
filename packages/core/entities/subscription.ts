@@ -61,6 +61,7 @@ export class Subscription implements SubscriptionProps {
     const props: SubscriptionProps = {
       ...input,
       id: randomUUID(),
+      canceledAt: input.canceledAt === undefined ? null : input.canceledAt,
       createdAt: now,
       updatedAt: now,
     };
@@ -87,12 +88,19 @@ export class Subscription implements SubscriptionProps {
     cancelAtPeriodEnd: boolean,
     canceledAt?: Date,
   ): void {
-    this.cancelAtPeriodEnd = cancelAtPeriodEnd;
-    this.canceledAt = canceledAt ?? new Date();
-    if (!cancelAtPeriodEnd) {
+    const now = new Date();
+    this.updatedAt = now;
+
+    if (!cancelAtPeriodEnd && this.status !== SubscriptionStatus.CANCELED) {
       this.status = SubscriptionStatus.CANCELED;
+      this.canceledAt = canceledAt ?? now;
+    } else if (canceledAt) {
+      this.canceledAt = canceledAt;
+    } else if (cancelAtPeriodEnd && !this.cancelAtPeriodEnd) {
+      this.canceledAt = this.canceledAt ?? now;
     }
-    this.updatedAt = new Date();
+
+    this.cancelAtPeriodEnd = cancelAtPeriodEnd;
   }
 
   public updateBillingPeriod(start: Date, end: Date): void {
