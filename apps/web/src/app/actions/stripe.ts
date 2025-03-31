@@ -3,9 +3,36 @@
 import { redirect } from "next/navigation";
 import { stripe } from "@/lib/stripe";
 import { auth } from "@clerk/nextjs/server";
+import { serverApi } from "@/lib/api";
+import axios from "axios";
 
 const premiumPriceId = process.env.STRIPE_PREMIUM_PRICE_ID;
 const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+async function getOrCreateStripeCustomer(
+  userId: string,
+): Promise<string | null> {
+  try {
+    // First try to get existing customer
+    const { data } = await serverApi.get(`/users/${userId}/stripe-customer`);
+    return data.stripeCustomerId;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      // If no customer exists, create one
+      try {
+        const { data } = await serverApi.post(
+          `/users/${userId}/stripe-customer`,
+        );
+        return data.stripeCustomerId;
+      } catch (createError) {
+        console.error("Error creating Stripe customer:", createError);
+        throw createError;
+      }
+    }
+    console.error("Error fetching Stripe customer ID:", error);
+    throw error;
+  }
+}
 
 export async function createCheckoutSession() {
   if (!premiumPriceId) {
@@ -23,6 +50,9 @@ export async function createCheckoutSession() {
   }
 
   try {
+    // Get or create the user's Stripe customer ID
+    const stripeCustomerId = await getOrCreateStripeCustomer(userId);
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "subscription",
@@ -35,8 +65,14 @@ export async function createCheckoutSession() {
       metadata: {
         userId,
       },
-      success_url: `${appUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/pricing`,
+      subscription_data: {
+        metadata: {
+          userId,
+        },
+      },
+      ...(stripeCustomerId && { customer: stripeCustomerId }),
+      success_url: `${appUrl}`,
+      cancel_url: `${appUrl}`,
     });
 
     if (!session.url) {

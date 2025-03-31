@@ -3,7 +3,7 @@ import type { Stripe } from "stripe";
 import { headers } from "next/headers";
 import { stripe } from "@/lib/stripe";
 import { serverApi } from "@/lib/api";
-import { CreateSubscriptionDto } from "@eclairum/backend/dtos";
+import { SyncSubscriptionDto } from "@eclairum/backend/dtos";
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 const relevantEvent: Stripe.WebhookEndpointCreateParams.EnabledEvent =
@@ -121,19 +121,21 @@ const handleCheckoutSessionCompleted = async (
     `Webhook Processed: ${relevantEvent} for session: ${sessionId}, User ID: ${validatedData.userId}, Price ID: ${validatedData.priceId}`,
   );
 
-  // WARNING: Ensure CreateSubscriptionDto at '@eclairum/backend/dtos'
-  // matches the fields being assigned below. Type errors may occur otherwise.
-  const createSubscriptionDto: CreateSubscriptionDto = {
+  console.log(JSON.stringify(validatedData));
+
+  // Construct the DTO matching the backend's SyncSubscriptionDto
+  const syncSubscriptionDto: SyncSubscriptionDto = {
     userId: validatedData.userId,
-    priceId: validatedData.priceId,
-    // stripeCustomerId: validatedData.stripeCustomerId, // Uncomment if DTO expects these
-    // stripeSubscriptionId: validatedData.stripeSubscriptionId, // Uncomment if DTO expects these
+    stripeSubscriptionId: validatedData.stripeSubscriptionId,
+    stripeCustomerId: validatedData.stripeCustomerId,
   };
 
   try {
-    await serverApi.post("/subscriptions", createSubscriptionDto);
+    // Assuming the backend endpoint for syncing is still POST /subscriptions
+    // If the endpoint changed (e.g., to PUT /subscriptions/sync), update this URL.
+    await serverApi.post("/subscriptions", syncSubscriptionDto);
     console.log(
-      `Successfully called backend /subscriptions for user ${validatedData.userId}`,
+      `Successfully called backend /subscriptions to sync for user ${validatedData.userId}`,
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
