@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Logger } from '@nestjs/common';
+import { Logger, NotFoundException } from '@nestjs/common';
 import { faker } from '@faker-js/faker';
 import { SubscriptionsService } from './subscriptions.service';
 import { StripeService } from './stripe.service';
@@ -8,42 +8,49 @@ import { SubscriptionRepositoryImpl } from '../repositories/subscriptions/subscr
 import { SyncSubscriptionDto } from './dto/sync-subscription.dto';
 import { Subscription, SubscriptionStatus } from '@eclairum/core/entities';
 
-// Define the mock execute function globally in the test scope
-const mockExecute = jest.fn();
+// Define the mock execute functions globally in the test scope
+const mockSyncExecute = jest.fn();
+const mockFetchExecute = jest.fn();
 
-// Mock the SyncSubscriptionUseCase module before importing
+// Mock the UseCase modules before importing
 jest.mock('@eclairum/core/use-cases', () => ({
   SyncSubscriptionUseCase: jest.fn().mockImplementation(() => ({
-    // Use the globally defined mock function
-    execute: mockExecute,
+    execute: mockSyncExecute, // Use the specific mock for sync
+  })),
+  FetchUserSubscriptionUseCase: jest.fn().mockImplementation(() => ({
+    execute: mockFetchExecute, // Use the specific mock for fetch
   })),
 }));
 
-// Import the mocked module
-import { SyncSubscriptionUseCase } from '@eclairum/core/use-cases';
+// Import the mocked modules
+import {
+  SyncSubscriptionUseCase,
+  FetchUserSubscriptionUseCase,
+} from '@eclairum/core/use-cases';
 
 describe('SubscriptionsService', () => {
   let service: SubscriptionsService;
   let mockUserRepository: Partial<UserRepositoryImpl>;
   let mockSubscriptionRepository: Partial<SubscriptionRepositoryImpl>;
   let mockPaymentGateway: Partial<StripeService>;
-  let loggerSpy: jest.SpyInstance;
+  let logSpy: jest.SpyInstance;
+  let errorSpy: jest.SpyInstance;
+  let warnSpy: jest.SpyInstance;
 
   // Helper to create DTO
   const createMockSyncSubscriptionDto = (): SyncSubscriptionDto => ({
     userId: faker.string.uuid(),
     stripeSubscriptionId: `sub_${faker.string.alphanumeric(14)}`,
-    stripeCustomerId: `cus_${faker.string.alphanumeric(14)}`, // Include optional field
+    stripeCustomerId: `cus_${faker.string.alphanumeric(14)}`,
   });
 
   // Helper to create mock Subscription
-  const createMockSubscription = (dto: SyncSubscriptionDto): Subscription => {
+  const createMockSubscription = (userId: string): Subscription => {
     return Subscription.reconstitute({
       id: faker.string.uuid(),
-      userId: dto.userId,
-      stripeSubscriptionId: dto.stripeSubscriptionId,
-      stripeCustomerId:
-        dto.stripeCustomerId ?? `cus_${faker.string.alphanumeric(14)}`,
+      userId: userId,
+      stripeSubscriptionId: `sub_${faker.string.alphanumeric(14)}`,
+      stripeCustomerId: `cus_${faker.string.alphanumeric(14)}`,
       status: SubscriptionStatus.ACTIVE,
       currentPeriodStart: faker.date.past(),
       currentPeriodEnd: faker.date.future(),
@@ -51,13 +58,15 @@ describe('SubscriptionsService', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
       stripePriceId: `price_${faker.string.alphanumeric(14)}`,
+      canceledAt: null,
     });
   };
 
   beforeEach(async () => {
-    // Clear the globally defined mock function and the constructor mock
-    mockExecute.mockClear();
-    jest.clearAllMocks();
+    // Clear mocks
+    mockSyncExecute.mockClear();
+    mockFetchExecute.mockClear();
+    jest.clearAllMocks(); // Clear constructor mocks etc.
 
     // Create simple partial mocks for dependencies
     mockUserRepository = {};
@@ -65,8 +74,9 @@ describe('SubscriptionsService', () => {
     mockPaymentGateway = {};
 
     // Spy on Logger methods
-    loggerSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
-    jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -80,7 +90,7 @@ describe('SubscriptionsService', () => {
           useValue: mockSubscriptionRepository,
         },
         {
-          provide: StripeService, // Use the actual service name used as token
+          provide: StripeService,
           useValue: mockPaymentGateway,
         },
       ],
@@ -90,23 +100,18 @@ describe('SubscriptionsService', () => {
   });
 
   afterEach(() => {
-    loggerSpy.mockRestore(); // Restore logger spy
+    // Restore logger spies
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
   });
 
   describe('sync', () => {
     it('should instantiate SyncSubscriptionUseCase with correct dependencies', async () => {
-      // Arrange
       const dto = createMockSyncSubscriptionDto();
-      const mockResult = createMockSubscription(dto);
-
-      // Set up the globally defined mock to return our result
-      mockExecute.mockResolvedValueOnce(mockResult);
-
-      // Act
+      const mockResult = createMockSubscription(dto.userId);
+      mockSyncExecute.mockResolvedValueOnce(mockResult);
       await service.sync(dto);
-
-      // Assert
-      // Check the mock *constructor* was called
       expect(SyncSubscriptionUseCase).toHaveBeenCalledWith(
         mockUserRepository,
         mockSubscriptionRepository,
@@ -115,104 +120,136 @@ describe('SubscriptionsService', () => {
     });
 
     it('should call SyncSubscriptionUseCase.execute with correct parameters', async () => {
-      // Arrange
       const dto = createMockSyncSubscriptionDto();
-      const mockResult = createMockSubscription(dto);
-
-      // Set up the globally defined mock
-      mockExecute.mockResolvedValueOnce(mockResult);
-
-      // Act
+      const mockResult = createMockSubscription(dto.userId);
+      mockSyncExecute.mockResolvedValueOnce(mockResult);
       await service.sync(dto);
-
-      // Assert
-      // Check the globally defined mock *function* was called
-      expect(mockExecute).toHaveBeenCalledWith({
+      expect(mockSyncExecute).toHaveBeenCalledWith({
         userId: dto.userId,
         stripeSubscriptionId: dto.stripeSubscriptionId,
-        // Assert that customerId is passed from DTO
         stripeCustomerId: dto.stripeCustomerId,
       });
     });
 
     it('should return the result from SyncSubscriptionUseCase on success', async () => {
-      // Arrange
       const dto = createMockSyncSubscriptionDto();
-      const mockResult = createMockSubscription(dto);
-
-      // Set up the globally defined mock
-      mockExecute.mockResolvedValueOnce(mockResult);
-
-      // Act
+      const mockResult = createMockSubscription(dto.userId);
+      mockSyncExecute.mockResolvedValueOnce(mockResult);
       const result = await service.sync(dto);
-
-      // Assert
       expect(result).toBe(mockResult);
     });
 
     it('should log success on successful sync', async () => {
-      // Arrange
       const dto = createMockSyncSubscriptionDto();
-      const mockResult = createMockSubscription(dto);
-      const getSpy = jest.spyOn(mockResult, 'getId');
-
-      // Set up the globally defined mock
-      mockExecute.mockResolvedValueOnce(mockResult);
-
-      // Act
+      const mockResult = createMockSubscription(dto.userId);
+      const getSpy = jest.spyOn(mockResult, 'getId').mockReturnValue('sub_123');
+      mockSyncExecute.mockResolvedValueOnce(mockResult);
       await service.sync(dto);
-
-      // Assert
-      expect(loggerSpy).toHaveBeenCalledWith(
+      expect(logSpy).toHaveBeenCalledWith(
         `Syncing subscription for user: ${dto.userId}, Stripe ID: ${dto.stripeSubscriptionId}`,
       );
-      expect(loggerSpy).toHaveBeenCalledWith(
-        `Subscription synced successfully: ID ${mockResult.getId()}`,
+      expect(logSpy).toHaveBeenCalledWith(
+        `Subscription synced successfully: ID sub_123`,
       );
       getSpy.mockRestore();
     });
 
     it('should handle errors from SyncSubscriptionUseCase, log, and re-throw', async () => {
-      // Arrange
       const dto = createMockSyncSubscriptionDto();
       const testError = new Error('Use case failed!');
-
-      // Set up the globally defined mock to throw
-      mockExecute.mockRejectedValueOnce(testError);
-      const errorSpy = jest.spyOn(Logger.prototype, 'error');
-
-      // Act & Assert
+      mockSyncExecute.mockRejectedValueOnce(testError);
       await expect(service.sync(dto)).rejects.toThrow(testError);
+      expect(errorSpy).toHaveBeenCalledWith(
+        `Failed to sync subscription for user ${dto.userId}: ${testError.message}`,
+        testError.stack,
+        { dto },
+      );
+      expect(SyncSubscriptionUseCase).toHaveBeenCalled();
+      expect(mockSyncExecute).toHaveBeenCalled();
+    });
+  });
 
-      // Verify logging
-      expect(errorSpy).toHaveBeenCalled();
-
-      // Ensure mocks were still called
-      expect(SyncSubscriptionUseCase).toHaveBeenCalled(); // Constructor called
-      expect(mockExecute).toHaveBeenCalled(); // Execute function called
-      errorSpy.mockRestore();
+  describe('fetchForUser', () => {
+    it('should instantiate FetchUserSubscriptionUseCase with correct dependencies', async () => {
+      const userId = faker.string.uuid();
+      mockFetchExecute.mockResolvedValueOnce(null); // Resolves null for constructor check
+      await service.fetchForUser(userId);
+      expect(FetchUserSubscriptionUseCase).toHaveBeenCalledWith(
+        mockUserRepository,
+        mockSubscriptionRepository,
+      );
     });
 
-    it('should call SyncSubscriptionUseCase.execute with correct parameters when customerId is undefined', async () => {
-      // Arrange
-      const dto = createMockSyncSubscriptionDto();
-      dto.stripeCustomerId = undefined;
-      const mockResult = createMockSubscription(dto);
+    it('should call FetchUserSubscriptionUseCase.execute with correct userId', async () => {
+      const userId = faker.string.uuid();
+      const mockResult = createMockSubscription(userId);
+      mockFetchExecute.mockResolvedValueOnce(mockResult);
+      await service.fetchForUser(userId);
+      expect(mockFetchExecute).toHaveBeenCalledWith({ userId });
+    });
 
-      // Set up the globally defined mock
-      mockExecute.mockResolvedValueOnce(mockResult);
+    it('should return the subscription and log success when found', async () => {
+      const userId = faker.string.uuid();
+      const mockResult = createMockSubscription(userId);
+      const getSpy = jest.spyOn(mockResult, 'getId').mockReturnValue('sub_456');
+      mockFetchExecute.mockResolvedValueOnce(mockResult);
+      const result = await service.fetchForUser(userId);
+      expect(result).toBe(mockResult);
+      expect(logSpy).toHaveBeenCalledWith(
+        `Fetching subscription for user: ${userId}`,
+      );
+      expect(logSpy).toHaveBeenCalledWith(
+        `Subscription found for user ${userId}: ID sub_456`,
+      );
+      getSpy.mockRestore();
+    });
+
+    it('should return null and log when no subscription is found', async () => {
+      const userId = faker.string.uuid();
+      mockFetchExecute.mockResolvedValueOnce(null);
+      const result = await service.fetchForUser(userId);
+      expect(result).toBeNull();
+      expect(logSpy).toHaveBeenCalledWith(
+        `Fetching subscription for user: ${userId}`,
+      );
+      expect(logSpy).toHaveBeenCalledWith(
+        `No active subscription found for user ${userId}.`,
+      );
+    });
+
+    it("should catch 'User not found' error, log warning, and throw NotFoundException", async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      // Corrected error instantiation
+      const testError = new Error(`User with ID ${userId} not found.`); // Error from use case
+      mockFetchExecute.mockRejectedValueOnce(testError);
 
       // Act
-      await service.sync(dto);
+      const promise = service.fetchForUser(userId);
 
       // Assert
-      // Check the globally defined mock *function* was called
-      expect(mockExecute).toHaveBeenCalledWith({
-        userId: dto.userId,
-        stripeSubscriptionId: dto.stripeSubscriptionId,
-        // Check that undefined is passed if DTO doesn't have customerId
-        stripeCustomerId: undefined,
-      });
+      await expect(promise).rejects.toThrow(NotFoundException);
+      await expect(promise).rejects.toThrow(
+        `User with ID ${userId} not found.`, // Message from NotFoundException
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        `User not found when fetching subscription: ${userId}`,
+      );
+      expect(FetchUserSubscriptionUseCase).toHaveBeenCalled();
+      expect(mockFetchExecute).toHaveBeenCalledWith({ userId });
+    });
+
+    it('should handle other errors from use case, log error, and re-throw', async () => {
+      const userId = faker.string.uuid();
+      const testError = new Error('Database connection failed!');
+      mockFetchExecute.mockRejectedValueOnce(testError);
+      await expect(service.fetchForUser(userId)).rejects.toThrow(testError);
+      expect(errorSpy).toHaveBeenCalledWith(
+        `Failed to fetch subscription for user ${userId}: ${testError.message}`,
+        testError.stack,
+      );
+      expect(FetchUserSubscriptionUseCase).toHaveBeenCalled();
+      expect(mockFetchExecute).toHaveBeenCalled();
     });
   });
 });
