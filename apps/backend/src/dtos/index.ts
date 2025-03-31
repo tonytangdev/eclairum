@@ -5,4 +5,4 @@ export * from '../quiz-generation-tasks/dto/fetch-quiz-generation-task.response.
 export * from '../users/dto/create-user.dto';
 export * from '../questions/dto/edit-question.dto';
 export * from '../answers/dto/edit-answer.dto';
-export * from '../subscriptions/dto/create-subscription.dto';
+export * from '../subscriptions/dto/sync-subscription.dto';
