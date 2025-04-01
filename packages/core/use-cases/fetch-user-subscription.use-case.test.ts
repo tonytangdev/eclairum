@@ -21,6 +21,8 @@ const mockSubscriptionRepository: jest.Mocked<SubscriptionRepository> = {
   findByUserId: jest.fn(),
   findByStripeSubscriptionId: jest.fn(),
   save: jest.fn(),
+  findActiveByUserId: jest.fn(),
+  findById: jest.fn(),
   // Removed delete as it's not in the interface
 };
 

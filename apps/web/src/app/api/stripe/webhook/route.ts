@@ -6,8 +6,11 @@ import { serverApi } from "@/lib/api";
 import { SyncSubscriptionDto } from "@eclairum/backend/dtos";
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-const relevantEvent: Stripe.WebhookEndpointCreateParams.EnabledEvent =
-  "checkout.session.completed";
+const relevantEvents = [
+  "checkout.session.completed",
+  "customer.subscription.updated",
+  "customer.subscription.deleted",
+] as const;
 
 // --- Helper Functions ---
 
@@ -75,7 +78,7 @@ const handleCheckoutSessionCompleted = async (
   // Double-check payment status
   if (session.payment_status !== "paid") {
     console.warn(
-      `Webhook Warning: ${relevantEvent} received for session ${sessionId}, but payment_status is ${session.payment_status}. Skipping backend call.`,
+      `Webhook Warning: ${relevantEvents[0]} received for session ${sessionId}, but payment_status is ${session.payment_status}. Skipping backend call.`,
     );
     return; // Exit gracefully, no action needed
   }
@@ -118,10 +121,8 @@ const handleCheckoutSessionCompleted = async (
   };
 
   console.log(
-    `Webhook Processed: ${relevantEvent} for session: ${sessionId}, User ID: ${validatedData.userId}, Price ID: ${validatedData.priceId}`,
+    `Webhook Processed: ${relevantEvents[0]} for session: ${sessionId}, User ID: ${validatedData.userId}, Price ID: ${validatedData.priceId}`,
   );
-
-  console.log(JSON.stringify(validatedData));
 
   // Construct the DTO matching the backend's SyncSubscriptionDto
   const syncSubscriptionDto: SyncSubscriptionDto = {
@@ -131,8 +132,6 @@ const handleCheckoutSessionCompleted = async (
   };
 
   try {
-    // Assuming the backend endpoint for syncing is still POST /subscriptions
-    // If the endpoint changed (e.g., to PUT /subscriptions/sync), update this URL.
     await serverApi.post("/subscriptions", syncSubscriptionDto);
     console.log(
       `Successfully called backend /subscriptions to sync for user ${validatedData.userId}`,
@@ -143,7 +142,65 @@ const handleCheckoutSessionCompleted = async (
       `Webhook Error: Failed to call backend /subscriptions for user ${validatedData.userId}, session ${sessionId}: ${message}`,
       err,
     );
-    // Throw to indicate the webhook processing failed at the backend step
+    throw new Error("Backend API call failed");
+  }
+};
+
+/**
+ * Handles subscription update events from Stripe.
+ * This includes status changes, cancellations, and other updates.
+ * @param subscription The subscription object from the webhook event
+ */
+const handleSubscriptionUpdate = async (
+  subscription: Stripe.Subscription,
+): Promise<void> => {
+  const subscriptionId = subscription.id;
+  const customerId =
+    typeof subscription.customer === "string"
+      ? subscription.customer
+      : subscription.customer.id;
+
+  // Get the user ID from the customer metadata
+  const customerResponse = await stripe.customers.retrieve(customerId, {
+    expand: ["metadata"],
+  });
+
+  // Check if the customer is deleted
+  if (customerResponse.deleted) {
+    throw new Error(
+      `Webhook Validation Error: Customer ${customerId} is deleted for subscription ${subscriptionId}`,
+    );
+  }
+
+  const userId = customerResponse.metadata?.userId;
+  if (!userId) {
+    throw new Error(
+      `Webhook Validation Error: Missing userId in customer metadata for subscription ${subscriptionId}`,
+    );
+  }
+
+  console.log(
+    `Webhook Processed: Subscription update for subscription: ${subscriptionId}, User ID: ${userId}`,
+  );
+
+  // Use the same sync endpoint to update the subscription
+  const syncSubscriptionDto: SyncSubscriptionDto = {
+    userId,
+    stripeSubscriptionId: subscriptionId,
+    stripeCustomerId: customerId,
+  };
+
+  try {
+    await serverApi.post("/subscriptions", syncSubscriptionDto);
+    console.log(
+      `Successfully synced subscription update for user ${userId}, subscription ${subscriptionId}`,
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error(
+      `Webhook Error: Failed to sync subscription update for user ${userId}, subscription ${subscriptionId}: ${message}`,
+      err,
+    );
     throw new Error("Backend API call failed");
   }
 };
@@ -166,18 +223,17 @@ export async function POST(req: Request) {
 
   try {
     switch (event.type) {
-      case relevantEvent: {
+      case relevantEvents[0]: {
         const session = event.data.object as Stripe.Checkout.Session;
         await handleCheckoutSessionCompleted(session);
         break;
       }
-      // TODO: Add cases for other relevant events (e.g., subscription updates/deletions)
-      // case 'customer.subscription.updated':
-      //   // handleSubscriptionUpdate(event.data.object as Stripe.Subscription);
-      //   break;
-      // case 'customer.subscription.deleted':
-      //   // handleSubscriptionDeletion(event.data.object as Stripe.Subscription);
-      //   break;
+      case relevantEvents[1]:
+      case relevantEvents[2]: {
+        const subscription = event.data.object as Stripe.Subscription;
+        await handleSubscriptionUpdate(subscription);
+        break;
+      }
       default:
         console.log(`Unhandled webhook event type: ${event.type}`);
     }

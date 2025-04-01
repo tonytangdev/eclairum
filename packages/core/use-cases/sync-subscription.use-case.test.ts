@@ -21,6 +21,8 @@ const mockSubscriptionRepository: jest.Mocked<SubscriptionRepository> = {
   save: jest.fn(),
   findByUserId: jest.fn(),
   findByStripeSubscriptionId: jest.fn(),
+  findActiveByUserId: jest.fn(),
+  findById: jest.fn(),
 };
 
 const mockPaymentGateway: jest.Mocked<PaymentGateway> = {
