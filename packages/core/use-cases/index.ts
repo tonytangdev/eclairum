@@ -11,3 +11,4 @@ export * from "./user-edits-answer.use-case";
 export * from "./resume-quiz-generation-task-after-upload.use-case";
 export * from "./sync-subscription.use-case";
 export * from "./fetch-user-subscription.use-case";
+export * from "./cancel-subscription.use-case";

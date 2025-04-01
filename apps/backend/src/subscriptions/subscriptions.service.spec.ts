@@ -11,6 +11,7 @@ import { Subscription, SubscriptionStatus } from '@eclairum/core/entities';
 // Define the mock execute functions globally in the test scope
 const mockSyncExecute = jest.fn();
 const mockFetchExecute = jest.fn();
+const mockCancelExecute = jest.fn();
 
 // Mock the UseCase modules before importing
 jest.mock('@eclairum/core/use-cases', () => ({
@@ -20,12 +21,16 @@ jest.mock('@eclairum/core/use-cases', () => ({
   FetchUserSubscriptionUseCase: jest.fn().mockImplementation(() => ({
     execute: mockFetchExecute, // Use the specific mock for fetch
   })),
+  CancelSubscriptionUseCase: jest.fn().mockImplementation(() => ({
+    execute: mockCancelExecute,
+  })),
 }));
 
 // Import the mocked modules
 import {
   SyncSubscriptionUseCase,
   FetchUserSubscriptionUseCase,
+  CancelSubscriptionUseCase,
 } from '@eclairum/core/use-cases';
 
 describe('SubscriptionsService', () => {
@@ -66,6 +71,7 @@ describe('SubscriptionsService', () => {
     // Clear mocks
     mockSyncExecute.mockClear();
     mockFetchExecute.mockClear();
+    mockCancelExecute.mockClear();
     jest.clearAllMocks(); // Clear constructor mocks etc.
 
     // Create simple partial mocks for dependencies
@@ -250,6 +256,104 @@ describe('SubscriptionsService', () => {
       );
       expect(FetchUserSubscriptionUseCase).toHaveBeenCalled();
       expect(mockFetchExecute).toHaveBeenCalled();
+    });
+  });
+
+  describe('cancel', () => {
+    it('should instantiate CancelSubscriptionUseCase with correct dependencies', async () => {
+      const userId = faker.string.uuid();
+      const mockResult = createMockSubscription(userId);
+      mockCancelExecute.mockResolvedValueOnce(mockResult);
+      await service.cancel(userId, false);
+      expect(CancelSubscriptionUseCase).toHaveBeenCalledWith(
+        mockUserRepository,
+        mockSubscriptionRepository,
+      );
+    });
+
+    it('should call CancelSubscriptionUseCase.execute with correct parameters', async () => {
+      const userId = faker.string.uuid();
+      const mockResult = createMockSubscription(userId);
+      mockCancelExecute.mockResolvedValueOnce(mockResult);
+      await service.cancel(userId, true);
+      expect(mockCancelExecute).toHaveBeenCalledWith({
+        userId,
+        cancelAtPeriodEnd: true,
+      });
+    });
+
+    it('should return the result from CancelSubscriptionUseCase on success', async () => {
+      const userId = faker.string.uuid();
+      const mockResult = createMockSubscription(userId);
+      mockCancelExecute.mockResolvedValueOnce(mockResult);
+      const result = await service.cancel(userId, false);
+      expect(result).toBe(mockResult);
+    });
+
+    it('should log success on successful cancellation', async () => {
+      const userId = faker.string.uuid();
+      const mockResult = createMockSubscription(userId);
+      const getSpy = jest.spyOn(mockResult, 'getId').mockReturnValue('sub_789');
+      mockCancelExecute.mockResolvedValueOnce(mockResult);
+      await service.cancel(userId, false);
+      expect(logSpy).toHaveBeenCalledWith(
+        `Canceling subscription for user: ${userId}, cancelAtPeriodEnd: false`,
+      );
+      expect(logSpy).toHaveBeenCalledWith(
+        `Subscription canceled successfully: ID sub_789`,
+      );
+      getSpy.mockRestore();
+    });
+
+    it("should catch 'User not found' error, log warning, and throw NotFoundException", async () => {
+      const userId = faker.string.uuid();
+      const testError = new Error(`User with ID ${userId} not found.`);
+      mockCancelExecute.mockRejectedValueOnce(testError);
+
+      const promise = service.cancel(userId, false);
+
+      await expect(promise).rejects.toThrow(NotFoundException);
+      await expect(promise).rejects.toThrow(
+        `User with ID ${userId} not found.`,
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        `User not found when canceling subscription: ${userId}`,
+      );
+      expect(CancelSubscriptionUseCase).toHaveBeenCalled();
+      expect(mockCancelExecute).toHaveBeenCalled();
+    });
+
+    it("should catch 'No active subscription' error, log warning, and throw NotFoundException", async () => {
+      const userId = faker.string.uuid();
+      const testError = new Error(
+        `No active subscription found for user ${userId}.`,
+      );
+      mockCancelExecute.mockRejectedValueOnce(testError);
+
+      const promise = service.cancel(userId, false);
+
+      await expect(promise).rejects.toThrow(NotFoundException);
+      await expect(promise).rejects.toThrow(
+        `No active subscription found for user ${userId}.`,
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        `No active subscription found when canceling: ${userId}`,
+      );
+      expect(CancelSubscriptionUseCase).toHaveBeenCalled();
+      expect(mockCancelExecute).toHaveBeenCalled();
+    });
+
+    it('should handle other errors from use case, log error, and re-throw', async () => {
+      const userId = faker.string.uuid();
+      const testError = new Error('Database connection failed!');
+      mockCancelExecute.mockRejectedValueOnce(testError);
+      await expect(service.cancel(userId, false)).rejects.toThrow(testError);
+      expect(errorSpy).toHaveBeenCalledWith(
+        `Failed to cancel subscription for user ${userId}: ${testError.message}`,
+        testError.stack,
+      );
+      expect(CancelSubscriptionUseCase).toHaveBeenCalled();
+      expect(mockCancelExecute).toHaveBeenCalled();
     });
   });
 });

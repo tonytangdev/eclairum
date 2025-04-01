@@ -3,6 +3,7 @@ import {
   SyncSubscriptionUseCase,
   SyncSubscriptionOutput,
   FetchUserSubscriptionUseCase,
+  CancelSubscriptionUseCase,
 } from '@eclairum/core/use-cases';
 import { SyncSubscriptionDto } from './dto/sync-subscription.dto';
 import { StripeService } from './stripe.service';
@@ -83,6 +84,55 @@ export class SubscriptionsService {
 
       this.logger.error(
         `Failed to fetch subscription for user ${userId}: ${typedError.message}`,
+        typedError.stack,
+      );
+      throw error;
+    }
+  }
+
+  async cancel(
+    userId: string,
+    cancelAtPeriodEnd: boolean,
+  ): Promise<Subscription> {
+    this.logger.log(
+      `Canceling subscription for user: ${userId}, cancelAtPeriodEnd: ${cancelAtPeriodEnd}`,
+    );
+
+    try {
+      const cancelUseCase = new CancelSubscriptionUseCase(
+        this.userRepository,
+        this.subscriptionRepository,
+      );
+
+      const subscription = await cancelUseCase.execute({
+        userId,
+        cancelAtPeriodEnd,
+      });
+
+      this.logger.log(
+        `Subscription canceled successfully: ID ${subscription.getId()}`,
+      );
+      return subscription;
+    } catch (error: unknown) {
+      const typedError = error as Error;
+      if (typedError.message.includes('User with ID')) {
+        this.logger.warn(
+          `User not found when canceling subscription: ${userId}`,
+        );
+        throw new NotFoundException(`User with ID ${userId} not found.`);
+      }
+
+      if (typedError.message.includes('No active subscription found')) {
+        this.logger.warn(
+          `No active subscription found when canceling: ${userId}`,
+        );
+        throw new NotFoundException(
+          `No active subscription found for user ${userId}.`,
+        );
+      }
+
+      this.logger.error(
+        `Failed to cancel subscription for user ${userId}: ${typedError.message}`,
         typedError.stack,
       );
       throw error;
