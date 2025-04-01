@@ -266,7 +266,7 @@ describe('StripeService', () => {
 
     it('should throw NotFoundException when Stripe indicates resource_missing', async () => {
       // Arrange: Revert to using the mocked StripeError class for instanceof check
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       const mockStripeError = new (Stripe as any).errors.StripeError({
         type: 'invalid_request_error',
         message: 'No such subscription',
@@ -285,7 +285,7 @@ describe('StripeService', () => {
 
     it('should throw InternalServerErrorException for other Stripe-like errors', async () => {
       // Arrange: Revert to using the mocked StripeError class for instanceof check
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       const mockStripeError = new (Stripe as any).errors.StripeError({
         type: 'api_error',
         message: 'Something went wrong',
