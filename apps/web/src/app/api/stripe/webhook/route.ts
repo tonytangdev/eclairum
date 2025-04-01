@@ -147,8 +147,65 @@ const handleCheckoutSessionCompleted = async (
 };
 
 /**
+ * Handles subscription cancellation events from Stripe.
+ * This includes both immediate cancellations and end-of-period cancellations.
+ * @param subscription The subscription object from the webhook event
+ */
+const handleSubscriptionCancellation = async (
+  subscription: Stripe.Subscription,
+): Promise<void> => {
+  const subscriptionId = subscription.id;
+  const customerId =
+    typeof subscription.customer === "string"
+      ? subscription.customer
+      : subscription.customer.id;
+
+  // Get the user ID from the customer metadata
+  const customerResponse = await stripe.customers.retrieve(customerId, {
+    expand: ["metadata"],
+  });
+
+  // Check if the customer is deleted
+  if (customerResponse.deleted) {
+    throw new Error(
+      `Webhook Validation Error: Customer ${customerId} is deleted for subscription ${subscriptionId}`,
+    );
+  }
+
+  const userId = customerResponse.metadata?.userId;
+  if (!userId) {
+    throw new Error(
+      `Webhook Validation Error: Missing userId in customer metadata for subscription ${subscriptionId}`,
+    );
+  }
+
+  console.log(
+    `Webhook Processed: Subscription cancellation for subscription: ${subscriptionId}, User ID: ${userId}`,
+  );
+
+  // Call the cancel endpoint with the appropriate parameters
+  try {
+    await serverApi.delete(`/subscriptions/user/${userId}`, {
+      data: {
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      },
+    });
+    console.log(
+      `Successfully processed subscription cancellation for user ${userId}, subscription ${subscriptionId}`,
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error(
+      `Webhook Error: Failed to process subscription cancellation for user ${userId}, subscription ${subscriptionId}: ${message}`,
+      err,
+    );
+    throw new Error("Backend API call failed");
+  }
+};
+
+/**
  * Handles subscription update events from Stripe.
- * This includes status changes, cancellations, and other updates.
+ * This includes status changes and other updates, but not cancellations.
  * @param subscription The subscription object from the webhook event
  */
 const handleSubscriptionUpdate = async (
@@ -228,10 +285,22 @@ export async function POST(req: Request) {
         await handleCheckoutSessionCompleted(session);
         break;
       }
-      case relevantEvents[1]:
+      case relevantEvents[1]: {
+        const subscription = event.data.object as Stripe.Subscription;
+        // Check if this is a cancellation update
+        if (
+          subscription.cancel_at_period_end ||
+          subscription.status === "canceled"
+        ) {
+          await handleSubscriptionCancellation(subscription);
+        } else {
+          await handleSubscriptionUpdate(subscription);
+        }
+        break;
+      }
       case relevantEvents[2]: {
         const subscription = event.data.object as Stripe.Subscription;
-        await handleSubscriptionUpdate(subscription);
+        await handleSubscriptionCancellation(subscription);
         break;
       }
       default:
@@ -249,7 +318,7 @@ export async function POST(req: Request) {
     // while indicating our internal failure via the response body.
     return NextResponse.json(
       { received: true, acknowledged: false, error: message },
-      { status: 200 }, // Or 500 if you prefer Stripe retries for these issues
+      { status: 200 },
     );
   }
 
