@@ -234,4 +234,116 @@ describe('SubscriptionRepositoryImpl', () => {
       expect(result).toBeNull();
     });
   });
+
+  describe('findById', () => {
+    it('should find entity by id, map to domain, and return domain subscription if found', async () => {
+      // Arrange
+      const id = faker.string.uuid();
+      const foundEntity = createMockSubscriptionEntity({ id });
+      const expectedDomainResult = createMockDomainSubscription({ id });
+
+      mockTypeOrmRepo.findOne!.mockResolvedValue(foundEntity);
+      (SubscriptionMapper.toDomain as jest.Mock).mockReturnValue(
+        expectedDomainResult,
+      );
+
+      // Act
+      const result = await repository.findById(id);
+
+      // Assert
+      expect(mockTypeOrmRepo.findOne!).toHaveBeenCalledWith({
+        where: { id },
+      });
+      expect(SubscriptionMapper.toDomain).toHaveBeenCalledWith(foundEntity);
+      expect(result).toBe(expectedDomainResult);
+    });
+
+    it('should return null if entity is not found by id', async () => {
+      // Arrange
+      const id = faker.string.uuid();
+      mockTypeOrmRepo.findOne!.mockResolvedValue(null);
+
+      // Act
+      const result = await repository.findById(id);
+
+      // Assert
+      expect(mockTypeOrmRepo.findOne!).toHaveBeenCalledWith({
+        where: { id },
+      });
+      expect(SubscriptionMapper.toDomain).not.toHaveBeenCalled();
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('findActiveByUserId', () => {
+    it('should find active entity by userId, map to domain, and return domain subscription if found', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const foundEntity = createMockSubscriptionEntity({
+        userId,
+        status: SubscriptionStatus.ACTIVE,
+      });
+      const expectedDomainResult = createMockDomainSubscription({
+        userId,
+        status: SubscriptionStatus.ACTIVE,
+      });
+
+      mockTypeOrmRepo.findOne!.mockResolvedValue(foundEntity);
+      (SubscriptionMapper.toDomain as jest.Mock).mockReturnValue(
+        expectedDomainResult,
+      );
+
+      // Act
+      const result = await repository.findActiveByUserId(userId);
+
+      // Assert
+      expect(mockTypeOrmRepo.findOne!).toHaveBeenCalledWith({
+        where: {
+          userId,
+          status: SubscriptionStatus.ACTIVE,
+        },
+      });
+      expect(SubscriptionMapper.toDomain).toHaveBeenCalledWith(foundEntity);
+      expect(result).toBe(expectedDomainResult);
+    });
+
+    it('should return null if no active entity is found for userId', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      mockTypeOrmRepo.findOne!.mockResolvedValue(null);
+
+      // Act
+      const result = await repository.findActiveByUserId(userId);
+
+      // Assert
+      expect(mockTypeOrmRepo.findOne!).toHaveBeenCalledWith({
+        where: {
+          userId,
+          status: SubscriptionStatus.ACTIVE,
+        },
+      });
+      expect(SubscriptionMapper.toDomain).not.toHaveBeenCalled();
+      expect(result).toBeNull();
+    });
+
+    it('should return null if found entity is not active', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+
+      mockTypeOrmRepo.findOne!.mockResolvedValue(null);
+
+      // Act
+      const result = await repository.findActiveByUserId(userId);
+
+      // Assert
+      expect(mockTypeOrmRepo.findOne!).toHaveBeenCalledWith({
+        where: {
+          userId,
+          status: SubscriptionStatus.ACTIVE,
+        },
+      });
+      expect(SubscriptionMapper.toDomain).not.toHaveBeenCalled();
+      expect(result).toBeNull();
+    });
+  });
 });

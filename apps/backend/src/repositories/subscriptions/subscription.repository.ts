@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SubscriptionRepository } from '@eclairum/core/interfaces/subscription-repository.interface';
-import { Subscription } from '@eclairum/core/entities';
+import { Subscription, SubscriptionStatus } from '@eclairum/core/entities';
 import { SubscriptionEntity } from '../../common/entities/subscription.entity';
 import { SubscriptionMapper } from './mappers/subscription.mapper';
 
@@ -19,9 +19,26 @@ export class SubscriptionRepositoryImpl implements SubscriptionRepository {
     return SubscriptionMapper.toDomain(savedEntity);
   }
 
+  async findById(id: string): Promise<Subscription | null> {
+    const entity = await this.subscriptionRepository.findOne({
+      where: { id },
+    });
+    return entity ? SubscriptionMapper.toDomain(entity) : null;
+  }
+
   async findByUserId(userId: string): Promise<Subscription | null> {
     const entity = await this.subscriptionRepository.findOne({
       where: { userId },
+    });
+    return entity ? SubscriptionMapper.toDomain(entity) : null;
+  }
+
+  async findActiveByUserId(userId: string): Promise<Subscription | null> {
+    const entity = await this.subscriptionRepository.findOne({
+      where: {
+        userId,
+        status: SubscriptionStatus.ACTIVE,
+      },
     });
     return entity ? SubscriptionMapper.toDomain(entity) : null;
   }
