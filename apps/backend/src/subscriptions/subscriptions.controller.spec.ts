@@ -23,7 +23,6 @@ const createMockSyncSubscriptionDto = (): SyncSubscriptionDto => ({
 
 // Helper to create mock CancelSubscriptionDto
 const createMockCancelSubscriptionDto = (): CancelSubscriptionDto => ({
-  userId: faker.string.uuid(),
   cancelAtPeriodEnd: faker.datatype.boolean(),
 });
 

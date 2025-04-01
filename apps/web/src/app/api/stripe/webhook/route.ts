@@ -161,9 +161,7 @@ const handleSubscriptionCancellation = async (
       : subscription.customer.id;
 
   // Get the user ID from the customer metadata
-  const customerResponse = await stripe.customers.retrieve(customerId, {
-    expand: ["metadata"],
-  });
+  const customerResponse = await stripe.customers.retrieve(customerId);
 
   // Check if the customer is deleted
   if (customerResponse.deleted) {
@@ -218,9 +216,7 @@ const handleSubscriptionUpdate = async (
       : subscription.customer.id;
 
   // Get the user ID from the customer metadata
-  const customerResponse = await stripe.customers.retrieve(customerId, {
-    expand: ["metadata"],
-  });
+  const customerResponse = await stripe.customers.retrieve(customerId);
 
   // Check if the customer is deleted
   if (customerResponse.deleted) {
