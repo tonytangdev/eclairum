@@ -3,6 +3,7 @@ import { faker } from '@faker-js/faker';
 import { SubscriptionsController } from './subscriptions.controller';
 import { SubscriptionsService } from './subscriptions.service';
 import { SyncSubscriptionDto } from './dto/sync-subscription.dto';
+import { CancelSubscriptionDto } from './dto/cancel-subscription.dto';
 import { Subscription, SubscriptionStatus } from '@eclairum/core/entities';
 import { NotFoundException } from '@nestjs/common';
 
@@ -10,18 +11,24 @@ import { NotFoundException } from '@nestjs/common';
 const mockSubscriptionsService = {
   sync: jest.fn(),
   fetchForUser: jest.fn(),
+  cancel: jest.fn(),
 };
 
 // Helper to create mock DTO
 const createMockSyncSubscriptionDto = (): SyncSubscriptionDto => ({
   userId: faker.string.uuid(),
   stripeSubscriptionId: `sub_${faker.string.alphanumeric(14)}`,
-  stripeCustomerId: `cus_${faker.string.alphanumeric(14)}`, // Include optional field
+  stripeCustomerId: `cus_${faker.string.alphanumeric(14)}`,
+});
+
+// Helper to create mock CancelSubscriptionDto
+const createMockCancelSubscriptionDto = (): CancelSubscriptionDto => ({
+  userId: faker.string.uuid(),
+  cancelAtPeriodEnd: faker.datatype.boolean(),
 });
 
 // Helper to create mock Subscription
 const createMockSubscription = (userId: string): Subscription => {
-  // Using reconstitute as it represents a complete entity
   return Subscription.reconstitute({
     id: faker.string.uuid(),
     userId: userId,
@@ -43,7 +50,7 @@ describe('SubscriptionsController', () => {
   let service: jest.Mocked<SubscriptionsService>;
 
   beforeEach(async () => {
-    jest.clearAllMocks(); // Clear mocks before each test
+    jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SubscriptionsController],
@@ -56,7 +63,6 @@ describe('SubscriptionsController', () => {
     }).compile();
 
     controller = module.get<SubscriptionsController>(SubscriptionsController);
-    // Get the mocked service instance
     service = module.get(SubscriptionsService);
   });
 
@@ -176,6 +182,78 @@ describe('SubscriptionsController', () => {
       // Act & Assert
       await expect(controller.fetchForUser(userId)).rejects.toThrow(testError);
       expect(service.fetchForUser).toHaveBeenCalledWith(userId);
+    });
+  });
+
+  describe('cancel', () => {
+    it('should call subscriptionsService.cancel with the provided userId and cancelAtPeriodEnd', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const dto = createMockCancelSubscriptionDto();
+      const expectedResult = createMockSubscription(userId);
+      service.cancel.mockResolvedValueOnce(expectedResult);
+
+      // Act
+      await controller.cancel(userId, dto);
+
+      // Assert
+      expect(service.cancel).toHaveBeenCalledWith(
+        userId,
+        dto.cancelAtPeriodEnd,
+      );
+      expect(service.cancel).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return the result from subscriptionsService.cancel on success', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const dto = createMockCancelSubscriptionDto();
+      const expectedResult = createMockSubscription(userId);
+      service.cancel.mockResolvedValueOnce(expectedResult);
+
+      // Act
+      const result = await controller.cancel(userId, dto);
+
+      // Assert
+      expect(result).toBe(expectedResult);
+    });
+
+    it('should propagate NotFoundException thrown by the service', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const dto = createMockCancelSubscriptionDto();
+      const testError = new NotFoundException(
+        `User with ID ${userId} not found.`,
+      );
+      service.cancel.mockRejectedValueOnce(testError);
+
+      // Act
+      const promise = controller.cancel(userId, dto);
+
+      // Assert
+      await expect(promise).rejects.toThrow(NotFoundException);
+      await expect(promise).rejects.toThrow(
+        `User with ID ${userId} not found.`,
+      );
+      expect(service.cancel).toHaveBeenCalledWith(
+        userId,
+        dto.cancelAtPeriodEnd,
+      );
+    });
+
+    it('should propagate other errors thrown by the service', async () => {
+      // Arrange
+      const userId = faker.string.uuid();
+      const dto = createMockCancelSubscriptionDto();
+      const testError = new Error('Database connection error');
+      service.cancel.mockRejectedValueOnce(testError);
+
+      // Act & Assert
+      await expect(controller.cancel(userId, dto)).rejects.toThrow(testError);
+      expect(service.cancel).toHaveBeenCalledWith(
+        userId,
+        dto.cancelAtPeriodEnd,
+      );
     });
   });
 });
