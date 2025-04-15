@@ -68,12 +68,6 @@ jobs:
           pnpm --filter @eclairum/core test
           pnpm --filter backend test
 
-      - name: Log Environment Variables
-        run: |
-          echo "REGISTRY: ${{ env.REGISTRY }}"
-          echo "ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}"
-          echo "AWS_REGION: ${{ env.AWS_REGION }}"
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
