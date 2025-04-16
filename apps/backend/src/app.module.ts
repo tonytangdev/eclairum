@@ -23,7 +23,6 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        console.log('DATABASE_HOST', configService.get('DATABASE_HOST'));
         return {
           type: 'postgres',
           host: configService.getOrThrow('DATABASE_HOST'),
