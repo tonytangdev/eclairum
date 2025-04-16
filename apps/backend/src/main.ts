@@ -2,6 +2,10 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DomainExceptionsFilter } from './exceptions/domain-exceptions.filter';
+import * as dns from 'node:dns';
+
+// Force Node.js to prefer IPv4 addresses during DNS resolution
+dns.setDefaultResultOrder('ipv4first');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
